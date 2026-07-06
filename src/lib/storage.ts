@@ -59,7 +59,7 @@ export interface StorageArea {
 function wrapChromeStorageArea(area: chrome.storage.StorageArea): StorageArea {
   return {
     get<T>(keys: string | string[] | null) {
-      return new Promise((resolve) => {
+      return new Promise<Record<string, T>>((resolve) => {
         area.get(keys, (result) => resolve(result as Record<string, T>))
       })
     },
