@@ -1,0 +1,18 @@
+:root {
+  --seirmg-accent-color: #017fff;
+}
+
+.seirmg-theme-black {
+  background-color: #1a1a1a !important;
+  color: #e0e0e0 !important;
+}
+
+.seirmg-theme-super-black {
+  background-color: #000000 !important;
+  color: #ffffff !important;
+}
+
+.seirmg-theme-custom a,
+.seirmg-theme-custom .infraBotao {
+  color: var(--seirmg-accent-color) !important;
+}
