@@ -36,31 +36,44 @@ async function verificarBlocoAssinaturaViaFetch(): Promise<void> {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  agendarAlarme()
+  agendarAlarme().catch((error) => {
+    console.error('[SEIRMG] Falha ao agendar alarme do bloco de assinatura:', error)
+  })
 })
 
 chrome.alarms.onAlarm.addListener((alarme) => {
   if (alarme.name !== ALARM_NAME) return
-  verificarBlocoAssinaturaViaFetch()
+  verificarBlocoAssinaturaViaFetch().catch((error) => {
+    console.error('[SEIRMG] Falha ao verificar bloco de assinatura via alarme:', error)
+  })
 })
 
 chrome.runtime.onMessage.addListener((mensagem) => {
   if (!ehMensagemItensBloco(mensagem)) return
-  processarItensBlocoAssinatura(mensagem.itens)
+  processarItensBlocoAssinatura(mensagem.itens).catch((error) => {
+    console.error(
+      '[SEIRMG] Falha ao processar itens do bloco de assinatura recebidos via mensagem:',
+      error
+    )
+  })
 })
 
 chrome.notifications.onClicked.addListener(async (notificationId) => {
-  const localConfig = await createLocalConfigStore().get()
-  if (!localConfig.baseUrlSei) return
+  try {
+    const localConfig = await createLocalConfigStore().get()
+    if (!localConfig.baseUrlSei) return
 
-  const url = `${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}`
-  const [abaExistente] = await chrome.tabs.query({ url: `${localConfig.baseUrlSei}/*` })
+    const url = `${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}`
+    const [abaExistente] = await chrome.tabs.query({ url: `${localConfig.baseUrlSei}/*` })
 
-  if (abaExistente?.id) {
-    chrome.tabs.update(abaExistente.id, { active: true, url })
-    if (abaExistente.windowId) chrome.windows.update(abaExistente.windowId, { focused: true })
-  } else {
-    chrome.tabs.create({ url })
+    if (abaExistente?.id) {
+      chrome.tabs.update(abaExistente.id, { active: true, url })
+      if (abaExistente.windowId) chrome.windows.update(abaExistente.windowId, { focused: true })
+    } else {
+      chrome.tabs.create({ url })
+    }
+    chrome.notifications.clear(notificationId)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao processar clique na notificação do bloco de assinatura:', error)
   }
-  chrome.notifications.clear(notificationId)
 })
