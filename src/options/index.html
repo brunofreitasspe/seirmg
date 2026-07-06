@@ -1,2 +1,61 @@
 <!doctype html>
-<html><body><div id="app">Opções SEIRMG</div></body></html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Opções — SEIRMG</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <h1>SEIRMG — Opções</h1>
+    <nav id="abas">
+      <button data-aba="geral" class="aba-btn ativa">Geral</button>
+      <button data-aba="aparencia" class="aba-btn">Aparência</button>
+      <button data-aba="processos" class="aba-btn">Processos</button>
+      <button data-aba="editor" class="aba-btn">Editor de Documentos</button>
+      <button data-aba="assinatura" class="aba-btn">Bloco de Assinatura e Notificações</button>
+      <button data-aba="integracoes" class="aba-btn">Integrações</button>
+      <button data-aba="sobre" class="aba-btn">Sobre</button>
+    </nav>
+
+    <section id="painel-geral" class="painel ativo">
+      <p>Em breve: ativar/desativar cada funcionalidade herdada individualmente.</p>
+    </section>
+    <section id="painel-aparencia" class="painel">
+      <p>Em breve: seleção de tema (claro, black, super-black, custom).</p>
+    </section>
+    <section id="painel-processos" class="painel">
+      <p>Em breve: prazos, cores de marcadores e agrupamento.</p>
+    </section>
+    <section id="painel-editor" class="painel">
+      <p>Em breve: funcionalidades herdadas do editor de documentos do Sei Pro.</p>
+    </section>
+    <section id="painel-assinatura" class="painel">
+      <h2>Bloco de Assinatura e Notificações</h2>
+      <label>
+        <input type="checkbox" id="assinatura-ativo" />
+        Ativar notificação de bloco de assinatura pendente
+      </label>
+      <br />
+      <label>
+        Intervalo de verificação (minutos):
+        <input type="number" id="assinatura-intervalo" min="5" max="120" />
+      </label>
+      <br />
+      <label>
+        <input type="checkbox" id="assinatura-som" />
+        Tocar som ao notificar
+      </label>
+      <br />
+      <button id="assinatura-salvar">Salvar</button>
+      <span id="assinatura-status"></span>
+    </section>
+    <section id="painel-integracoes" class="painel">
+      <p>Em breve: configuração da integração com o Planka.</p>
+    </section>
+    <section id="painel-sobre" class="painel">
+      <p>SEIRMG unifica as extensões Sei++ e Sei Pro para o Sistema Eletrônico de Informações (SEI).</p>
+    </section>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
