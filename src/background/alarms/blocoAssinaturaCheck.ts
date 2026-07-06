@@ -20,7 +20,11 @@ export async function verificarBlocoAssinatura(deps: BlocoAssinaturaCheckDeps): 
   const resultado = await deps.fetchBlocoAssinaturaHtml()
   if (!resultado.ok) return
 
-  const dom = new DOMParser().parseFromString(resultado.data, 'text/html')
-  const itens = parseBlocoAssinaturaTable(dom, deps.parseOptions)
-  await processarItens(itens)
+  try {
+    const dom = new DOMParser().parseFromString(resultado.data, 'text/html')
+    const itens = parseBlocoAssinaturaTable(dom, deps.parseOptions)
+    await processarItens(itens)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao processar itens do bloco de assinatura:', error)
+  }
 }

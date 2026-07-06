@@ -29,4 +29,26 @@ describe('verificarBlocoAssinatura', () => {
       { id: '/bloco/1', numero: '1', link: '/bloco/1', estado: 'aberto' },
     ])
   })
+
+  it('não propaga erro quando processarItens rejeita', async () => {
+    const html = `<div id="divInfraAreaTabela"><table><tbody>
+      <tr><td></td><td>Nº</td><td>Tipo</td><td>Data</td><td>Estado</td><td>Unidade</td><td>Disp</td></tr>
+      <tr><td></td><td><a href="/bloco/1">1</a></td><td>Assinatura</td><td>01/01/2026</td><td>Aberto</td><td>UNIDADE-A</td><td></td></tr>
+    </tbody></table></div>`
+    const processarItens = vi.fn().mockRejectedValue(new Error('boom'))
+    const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+    await expect(
+      verificarBlocoAssinatura({
+        fetchBlocoAssinaturaHtml: async () => ({ ok: true, data: html }),
+        parseOptions: { seiVersionAtLeast4: true },
+        processarItens,
+      }),
+    ).resolves.not.toThrow()
+
+    expect(processarItens).toHaveBeenCalled()
+    expect(consoleErrorSpy).toHaveBeenCalled()
+
+    consoleErrorSpy.mockRestore()
+  })
 })
