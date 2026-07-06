@@ -1,3 +1,66 @@
+import { ALARM_NAME, verificarBlocoAssinatura } from './alarms/blocoAssinaturaCheck'
+import { processarItensBlocoAssinatura } from './blocoAssinaturaPipeline'
+import { fetchText } from '../lib/result'
+import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
+import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
+
+const ACAO_BLOCO_ASSINATURA = 'bloco_assinatura_listar'
+
+interface MensagemItensBloco {
+  type: 'seirmg:bloco-assinatura:itens'
+  itens: BlocoAssinaturaItem[]
+}
+
+function ehMensagemItensBloco(mensagem: unknown): mensagem is MensagemItensBloco {
+  return (
+    typeof mensagem === 'object' &&
+    mensagem !== null &&
+    (mensagem as { type?: unknown }).type === 'seirmg:bloco-assinatura:itens'
+  )
+}
+
+async function agendarAlarme(): Promise<void> {
+  const config = await createSyncConfigStore().get()
+  chrome.alarms.create(ALARM_NAME, { periodInMinutes: config.blocoAssinatura.intervaloMinutos })
+}
+
+async function verificarBlocoAssinaturaViaFetch(): Promise<void> {
+  const localConfig = await createLocalConfigStore().get()
+  if (!localConfig.baseUrlSei) return
+
+  await verificarBlocoAssinatura({
+    fetchBlocoAssinaturaHtml: () =>
+      fetchText(`${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}`),
+    parseOptions: { seiVersionAtLeast4: localConfig.seiVersionAtLeast4 ?? true },
+  })
+}
+
 chrome.runtime.onInstalled.addListener(() => {
-  console.log('[SEIRMG] instalado')
+  agendarAlarme()
+})
+
+chrome.alarms.onAlarm.addListener((alarme) => {
+  if (alarme.name !== ALARM_NAME) return
+  verificarBlocoAssinaturaViaFetch()
+})
+
+chrome.runtime.onMessage.addListener((mensagem) => {
+  if (!ehMensagemItensBloco(mensagem)) return
+  processarItensBlocoAssinatura(mensagem.itens)
+})
+
+chrome.notifications.onClicked.addListener(async (notificationId) => {
+  const localConfig = await createLocalConfigStore().get()
+  if (!localConfig.baseUrlSei) return
+
+  const url = `${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}`
+  const [abaExistente] = await chrome.tabs.query({ url: `${localConfig.baseUrlSei}/*` })
+
+  if (abaExistente?.id) {
+    chrome.tabs.update(abaExistente.id, { active: true, url })
+    if (abaExistente.windowId) chrome.windows.update(abaExistente.windowId, { focused: true })
+  } else {
+    chrome.tabs.create({ url })
+  }
+  chrome.notifications.clear(notificationId)
 })
