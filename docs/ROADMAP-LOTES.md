@@ -6,12 +6,12 @@
 
 - **Scaffold + notificação de bloco de assinatura** (background: `chrome.alarms`/`chrome.notifications`) — `docs/superpowers/plans/2026-07-06-seirmg-scaffold-e-notificacao-assinatura.md` + correção — `docs/superpowers/plans/2026-07-06-seirmg-bloco-assinatura-correcao.md`
 - **Lote A — Notificação de processos novos + popup** — `docs/superpowers/plans/2026-07-06-seirmg-lote-a-processos-novos.md`
+- **Lote B — Bloco de Assinatura: seleção em massa** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-b-selecao-massa-bloco-assinatura-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-b-selecao-massa-bloco-assinatura.md`
 
 ## Roteiro (ordem sugerida)
 
 | # | Lote | Escopo | Fonte |
 |---|------|--------|-------|
-| B | **Bloco de Assinatura — seleção em massa** | Botões de seleção em massa na tela do bloco (`selecionarDocumentosAssinar.js`): Todos/Nenhum/Sem assinatura/Sem minha assinatura/Com minha assinatura. (O indicador visual — badge consolidado ao lado do logo — já foi entregue via `content-scripts/core/badge.ts`, decisão de arquitetura §"Indicador de pendência consolidado"; não há mais nada de `verificarBlocoAssinatura.js` a portar.) | Sei++ §1.2 |
 | C | **Motor de tema (dark mode) + aba Aparência** | `lib/theme.ts`: presets claro/black/super-black + cor customizável, aplicado via classe cross-iframe. Habilita a aba "Aparência" da tela de opções (hoje placeholder). Pré-requisito de UX para vários lotes seguintes. | Sei Pro §2.3, decisão validada §6.4 |
 | D | **Controle de Processos — prazos e cores** | Colunas de prazo/dias com threshold Alerta/Crítico (`incluirCalculoPrazos.js`); cor do processo por especificação (`marcarCorProcesso.js`); especificação na listagem (`mostrarEspecificacao`/`listaPorEspecificacao`); cor de ícone de ponto de controle via filtro CSS (`pontoControleCores`/`colorToFilter`). | Sei++ §1.2 |
 | E | **Controle de Processos — filtros e seleção** | Filtro composto + busca "OU" (`filtra_processos`); filtro por atribuição/info de blocos; seleção múltipla via Shift+clique; confirmação antes de concluir em lote; correção de tabelas nativas (thead); agrupar lista de processos, rolagem infinita e ordenação por cabeçalho persistente (Sei Pro). | Sei++ §1.2, Sei Pro §2.3 |
