@@ -25,9 +25,10 @@ describe('verificarBlocoAssinatura', () => {
       processarItens,
     })
 
-    expect(processarItens).toHaveBeenCalledWith([
-      { id: '/bloco/1', numero: '1', link: '/bloco/1', estado: 'aberto' },
-    ])
+    expect(processarItens).toHaveBeenCalledWith(
+      [{ id: '/bloco/1', numero: '1', link: '/bloco/1', estado: 'aberto' }],
+      { sempreNotificarPendentes: true }
+    )
   })
 
   it('não propaga erro quando processarItens rejeita', async () => {
