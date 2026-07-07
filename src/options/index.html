@@ -28,7 +28,24 @@
       <span id="geral-status"></span>
     </section>
     <section id="painel-aparencia" class="painel">
-      <p>Em breve: seleção de tema (claro, black, super-black, custom).</p>
+      <h2>Aparência</h2>
+      <label>
+        Tema:
+        <select id="aparencia-preset">
+          <option value="claro">Claro</option>
+          <option value="black">Black</option>
+          <option value="super-black">Super Black</option>
+          <option value="custom">Cor customizada</option>
+        </select>
+      </label>
+      <br />
+      <label>
+        Cor customizada:
+        <input type="color" id="aparencia-cor-customizada" />
+      </label>
+      <br />
+      <button id="aparencia-salvar">Salvar</button>
+      <span id="aparencia-status"></span>
     </section>
     <section id="painel-processos" class="painel">
       <p>Em breve: prazos, cores de marcadores e agrupamento.</p>

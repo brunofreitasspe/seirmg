@@ -1,6 +1,6 @@
 import bellIconSvg from 'lucide-static/icons/bell.svg?raw'
 import { ativarAba } from './tabs'
-import { createSyncConfigStore } from '../lib/storage'
+import { createSyncConfigStore, type ThemePreset } from '../lib/storage'
 import { ALARM_NAME } from '../background/alarms/blocoAssinaturaCheck'
 import { ALARM_NAME_PROCESSOS_NOVOS } from '../background/alarms/processosNovosCheck'
 
@@ -146,6 +146,44 @@ async function carregarAbaGeral(): Promise<void> {
   }
 }
 
+async function carregarAbaAparencia(): Promise<void> {
+  try {
+    const store = createSyncConfigStore()
+    const config = await store.get()
+
+    const selectPreset = document.getElementById('aparencia-preset') as HTMLSelectElement | null
+    const inputCor = document.getElementById('aparencia-cor-customizada') as HTMLInputElement | null
+    const status = document.getElementById('aparencia-status')
+
+    if (selectPreset) selectPreset.value = config.tema.preset
+    if (inputCor) inputCor.value = config.tema.customColor ?? '#017fff'
+
+    document.getElementById('aparencia-salvar')?.addEventListener('click', async () => {
+      try {
+        const atualizado = {
+          ...config,
+          tema: {
+            preset: (selectPreset?.value ?? 'claro') as ThemePreset,
+            customColor: inputCor?.value ?? '#017fff',
+          },
+        }
+        await store.set(atualizado)
+        if (status) {
+          status.textContent = 'Salvo!'
+          setTimeout(() => {
+            status.textContent = ''
+          }, 2000)
+        }
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao salvar configuração de aparência:', error)
+      }
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao carregar aba Aparência:', error)
+  }
+}
+
+carregarAbaAparencia()
 carregarAbaGeral()
 carregarAbaAssinatura()
 carregarSecaoProcessosNovos()
