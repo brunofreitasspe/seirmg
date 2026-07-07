@@ -174,4 +174,12 @@ describe('createLocalConfigStore', () => {
     await store.set(atualizado)
     expect(await store.get()).toEqual(atualizado)
   })
+
+  it('persiste atribuicaoSelecionada', async () => {
+    const area = criarAreaFalsa()
+    const store = createLocalConfigStore(area)
+    const atualizado = { ...DEFAULT_LOCAL_CONFIG, atribuicaoSelecionada: 'joao.silva' }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
 })

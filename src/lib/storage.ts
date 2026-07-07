@@ -90,6 +90,7 @@ export interface LocalConfig {
   processosNovosBadgeCount: number
   baseUrlSei?: string
   seiVersionAtLeast4?: boolean
+  atribuicaoSelecionada?: string
 }
 
 export const DEFAULT_SYNC_CONFIG: SyncConfig = {
