@@ -12,7 +12,7 @@
       <button data-aba="aparencia" class="aba-btn">Aparência</button>
       <button data-aba="processos" class="aba-btn">Processos</button>
       <button data-aba="editor" class="aba-btn">Editor de Documentos</button>
-      <button data-aba="assinatura" class="aba-btn">Bloco de Assinatura e Notificações</button>
+      <button data-aba="notificacoes" class="aba-btn">Notificações</button>
       <button data-aba="integracoes" class="aba-btn">Integrações</button>
       <button data-aba="sobre" class="aba-btn">Sobre</button>
     </nav>
@@ -29,8 +29,9 @@
     <section id="painel-editor" class="painel">
       <p>Em breve: funcionalidades herdadas do editor de documentos do Sei Pro.</p>
     </section>
-    <section id="painel-assinatura" class="painel">
-      <h2>Bloco de Assinatura e Notificações</h2>
+    <section id="painel-notificacoes" class="painel">
+      <h2>Notificações</h2>
+      <h3>Bloco de Assinatura</h3>
       <label>
         <input type="checkbox" id="assinatura-ativo" />
         Ativar notificação de bloco de assinatura pendente
@@ -48,6 +49,25 @@
       <br />
       <button id="assinatura-salvar">Salvar</button>
       <span id="assinatura-status"></span>
+
+      <h3>Processos Novos</h3>
+      <label>
+        <input type="checkbox" id="processos-novos-ativo" />
+        Ativar notificação de processos novos
+      </label>
+      <br />
+      <label>
+        Intervalo de verificação (minutos):
+        <input type="number" id="processos-novos-intervalo" min="5" max="120" />
+      </label>
+      <br />
+      <label>
+        <input type="checkbox" id="processos-novos-som" />
+        Tocar som ao notificar
+      </label>
+      <br />
+      <button id="processos-novos-salvar">Salvar</button>
+      <span id="processos-novos-status"></span>
     </section>
     <section id="painel-integracoes" class="painel">
       <p>Em breve: configuração da integração com o Planka.</p>
