@@ -49,23 +49,32 @@ async function verificarBlocoAssinaturaViaFetch(): Promise<void> {
   })
 }
 
+let verificacaoImediataEmAndamento = false
+
 async function verificarImediatoSeNecessario(): Promise<void> {
-  const localStore = createLocalConfigStore()
-  const localConfig = await localStore.get()
-  const agoraIso = new Date().toISOString()
+  if (verificacaoImediataEmAndamento) return
+  verificacaoImediataEmAndamento = true
 
-  if (
-    !passouIntervalo(
-      localConfig.ultimaVerificacaoImediata,
-      agoraIso,
-      INTERVALO_MINIMO_VERIFICACAO_IMEDIATA_MINUTOS
-    )
-  ) {
-    return
+  try {
+    const localStore = createLocalConfigStore()
+    const localConfig = await localStore.get()
+    const agoraIso = new Date().toISOString()
+
+    if (
+      !passouIntervalo(
+        localConfig.ultimaVerificacaoImediata,
+        agoraIso,
+        INTERVALO_MINIMO_VERIFICACAO_IMEDIATA_MINUTOS
+      )
+    ) {
+      return
+    }
+
+    await localStore.set({ ...localConfig, ultimaVerificacaoImediata: agoraIso })
+    await verificarBlocoAssinaturaViaFetch()
+  } finally {
+    verificacaoImediataEmAndamento = false
   }
-
-  await localStore.set({ ...localConfig, ultimaVerificacaoImediata: agoraIso })
-  await verificarBlocoAssinaturaViaFetch()
 }
 
 chrome.runtime.onInstalled.addListener(() => {

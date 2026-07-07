@@ -9,9 +9,9 @@ async function processarPagina(): Promise<void> {
       seiVersionAtLeast4: localConfig.seiVersionAtLeast4 ?? true,
     })
 
-    if (itens.length > 0) {
-      chrome.runtime.sendMessage({ type: 'seirmg:bloco-assinatura:itens', itens })
-    }
+    chrome.runtime.sendMessage({ type: 'seirmg:bloco-assinatura:itens', itens }).catch((error) => {
+      console.error('[SEIRMG] Falha ao enviar itens do bloco de assinatura:', error)
+    })
 
     await renderBadge()
   } catch (error) {
