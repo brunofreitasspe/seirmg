@@ -24,9 +24,14 @@ import {
   parseProcessosDoBloco,
 } from '../../features/controle-processos/filtroBloco'
 import { detectarTipoColuna, ordenarIds, type TipoColuna } from '../../features/controle-processos/ordenarTabela'
+import {
+  extrairCamposOcultos,
+  extrairLinhasValidas,
+  extrairNroItens,
+} from '../../features/controle-processos/rolagemInfinita'
 import { fetchText } from '../../lib/result'
 import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
-import type { ControleProcessosConfig } from '../../lib/storage'
+import type { ControleProcessosConfig, SyncConfig } from '../../lib/storage'
 
 const IDS_TABELAS = ['#tblProcessosDetalhado', '#tblProcessosGerados', '#tblProcessosRecebidos']
 
@@ -604,6 +609,116 @@ function montarFiltroBloco(): void {
   }
 }
 
+function desabilitarSelecaoNaLinha(linha: Element): void {
+  const checkbox = linha.querySelector<HTMLInputElement>('input.infraCheckbox, input[type="checkbox"]')
+  if (!checkbox) return
+
+  checkbox.disabled = true
+  const celula = checkbox.closest('td')
+  if (!celula) return
+
+  celula.setAttribute(
+    'onmouseover',
+    "return infraTooltipMostrar('Desative a opção \"Rolagem infinita\" nas Opções do SEIRMG para utilizar esta seleção')"
+  )
+  celula.setAttribute('onmouseout', 'return infraTooltipOcultar()')
+}
+
+function reaplicarTratamentosNasLinhasNovas(idTabela: string, config: SyncConfig, linhas: Element[]): void {
+  aplicarPrazosEmLinhas(config.controleProcessos.prazos, linhas)
+  aplicarCorProcessoEmLinhas(config.controleProcessos.coresProcesso, linhas)
+  aplicarEspecificacaoEmLinhas(config.controleProcessos.especificacao, linhas)
+  reaplicarFiltrosAposNovasLinhas.forEach((reaplicar) => reaplicar())
+  reaplicarOrdenacaoAtual(idTabela)
+}
+
+async function buscarProximasPaginas(
+  tipo: 'Recebidos' | 'Gerados',
+  idTabela: string,
+  form: HTMLFormElement,
+  config: SyncConfig,
+  indice: number
+): Promise<void> {
+  const campos = extrairCamposOcultos(form)
+  campos[`hdn${tipo}PaginaAtual`] = String(indice)
+
+  const resultado = await fetchText(form.action, {
+    method: 'POST',
+    body: new URLSearchParams(campos),
+  })
+
+  if (!resultado.ok) {
+    console.error(`[SEIRMG] Falha ao buscar página ${indice} de ${tipo}:`, resultado.error)
+    return
+  }
+
+  const doc = new DOMParser().parseFromString(resultado.data, 'text/html')
+  const linhasNovas = extrairLinhasValidas(doc, idTabela)
+
+  if (linhasNovas.length === 0) {
+    const camposFinais = extrairCamposOcultos(form)
+    camposFinais[`hdn${tipo}PaginaAtual`] = '0'
+    fetchText(form.action, { method: 'POST', body: new URLSearchParams(camposFinais) }).catch((error) => {
+      console.error(`[SEIRMG] Falha ao resetar página de ${tipo}:`, error)
+    })
+    return
+  }
+
+  const tabela = document.querySelector(idTabela)
+  const tbody = tabela?.querySelector('tbody')
+  if (!tabela || !tbody) return
+
+  const linhasAdotadas = linhasNovas.map((linha) => document.adoptNode(linha))
+  linhasAdotadas.forEach((linha) => {
+    desabilitarSelecaoNaLinha(linha)
+    tbody.appendChild(linha)
+  })
+
+  const campoNroItens = document.getElementById(`hdn${tipo}NroItens`) as HTMLInputElement | null
+  const nroItensAnterior = Number(campoNroItens?.value ?? '0')
+  const nroItensNovo = extrairNroItens(doc, tipo) ?? 0
+  const totalItens = nroItensAnterior + nroItensNovo
+  if (campoNroItens) campoNroItens.value = String(totalItens)
+  atualizarCaption(tabela, totalItens)
+
+  reaplicarTratamentosNasLinhasNovas(idTabela, config, linhasAdotadas)
+
+  await buscarProximasPaginas(tipo, idTabela, form, config, indice + 1)
+}
+
+async function iniciarRemocaoPaginacao(
+  tipo: 'Recebidos' | 'Gerados',
+  idTabela: string,
+  config: SyncConfig
+): Promise<void> {
+  try {
+    const linkPaginacao = document.querySelector(`#div${tipo}AreaPaginacaoSuperior a`)
+    if (!linkPaginacao) return
+
+    const form = document.getElementById('frmProcedimentoControlar') as HTMLFormElement | null
+    if (!form) return
+
+    const campoPagina = document.getElementById(`hdn${tipo}PaginaAtual`) as HTMLInputElement | null
+    const paginaAtual = Number(campoPagina?.value ?? '0')
+
+    if (paginaAtual > 0) {
+      if (campoPagina) campoPagina.value = '0'
+      form.submit()
+      return
+    }
+
+    document
+      .querySelectorAll(`#div${tipo} .infraAreaPaginacao a, #div${tipo} .infraAreaPaginacao select`)
+      .forEach((elemento) => {
+        (elemento as HTMLElement).style.display = 'none'
+      })
+
+    await buscarProximasPaginas(tipo, idTabela, form, config, 1)
+  } catch (error) {
+    console.error(`[SEIRMG] Falha ao remover paginação (${tipo}):`, error)
+  }
+}
+
 async function bootstrap(): Promise<void> {
   try {
     corrigirTabelasNativas()
@@ -618,6 +733,18 @@ async function bootstrap(): Promise<void> {
     aplicarPrazos(config.controleProcessos.prazos)
     aplicarCorProcesso(config.controleProcessos.coresProcesso)
     aplicarEspecificacao(config.controleProcessos.especificacao)
+
+    if (config.controleProcessos.rolagemInfinita.ativo) {
+      const tabelasRolagem: Array<{ tipo: 'Recebidos' | 'Gerados'; idTabela: string }> = [
+        { tipo: 'Recebidos', idTabela: '#tblProcessosRecebidos' },
+        { tipo: 'Gerados', idTabela: '#tblProcessosGerados' },
+      ]
+      tabelasRolagem.forEach(({ tipo, idTabela }) => {
+        iniciarRemocaoPaginacao(tipo, idTabela, config).catch((error) => {
+          console.error(`[SEIRMG] Falha ao iniciar remoção de paginação (${tipo}):`, error)
+        })
+      })
+    }
   } catch (error) {
     console.error('[SEIRMG] Falha ao aplicar recursos de Controle de Processos:', error)
   }
