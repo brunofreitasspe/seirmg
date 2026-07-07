@@ -7,8 +7,7 @@ export async function renderBadge(): Promise<void> {
   if (existente) existente.remove()
 
   const localConfig = await createLocalConfigStore().get()
-  // conta itens rastreados como pendentes; remoção ao assinar/resolver fica para um plano futuro
-  const totalPendente = Object.keys(localConfig.blocoAssinaturaNotificado).length
+  const totalPendente = localConfig.blocoAssinaturaPendenteAtual.length
   if (totalPendente === 0) return
 
   const logo = document.querySelector('#lnkInfraLogo, #divLogoSEI, .infraLogo')
