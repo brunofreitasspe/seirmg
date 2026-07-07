@@ -2,13 +2,19 @@ import { ALARM_NAME, verificarBlocoAssinatura } from './alarms/blocoAssinaturaCh
 import { processarItensBlocoAssinatura } from './blocoAssinaturaPipeline'
 import { fetchText } from '../lib/result'
 import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
+import { passouIntervalo } from '../lib/throttle'
 import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
 
 const ACAO_BLOCO_ASSINATURA = 'bloco_assinatura_listar'
+const INTERVALO_MINIMO_VERIFICACAO_IMEDIATA_MINUTOS = 2
 
 interface MensagemItensBloco {
   type: 'seirmg:bloco-assinatura:itens'
   itens: BlocoAssinaturaItem[]
+}
+
+interface MensagemSeiDetectado {
+  type: 'seirmg:sei-detectado'
 }
 
 function ehMensagemItensBloco(mensagem: unknown): mensagem is MensagemItensBloco {
@@ -16,6 +22,14 @@ function ehMensagemItensBloco(mensagem: unknown): mensagem is MensagemItensBloco
     typeof mensagem === 'object' &&
     mensagem !== null &&
     (mensagem as { type?: unknown }).type === 'seirmg:bloco-assinatura:itens'
+  )
+}
+
+function ehMensagemSeiDetectado(mensagem: unknown): mensagem is MensagemSeiDetectado {
+  return (
+    typeof mensagem === 'object' &&
+    mensagem !== null &&
+    (mensagem as { type?: unknown }).type === 'seirmg:sei-detectado'
   )
 }
 
@@ -33,6 +47,25 @@ async function verificarBlocoAssinaturaViaFetch(): Promise<void> {
       fetchText(`${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}`),
     parseOptions: { seiVersionAtLeast4: localConfig.seiVersionAtLeast4 ?? true },
   })
+}
+
+async function verificarImediatoSeNecessario(): Promise<void> {
+  const localStore = createLocalConfigStore()
+  const localConfig = await localStore.get()
+  const agoraIso = new Date().toISOString()
+
+  if (
+    !passouIntervalo(
+      localConfig.ultimaVerificacaoImediata,
+      agoraIso,
+      INTERVALO_MINIMO_VERIFICACAO_IMEDIATA_MINUTOS
+    )
+  ) {
+    return
+  }
+
+  await localStore.set({ ...localConfig, ultimaVerificacaoImediata: agoraIso })
+  await verificarBlocoAssinaturaViaFetch()
 }
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -55,6 +88,13 @@ chrome.runtime.onMessage.addListener((mensagem) => {
       '[SEIRMG] Falha ao processar itens do bloco de assinatura recebidos via mensagem:',
       error
     )
+  })
+})
+
+chrome.runtime.onMessage.addListener((mensagem) => {
+  if (!ehMensagemSeiDetectado(mensagem)) return
+  verificarImediatoSeNecessario().catch((error) => {
+    console.error('[SEIRMG] Falha ao verificar imediatamente após detectar sessão do SEI:', error)
   })
 })
 
