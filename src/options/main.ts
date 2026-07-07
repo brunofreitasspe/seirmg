@@ -3,10 +3,18 @@ import { ativarAba } from './tabs'
 import {
   createSyncConfigStore,
   type ConfiguracaoCor,
+  type ConfiguracaoPontoControle,
   type ModoEspecificacao,
   type ThemePreset,
 } from '../lib/storage'
 import { montarListaEditavel } from './listaEditavel'
+import { colorToFilter } from '../features/ponto-controle/colorToFilter'
+
+interface RegraPontoControleEditavel {
+  nome: string
+  cor: string
+  [chave: string]: string
+}
 import { ALARM_NAME } from '../background/alarms/blocoAssinaturaCheck'
 import { ALARM_NAME_PROCESSOS_NOVOS } from '../background/alarms/processosNovosCheck'
 
@@ -206,6 +214,9 @@ async function carregarAbaProcessos(): Promise<void> {
       'processos-especificacao-ativo'
     ) as HTMLInputElement | null
     const selectModo = document.getElementById('processos-especificacao-modo') as HTMLSelectElement | null
+    const inputPontoControleAtivo = document.getElementById(
+      'processos-ponto-controle-ativo'
+    ) as HTMLInputElement | null
     const status = document.getElementById('processos-status')
 
     if (inputPrazosAtivo) inputPrazosAtivo.checked = config.controleProcessos.prazos.ativo
@@ -220,6 +231,7 @@ async function carregarAbaProcessos(): Promise<void> {
       inputEspecificacaoAtivo.checked = config.controleProcessos.especificacao.ativo
     }
     if (selectModo) selectModo.value = config.controleProcessos.especificacao.modo
+    if (inputPontoControleAtivo) inputPontoControleAtivo.checked = config.pontoControle.ativo
 
     const containerCores = document.getElementById('processos-cores-lista')
     const listaCores = containerCores
@@ -233,8 +245,31 @@ async function carregarAbaProcessos(): Promise<void> {
         )
       : null
 
+    const containerPontoControle = document.getElementById('processos-ponto-controle-lista')
+    const listaPontoControle = containerPontoControle
+      ? montarListaEditavel<RegraPontoControleEditavel>(
+          containerPontoControle,
+          [
+            { chave: 'nome', rotulo: 'Nome do ponto de controle', tipo: 'text' },
+            { chave: 'cor', rotulo: 'Cor', tipo: 'color' },
+          ],
+          config.pontoControle.regras.map(({ nome, cor }) => ({ nome, cor }))
+        )
+      : null
+
     document.getElementById('processos-salvar')?.addEventListener('click', async () => {
       try {
+        const regrasPontoControle: ConfiguracaoPontoControle[] = (
+          listaPontoControle?.obterItens() ?? []
+        ).flatMap((regra) => {
+          try {
+            return [{ nome: regra.nome, cor: regra.cor, filter: colorToFilter(regra.cor) }]
+          } catch (error) {
+            console.error(`[SEIRMG] Falha ao calcular filtro de cor para "${regra.nome}":`, error)
+            return []
+          }
+        })
+
         const atualizado = {
           ...config,
           controleProcessos: {
@@ -255,6 +290,10 @@ async function carregarAbaProcessos(): Promise<void> {
               ativo: inputEspecificacaoAtivo?.checked ?? true,
               modo: (selectModo?.value ?? 'mostrar') as ModoEspecificacao,
             },
+          },
+          pontoControle: {
+            ativo: inputPontoControleAtivo?.checked ?? true,
+            regras: regrasPontoControle,
           },
         }
         await store.set(atualizado)
