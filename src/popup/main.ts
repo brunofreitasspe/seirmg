@@ -20,9 +20,16 @@ document.getElementById('abrir-bloco')?.addEventListener('click', async () => {
   try {
     const localConfig = await createLocalConfigStore().get()
     if (!localConfig.baseUrlSei) return
-    chrome.tabs.create({
-      url: `${localConfig.baseUrlSei}/controlador.php?acao=bloco_assinatura_listar`,
-    })
+
+    const url = `${localConfig.baseUrlSei}/controlador.php?acao=bloco_assinatura_listar`
+    const [abaExistente] = await chrome.tabs.query({ url: `${localConfig.baseUrlSei}/*` })
+
+    if (abaExistente?.id) {
+      chrome.tabs.update(abaExistente.id, { active: true, url })
+      if (abaExistente.windowId) chrome.windows.update(abaExistente.windowId, { focused: true })
+    } else {
+      chrome.tabs.create({ url })
+    }
   } catch (error) {
     console.error('[SEIRMG] Falha ao abrir bloco de assinatura:', error)
   }
