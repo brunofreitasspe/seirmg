@@ -37,6 +37,22 @@ describe('createSyncConfigStore', () => {
     await store.set(atualizado)
     expect(await store.get()).toEqual(atualizado)
   })
+
+  it('inclui processosNovos padrão (ativo, 5 min, som) quando vazio', async () => {
+    const store = createSyncConfigStore(criarAreaFalsa())
+    expect((await store.get()).processosNovos).toEqual({ ativo: true, intervaloMinutos: 5, tocarSom: true })
+  })
+
+  it('persiste e recupera alterações de processosNovos', async () => {
+    const area = criarAreaFalsa()
+    const store = createSyncConfigStore(area)
+    const atualizado = {
+      ...DEFAULT_SYNC_CONFIG,
+      processosNovos: { ativo: false, intervaloMinutos: 10, tocarSom: false },
+    }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
 })
 
 describe('createLocalConfigStore', () => {
@@ -68,6 +84,23 @@ describe('createLocalConfigStore', () => {
       ...DEFAULT_LOCAL_CONFIG,
       blocoAssinaturaPendenteAtual: ['abc', 'def'],
       ultimaVerificacaoImediata: '2026-07-06T10:00:00.000Z',
+    }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
+
+  it('inclui processosNovosBadgeCount zero por padrão', async () => {
+    const store = createLocalConfigStore(criarAreaFalsa())
+    expect((await store.get()).processosNovosBadgeCount).toBe(0)
+  })
+
+  it('persiste processosNovosNotificado e processosNovosBadgeCount', async () => {
+    const area = criarAreaFalsa()
+    const store = createLocalConfigStore(area)
+    const atualizado = {
+      ...DEFAULT_LOCAL_CONFIG,
+      processosNovosNotificado: { p1: { notificadoEm: '2026-07-06T10:00:00.000Z' } },
+      processosNovosBadgeCount: 3,
     }
     await store.set(atualizado)
     expect(await store.get()).toEqual(atualizado)

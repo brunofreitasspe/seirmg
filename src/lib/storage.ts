@@ -15,11 +15,18 @@ export interface BlocoAssinaturaConfig {
   tocarSom: boolean
 }
 
+export interface ProcessosNovosConfig {
+  ativo: boolean
+  intervaloMinutos: number
+  tocarSom: boolean
+}
+
 export interface SyncConfig {
   schemaVersion: 1
   featureFlags: FeatureFlags
   tema: ThemeConfig
   blocoAssinatura: BlocoAssinaturaConfig
+  processosNovos: ProcessosNovosConfig
 }
 
 export interface NotificadoState {
@@ -31,6 +38,8 @@ export interface LocalConfig {
   blocoAssinaturaNotificado: NotificadoState
   blocoAssinaturaPendenteAtual: string[]
   ultimaVerificacaoImediata?: string
+  processosNovosNotificado: NotificadoState
+  processosNovosBadgeCount: number
   baseUrlSei?: string
   seiVersionAtLeast4?: boolean
 }
@@ -46,12 +55,19 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     intervaloMinutos: 15,
     tocarSom: true,
   },
+  processosNovos: {
+    ativo: true,
+    intervaloMinutos: 5,
+    tocarSom: true,
+  },
 }
 
 export const DEFAULT_LOCAL_CONFIG: LocalConfig = {
   schemaVersion: 1,
   blocoAssinaturaNotificado: {},
   blocoAssinaturaPendenteAtual: [],
+  processosNovosNotificado: {},
+  processosNovosBadgeCount: 0,
 }
 
 export interface StorageArea {
