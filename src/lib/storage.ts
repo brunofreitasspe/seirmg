@@ -25,6 +25,7 @@ export interface ProcessosNovosConfig {
 export interface ConfiguracaoCor {
   valor: string
   cor: string
+  [chave: string]: string
 }
 
 export interface PrazosConfig {
