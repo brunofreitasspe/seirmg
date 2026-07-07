@@ -35,6 +35,8 @@ import type { ControleProcessosConfig, SyncConfig } from '../../lib/storage'
 
 const IDS_TABELAS = ['#tblProcessosDetalhado', '#tblProcessosGerados', '#tblProcessosRecebidos']
 
+const LIMITE_PAGINAS_ROLAGEM_INFINITA = 200
+
 function linhasDaTabela(idTabela: string): Element[] {
   const tabela = document.querySelector(idTabela)
   if (!tabela) return []
@@ -639,6 +641,13 @@ async function buscarProximasPaginas(
   config: SyncConfig,
   indice: number
 ): Promise<void> {
+  if (indice > LIMITE_PAGINAS_ROLAGEM_INFINITA) {
+    console.error(
+      `[SEIRMG] Limite de ${LIMITE_PAGINAS_ROLAGEM_INFINITA} páginas atingido ao buscar página ${indice} de ${tipo} (possível loop sem fim na paginação do SEI). Interrompendo busca.`
+    )
+    return
+  }
+
   const campos = extrairCamposOcultos(form)
   campos[`hdn${tipo}PaginaAtual`] = String(indice)
 
