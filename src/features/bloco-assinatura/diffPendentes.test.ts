@@ -1,11 +1,29 @@
 import { describe, expect, it } from 'vitest'
-import { diffPendentes } from './diffPendentes'
+import { diffPendentes, ehPendente } from './diffPendentes'
 import type { BlocoAssinaturaItem } from './types'
 
 const itemPendente: BlocoAssinaturaItem = { id: 'a', numero: '1', link: '/a', estado: 'disponibilizado_para_area' }
 const itemAberto: BlocoAssinaturaItem = { id: 'b', numero: '2', link: '/b', estado: 'aberto' }
 const itemPelaArea: BlocoAssinaturaItem = { id: 'c', numero: '3', link: '/c', estado: 'disponibilizado_pela_area' }
 const itemRetornado: BlocoAssinaturaItem = { id: 'd', numero: '4', link: '/d', estado: 'retornado' }
+
+describe('ehPendente', () => {
+  it('considera pendente um item disponibilizado para a área', () => {
+    expect(ehPendente(itemPendente)).toBe(true)
+  })
+
+  it('considera pendente um item aberto', () => {
+    expect(ehPendente(itemAberto)).toBe(true)
+  })
+
+  it('não considera pendente um item disponibilizado pela área', () => {
+    expect(ehPendente(itemPelaArea)).toBe(false)
+  })
+
+  it('não considera pendente um item retornado', () => {
+    expect(ehPendente(itemRetornado)).toBe(false)
+  })
+})
 
 describe('diffPendentes', () => {
   it('considera novo um item pendente ainda não notificado', () => {

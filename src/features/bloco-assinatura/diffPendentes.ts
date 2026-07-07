@@ -6,14 +6,16 @@ export interface DiffResultado {
   estadoAtualizado: NotificadoState
 }
 
+export function ehPendente(item: BlocoAssinaturaItem): boolean {
+  return item.estado === 'disponibilizado_para_area' || item.estado === 'aberto'
+}
+
 export function diffPendentes(
   itens: BlocoAssinaturaItem[],
   jaNotificados: NotificadoState,
   agoraIso: string
 ): DiffResultado {
-  const pendentes = itens.filter(
-    (item) => item.estado === 'disponibilizado_para_area' || item.estado === 'aberto'
-  )
+  const pendentes = itens.filter(ehPendente)
   const novos = pendentes.filter((item) => !(item.id in jaNotificados))
 
   const estadoAtualizado: NotificadoState = { ...jaNotificados }
