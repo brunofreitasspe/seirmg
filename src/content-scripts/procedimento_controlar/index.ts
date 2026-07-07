@@ -186,6 +186,7 @@ function corrigirTabelasNativas(): void {
 }
 
 const estadoFiltrosPorTabela = new Map<string, EstadoFiltros>()
+const reaplicarFiltrosAposNovasLinhas: Array<() => void> = []
 
 interface EstadoOrdenacao {
   indiceColuna: number
@@ -346,6 +347,7 @@ function montarBuscaRapida(): void {
 
     inputBusca.addEventListener('input', atualizar)
     inputBusca.addEventListener('change', atualizar)
+    reaplicarFiltrosAposNovasLinhas.push(atualizar)
   } catch (error) {
     console.error('[SEIRMG] Falha ao montar busca rápida:', error)
   }
@@ -464,6 +466,8 @@ async function montarFiltroAtribuicao(): Promise<void> {
       })
     }
 
+    reaplicarFiltrosAposNovasLinhas.push(() => aplicar(select.value))
+
     select.addEventListener('change', () => {
       aplicar(select.value)
       createLocalConfigStore()
@@ -516,7 +520,11 @@ function montarFiltroBloco(): void {
     selectBloco.appendChild(new Option('', ''))
     selectBloco.style.display = 'none'
 
+    let ultimoNumerosBloco: string[] | null = null
+
     const aplicarFiltroBloco = (numeros: string[] | null): void => {
+      ultimoNumerosBloco = numeros
+
       IDS_TABELAS.forEach((idTabela) => {
         const linhas = linhasDaTabela(idTabela)
         let estado = estadoFiltrosPorTabela.get(idTabela) ?? {}
@@ -538,6 +546,8 @@ function montarFiltroBloco(): void {
         aplicarVisibilidade(idTabela, calcularVisibilidade(estado, ids))
       })
     }
+
+    reaplicarFiltrosAposNovasLinhas.push(() => aplicarFiltroBloco(ultimoNumerosBloco))
 
     selectTipo.addEventListener('change', () => {
       selectBloco.innerHTML = ''
