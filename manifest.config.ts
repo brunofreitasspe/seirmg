@@ -39,7 +39,16 @@ export default defineManifest({
         '*://*.org/*controlador.php?acao=*',
       ],
       js: ['src/content-scripts/core/index.ts'],
+      run_at: 'document_idle',
+    },
+    {
+      matches: [
+        '*://*.br/*controlador.php?acao=*',
+        '*://*.org/*controlador.php?acao=*',
+      ],
+      js: ['src/content-scripts/tema/index.ts'],
       css: ['src/content-scripts/core/theme.css'],
+      all_frames: true,
       run_at: 'document_idle',
     },
     {
