@@ -292,6 +292,7 @@ async function carregarAbaProcessos(): Promise<void> {
               ativo: inputEspecificacaoAtivo?.checked ?? true,
               modo: (selectModo?.value ?? 'mostrar') as ModoEspecificacao,
             },
+            rolagemInfinita: config.controleProcessos.rolagemInfinita,
           },
           pontoControle: {
             ativo: inputPontoControleAtivo?.checked ?? true,
