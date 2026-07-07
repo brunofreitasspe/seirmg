@@ -23,6 +23,7 @@ import {
   parseListaBlocos,
   parseProcessosDoBloco,
 } from '../../features/controle-processos/filtroBloco'
+import { detectarTipoColuna, ordenarIds, type TipoColuna } from '../../features/controle-processos/ordenarTabela'
 import { fetchText } from '../../lib/result'
 import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
 import type { ControleProcessosConfig } from '../../lib/storage'
@@ -162,6 +163,80 @@ function corrigirTabelasNativas(): void {
 }
 
 const estadoFiltrosPorTabela = new Map<string, EstadoFiltros>()
+
+interface EstadoOrdenacao {
+  indiceColuna: number
+  direcao: 'asc' | 'desc'
+}
+
+const estadoOrdenacaoPorTabela = new Map<string, EstadoOrdenacao>()
+
+function limparIndicadoresOrdenacao(headers: HTMLTableCellElement[]): void {
+  headers.forEach((th) => {
+    th.querySelector('.seirmg-indicador-ordenacao')?.remove()
+  })
+}
+
+function aplicarIndicadorOrdenacao(th: HTMLTableCellElement, direcao: 'asc' | 'desc'): void {
+  const span = document.createElement('span')
+  span.className = 'seirmg-indicador-ordenacao'
+  span.textContent = direcao === 'asc' ? ' ▲' : ' ▼'
+  th.appendChild(span)
+}
+
+function ordenarTabelaPelaColuna(idTabela: string, indiceColuna: number, headers: HTMLTableCellElement[]): void {
+  try {
+    const estadoAtual = estadoOrdenacaoPorTabela.get(idTabela)
+    const direcao: 'asc' | 'desc' =
+      estadoAtual?.indiceColuna === indiceColuna && estadoAtual.direcao === 'asc' ? 'desc' : 'asc'
+    estadoOrdenacaoPorTabela.set(idTabela, { indiceColuna, direcao })
+
+    const linhas = linhasDaTabela(idTabela)
+    const valores = linhas.map((linha, index) => ({
+      id: linha.id || String(index),
+      valor: linha.children[indiceColuna]?.textContent?.trim() ?? '',
+    }))
+
+    const tipo: TipoColuna = detectarTipoColuna(valores.map((item) => item.valor))
+    const ordemIds = ordenarIds(valores, tipo, direcao)
+
+    const tabela = document.querySelector(idTabela)
+    const tbody = tabela?.querySelector('tbody')
+    if (!tbody) return
+
+    const linhaPorId = new Map(linhas.map((linha, index) => [linha.id || String(index), linha]))
+    ordemIds.forEach((id) => {
+      const linha = linhaPorId.get(id)
+      if (linha) tbody.appendChild(linha)
+    })
+
+    limparIndicadoresOrdenacao(headers)
+    aplicarIndicadorOrdenacao(headers[indiceColuna], direcao)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao ordenar tabela:', error)
+  }
+}
+
+function montarOrdenacaoTabelas(): void {
+  try {
+    IDS_TABELAS.forEach((idTabela) => {
+      const tabela = document.querySelector(idTabela)
+      if (!tabela) return
+
+      const headers = Array.from(tabela.querySelectorAll<HTMLTableCellElement>('thead > tr > th'))
+      headers.forEach((th, indiceColuna) => {
+        if (!th.textContent?.trim()) return
+
+        th.style.cursor = 'pointer'
+        th.addEventListener('click', () => {
+          ordenarTabelaPelaColuna(idTabela, indiceColuna, headers)
+        })
+      })
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao montar ordenação de tabelas:', error)
+  }
+}
 
 function atualizarCaption(tabela: Element, totalVisivel: number): void {
   const caption = tabela.querySelector('caption')
@@ -483,6 +558,7 @@ async function bootstrap(): Promise<void> {
     montarSelecaoMultipla()
     montarConfirmarAntesDeConcluir()
     montarFiltroBloco()
+    montarOrdenacaoTabelas()
     await montarFiltroAtribuicao()
 
     const config = await createSyncConfigStore().get()
