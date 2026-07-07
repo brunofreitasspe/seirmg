@@ -21,6 +21,10 @@ async function bootstrap(): Promise<void> {
     const syncConfig = await createSyncConfigStore().get()
     applyTheme(document.body, syncConfig.tema)
 
+    chrome.runtime.sendMessage({ type: 'seirmg:sei-detectado' }).catch((error) => {
+      console.error('[SEIRMG] Falha ao notificar sessão do SEI detectada:', error)
+    })
+
     await renderBadge()
   } catch (error) {
     console.error('[SEIRMG] Falha ao inicializar core:', error)
