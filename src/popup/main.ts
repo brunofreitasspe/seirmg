@@ -3,7 +3,7 @@ import { createLocalConfigStore } from '../lib/storage'
 async function render(): Promise<void> {
   try {
     const localConfig = await createLocalConfigStore().get()
-    const total = Object.keys(localConfig.blocoAssinaturaNotificado).length
+    const total = localConfig.blocoAssinaturaPendenteAtual.length
 
     const status = document.getElementById('status')
     const contagem = document.getElementById('contagem')
