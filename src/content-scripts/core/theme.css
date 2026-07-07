@@ -2,15 +2,436 @@
   --seirmg-accent-color: #017fff;
 }
 
+/* ===== Black — portado de C:\sei\seiplus\cs_modules\themes\black.css ===== */
+
 .seirmg-theme-black {
-  background-color: #1a1a1a !important;
-  color: #e0e0e0 !important;
+  --dark-gray: #363636;
 }
 
-.seirmg-theme-super-black {
-  background-color: #000000 !important;
-  color: #ffffff !important;
+.seirmg-theme-black * {
+  color: white;
+  background-color: transparent;
 }
+body.seirmg-theme-black {
+  background-color: black;
+}
+.seirmg-theme-black input, .seirmg-theme-black button, .seirmg-theme-black textarea, .seirmg-theme-black select {
+  background-color: black !important;
+  color: inherit !important;
+}
+.seirmg-theme-black option {
+  background-color: var(--dark-gray);
+}
+.seirmg-theme-black option:hover {
+  background-color: darkblue !important;
+}
+.seirmg-theme-black button *, .seirmg-theme-black span.infraTeclaAtalho {
+  color: inherit !important;
+}
+.seirmg-theme-black fieldset {
+  border-color: white !important;
+}
+.seirmg-theme-black legend {
+  color: inherit !important;
+  background-color: var(--dark-gray) !important;
+  border-color: white !important;
+}
+.seirmg-theme-black a:link { color: #0066ff; }
+.seirmg-theme-black a:visited { color: rgb(132, 0, 255); }
+.seirmg-theme-black a:hover { color: lightskyblue; }
+.seirmg-theme-black a:active { color: red; }
+.seirmg-theme-black li a:hover {
+  background-color: darkblue !important;
+  color: white !important;
+}
+.seirmg-theme-black #tblTipoProcedimento, .seirmg-theme-black #tblSeries {
+  background-color: black !important;
+}
+.seirmg-theme-black .dd-options {
+  background-color: black !important;
+}
+.seirmg-theme-black .dd-option-selected, .seirmg-theme-black .dd-selected {
+  background: darkgreen !important;
+}
+.seirmg-theme-black table.resultado td.resSnippet, .seirmg-theme-black table.resultado td.metatag, .seirmg-theme-black table.resultado td.metatag * {
+  background-color: inherit !important;
+}
+.seirmg-theme-black .totalEstatisticas {
+  background-color: darkblue !important;
+}
+.seirmg-theme-black #btnVisualizarAssinaturas { color: black !important; }
+.seirmg-theme-black th.tituloControle { background-color: transparent; }
+.seirmg-theme-black #divInfraAreaGlobal, .seirmg-theme-black #divAutenticacao, .seirmg-theme-black #divSistema {
+  background-color: transparent !important;
+}
+.seirmg-theme-black th.tituloControleExterno {
+  background-color: unset;
+}
+
+.seirmg-theme-black .andamentoConcluido { background-color: black; }
+.seirmg-theme-black .andamentoAberto { background-color: darkgoldenrod; }
+.seirmg-theme-black .andamentoAberto td { color: black; }
+.seirmg-theme-black .andamentoAberto td a { color: blue; }
+
+.seirmg-theme-black div.infraBarraSistema {
+  background-image: none;
+  border-bottom-color: var(--dark-gray);
+}
+.seirmg-theme-black #divInfraBarraSistemaE img:first-child, .seirmg-theme-black #divComandos img {
+  filter: brightness(50%);
+}
+
+.seirmg-theme-black #main-menu, .seirmg-theme-black #main-menu ul {
+  background-color: var(--dark-gray) !important;
+  border: none;
+}
+.seirmg-theme-black #main-menu li, .seirmg-theme-black div.infraAreaTelaE {
+  background-color: black !important;
+}
+.seirmg-theme-black #main-menu a {
+  color: inherit !important;
+  background-color: inherit;
+  border-bottom-color: var(--dark-gray);
+}
+.seirmg-theme-black #main-menu li a:hover, .seirmg-theme-black #main-menu li a.highlighted {
+  background-color: darkblue !important;
+}
+
+.seirmg-theme-black #s2id_hdnDestinatario ul.select2-choices, .seirmg-theme-black li.select2-search-choice {
+  background-image: none !important;
+}
+.seirmg-theme-black #s2id_hdnDestinatario *, .seirmg-theme-black #select2-drop, .seirmg-theme-black li.select2-search-choice,
+.seirmg-theme-black li.select2-search-choice *, .seirmg-theme-black li.select2-no-results, .seirmg-theme-black li.select2-searching {
+  background-color: black !important;
+}
+
+.seirmg-theme-black div.infraTooltipTitulo { color: black !important; }
+.seirmg-theme-black div.infraTooltipTexto { color: black !important; }
+
+.seirmg-theme-black div.infraAreaGlobal {
+  border-color: var(--dark-gray);
+}
+.seirmg-theme-black a.ancoraPadraoPreta, .seirmg-theme-black caption.infraCaption, .seirmg-theme-black a.processoVisualizado {
+  color: inherit;
+}
+.seirmg-theme-black a.processoVisitado {
+  color: #3E8BFF;
+}
+.seirmg-theme-black label.infraLabelOpcional, .seirmg-theme-black label.infraLabelObrigatorio,
+.seirmg-theme-black label.infraLabelCheckbox, .seirmg-theme-black label.infraLabelRadio {
+  color: inherit;
+}
+.seirmg-theme-black a.ancoraSigla, .seirmg-theme-black a.ancoraHistoricoProcesso {
+  color: #0066ff;
+}
+.seirmg-theme-black a.ancoraOpcao {
+  color: inherit;
+}
+.seirmg-theme-black .infraSpanRealce {
+  background-color: darkgreen;
+}
+.seirmg-theme-black div.tituloProcessoDocumento, .seirmg-theme-black div.tituloProcessoDocumento label {
+  background-color: var(--dark-gray);
+  color: white;
+  border-bottom-color: black;
+}
+.seirmg-theme-black tr.trVermelha {
+  background-color: #550000;
+}
+
+.seirmg-theme-black caption.infraCaption {
+  border-bottom-color: lightgray;
+}
+.seirmg-theme-black table.infraTable {
+  background-color: #555 !important;
+}
+.seirmg-theme-black th.infraTh, .seirmg-theme-black th.infraTh div {
+  background-color: #555;
+  background-image: none;
+}
+.seirmg-theme-black tr.infraTrClara {
+  background-color: black;
+}
+.seirmg-theme-black tr.infraTrEscura {
+  background-color: #333;
+}
+.seirmg-theme-black tr.infraTrAcessada td {
+  background-color: transparent !important;
+}
+.seirmg-theme-black tr.infraTrAcessada a {
+  color: unset !important;
+}
+.seirmg-theme-black div.infraBarraComandos {
+  border-top-color: transparent;
+  border-bottom-color: transparent;
+}
+.seirmg-theme-black div.infraAreaDados {
+  border-bottom-color: transparent;
+}
+.seirmg-theme-black div.infraAreaTelaD {
+  border-color: transparent;
+}
+.seirmg-theme-black .infraProcessando {
+  color: black !important;
+  background-color: transparent !important;
+  filter: invert(100%);
+}
+.seirmg-theme-black tr.infraTrMarcada td {
+  background-color: transparent !important;
+}
+.seirmg-theme-black tr.infraTrMarcada {
+  background-color: #003800 !important;
+}
+.seirmg-theme-black tr.infraTrSelecionada,
+.seirmg-theme-black tr.infraTrSelecionada td,
+.seirmg-theme-black td.infraTdSelecionada {
+  background-color: darkblue !important;
+}
+
+.seirmg-theme-black div.infraAjaxAutoCompletar {
+  background-color: black;
+}
+.seirmg-theme-black div.infraAjaxAutoCompletar a {
+  color: lightgray;
+}
+.seirmg-theme-black div.infraAjaxAutoCompletar li.selected {
+  background-color: darkblue;
+}
+.seirmg-theme-black .infraAjaxMarcarSelecao {
+  border-color: gray !important;
+}
+
+.seirmg-theme-black #infraCalendario, .seirmg-theme-black #divCalendario .diaUtil {
+  background-color: black;
+  border: none;
+}
+.seirmg-theme-black .calendar_week_column, .seirmg-theme-black #infraCalendario .todaysDate,
+.seirmg-theme-black #divCalendario .diaFimDeSemana {
+  background-color: #333333 !important;
+  border: none;
+}
+.seirmg-theme-black #divCalendario .diaAtrasado {
+  background-color: darkred !important;
+}
+.seirmg-theme-black #divCalendario .diaConteudo a {
+  color: black;
+}
+
+.seirmg-theme-black div.infraBarraSuperior {
+  filter: brightness(70%);
+}
+
+.seirmg-theme-black .ms-drop {
+  background-color: var(--dark-gray);
+}
+.seirmg-theme-black .ms-drop:hover {
+  background-color: darkblue;
+}
+
+.seirmg-theme-black #divArvore {
+  border-bottom-color: white;
+}
+.seirmg-theme-black #divRelacionados {
+  border-top-color: white;
+}
+.seirmg-theme-black a.ancoraRelacionadosParcial {
+  color: inherit;
+}
+
+.seirmg-theme-black img[src*="aguarde.gif"],
+.seirmg-theme-black img[src*="aguarde_pequeno.gif"],
+.seirmg-theme-black img[src*="ajuda.gif"],
+.seirmg-theme-black img[src*="sei_assinar_pequeno.gif"],
+.seirmg-theme-black img[src*="sei_autenticar_pequeno.gif"],
+.seirmg-theme-black img[src*="sei_autenticar_pequeno_nao_bloqueado.gif"] {
+  filter: invert(100%);
+}
+
+.seirmg-theme-black .scayt-misspell-word {
+  color: inherit;
+}
+
+.seirmg-theme-black tr.trEspaco {
+  background-color: black;
+}
+
+.seirmg-theme-black tr.resTituloRegistro td {
+  background-color: var(--dark-gray) !important;
+}
+
+.seirmg-theme-black div.tituloNovidade {
+  border-bottom-color: transparent;
+}
+
+.seirmg-theme-black #ifrArvoreHtml {
+  background-color: white;
+  filter: brightness(90%);
+}
+
+.seirmg-theme-black .texto {
+  color: inherit;
+  background: inherit;
+}
+.seirmg-theme-black .exemplo {
+  background: inherit;
+}
+.seirmg-theme-black .exemplo strong {
+  color: inherit;
+}
+
+.seirmg-theme-black #divAreaRestrita {
+  background-color: inherit !important;
+}
+.seirmg-theme-black #divSistema {
+  filter: brightness(50%);
+}
+
+.seirmg-theme-black .infraTrseippalerta {
+  background-color: #330 !important;
+}
+.seirmg-theme-black .infraTrseippcritico {
+  background-color: #300 !important;
+}
+.seirmg-theme-black .infraTrEscura:hover, .seirmg-theme-black .infraTrClara:hover, .seirmg-theme-black .infraTrseippalerta:hover, .seirmg-theme-black .infraTrseippcritico:hover { background-color: darkblue !important; }
+.seirmg-theme-black .infraTrClara:hover * { color: white !important; }
+
+.seirmg-theme-black .seipp-options label:hover {
+  background-color: darkblue !important;
+}
+.seirmg-theme-black .toggle-options, .seirmg-theme-black .toggle-options:visited {
+  color: #0066ff !important;
+}
+.seirmg-theme-black .toggle-options > span {
+  filter: invert(100%);
+}
+.seirmg-theme-black a.seipp-assinatura {
+  background-color: #660 !important;
+}
+
+.seirmg-theme-black .cke_dialog_contents_body input, .seirmg-theme-black .cke_dialog_contents_body select {
+  background-color: white !important;
+}
+
+/* ===== Super Black — portado de C:\sei\seiplus\cs_modules\themes\super-black.css ===== */
+
+body.seirmg-theme-super-black,
+.seirmg-theme-super-black .divLink,
+.seirmg-theme-super-black .infraAreaTelaDEscondePequeno {
+  background-color: black;
+  color: white;
+}
+
+.seirmg-theme-super-black input, .seirmg-theme-super-black button, .seirmg-theme-super-black textarea, .seirmg-theme-super-black select {
+  background-color: black;
+  color: white;
+}
+.seirmg-theme-super-black .infraCheckboxDiv label:focus::before, .seirmg-theme-super-black .infraCheckboxDiv label:hover::before,
+.seirmg-theme-super-black select:focus, .seirmg-theme-super-black textarea:focus, .seirmg-theme-super-black input:focus {
+  background-color: #202020;
+}
+
+.seirmg-theme-super-black .infraCheckboxDiv label::before {
+  background-color: black;
+}
+
+.seirmg-theme-super-black label.infraLabelOpcional, .seirmg-theme-super-black label.infraLabelObrigatorio {
+  color: gray;
+}
+
+.seirmg-theme-super-black .infraCorBarraSistema, .seirmg-theme-super-black .infraCorBarraSuperior {
+  background-color: black !important;
+}
+
+.seirmg-theme-super-black .infraBarraLocalizacao {
+  color: gray;
+}
+
+.seirmg-theme-super-black legend.infraLegend, .seirmg-theme-super-black table.infraTable thead tr, .seirmg-theme-super-black table.infraTable tr > th.infraTh {
+  background: #555;
+}
+
+.seirmg-theme-super-black tr.infraTrClara, .seirmg-theme-super-black td.infraTdClara {
+  background-color: black;
+}
+
+.seirmg-theme-super-black a.processoVisualizado, .seirmg-theme-super-black table.infraTable, .seirmg-theme-super-black a {
+  color: white;
+}
+
+.seirmg-theme-super-black tr.infraTrSelecionada, .seirmg-theme-super-black tr.infraTrSelecionada td, .seirmg-theme-super-black td.infraTdSelecionada {
+  background-color: #555 !important;
+}
+
+.seirmg-theme-super-black tr.infraTrAcessada, .seirmg-theme-super-black tr.infraTrAcessada td, .seirmg-theme-super-black td.infraTdAcessada {
+  background-color: #242400 !important;
+}
+
+.seirmg-theme-super-black #divFiltro {
+  border-bottom: 2px solid;
+}
+
+.seirmg-theme-super-black #btnInfraTopo,
+.seirmg-theme-super-black #divTabelaProcesso img[src*=marcador_preto] {
+  filter: drop-shadow(0px 0px 2px white);
+}
+
+.seirmg-theme-super-black #txtPesquisaRapida {
+  background-color: black;
+  color: white;
+}
+
+.seirmg-theme-super-black span.infraAcaoBarraConjugada, .seirmg-theme-super-black span.infraAcaoBarraConjugada:hover {
+  background-color: black;
+}
+
+.seirmg-theme-super-black #lnkInfraUnidade {
+  background-color: black;
+}
+
+.seirmg-theme-super-black .divInfraAreaTelaE, .seirmg-theme-super-black #divInfraPesquisarMenu {
+  background-color: black;
+}
+
+.seirmg-theme-super-black .infraPesquisarMenu, .seirmg-theme-super-black .infraPesquisarMenu:focus {
+  background-color: black;
+  color: white !important;
+}
+
+.seirmg-theme-super-black div.infraArvore a {
+  color: white;
+}
+
+.seirmg-theme-super-black div.infraArvore .noVisitado {
+  background-color: black;
+  color: #3E8BFF;
+}
+
+.seirmg-theme-super-black div.infraArvore img[src*=assinatura2],
+.seirmg-theme-super-black div.infraArvore img[src*=autenticacao2] {
+  filter: invert(100%);
+}
+
+.seirmg-theme-super-black #divInfraAreaTelaD {
+  background-color: black;
+}
+
+.seirmg-theme-super-black .barraBotoesSEI {
+  border: black !important;
+}
+
+.seirmg-theme-super-black #divArvoreConteudo {
+  background-color: black;
+}
+
+.seirmg-theme-super-black #divArvoreConteudo #divArvoreInformacao {
+  color: white;
+}
+
+.seirmg-theme-super-black #seipp-div-options-ui .card {
+  background-color: black;
+}
+
+/* ===== Custom ===== */
 
 .seirmg-theme-custom a,
 .seirmg-theme-custom .infraBotao {
