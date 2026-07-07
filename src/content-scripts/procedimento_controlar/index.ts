@@ -632,6 +632,7 @@ function reaplicarTratamentosNasLinhasNovas(idTabela: string, config: SyncConfig
   aplicarEspecificacaoEmLinhas(config.controleProcessos.especificacao, linhas)
   reaplicarFiltrosAposNovasLinhas.forEach((reaplicar) => reaplicar())
   reaplicarOrdenacaoAtual(idTabela)
+  linhas.forEach((linha) => desabilitarSelecaoNaLinha(linha))
 }
 
 async function buscarProximasPaginas(
