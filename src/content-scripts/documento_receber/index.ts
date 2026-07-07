@@ -1,10 +1,79 @@
+import { formatarDataHoje } from '../../features/documento-receber/autopreencher'
 import {
   extrairUrlUnidadeSelecionarReabertura,
   processoFechadoEmTodasUnidades,
 } from '../../features/documento-receber/forcarReabertura'
 import { fetchText } from '../../lib/result'
+import { createSyncConfigStore } from '../../lib/storage'
+import type { DocumentoExternoConfig } from '../../lib/storage'
+
+function criarAvisoPreenchimento(): HTMLSpanElement {
+  const aviso = document.createElement('span')
+  aviso.style.backgroundColor = 'red'
+  aviso.textContent =
+    'Houve preenchimento de valores pré configurados nesta tela. Verifique se estão corretos!'
+  return aviso
+}
+
+function autopreencherDocumentoExterno(config: DocumentoExternoConfig): void {
+  try {
+    if (!config.ativo) return
+
+    const inputData = document.getElementById('txtDataElaboracao') as HTMLInputElement | null
+    if (!inputData) return
+
+    inputData.value = formatarDataHoje(new Date())
+
+    setTimeout(() => {
+      try {
+        if (config.formato === 'N') {
+          document.querySelector<HTMLInputElement>('#optNato')?.click()
+        } else if (config.formato === 'D') {
+          document.querySelector<HTMLInputElement>('#optDigitalizado')?.click()
+          const selectConferencia = document.getElementById(
+            'selTipoConferencia'
+          ) as HTMLSelectElement | null
+          if (selectConferencia) selectConferencia.value = config.tipoConferencia
+        }
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao preencher formato do documento:', error)
+      }
+    }, 500)
+
+    if (config.nivelAcesso === 'R') {
+      document.querySelector<HTMLInputElement>('#optRestrito')?.click()
+    } else if (config.nivelAcesso === 'S') {
+      document.querySelector<HTMLInputElement>('#optSigiloso')?.click()
+    } else {
+      document.querySelector<HTMLInputElement>('#optPublico')?.click()
+    }
+
+    if (config.nivelAcesso === 'S' || config.nivelAcesso === 'R') {
+      setTimeout(() => {
+        const selectHipotese = document.getElementById('selHipoteseLegal') as HTMLSelectElement | null
+        if (selectHipotese) selectHipotese.value = config.hipoteseLegal
+      }, 500)
+    }
+
+    document
+      .querySelector('#divInfraBarraComandosInferior #btnSalvar')
+      ?.insertAdjacentElement('beforebegin', criarAvisoPreenchimento())
+    document
+      .querySelector('#divInfraBarraComandosSuperior #btnSalvar')
+      ?.insertAdjacentElement('beforebegin', criarAvisoPreenchimento())
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao autopreencher documento externo:', error)
+  }
+}
 
 async function bootstrap(): Promise<void> {
+  try {
+    const syncConfig = await createSyncConfigStore().get()
+    autopreencherDocumentoExterno(syncConfig.documentoExterno)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao carregar configuração de documento externo:', error)
+  }
+
   try {
     const divAlerta = document.getElementById('divUnidadesReabertura')
     if (!divAlerta || getComputedStyle(divAlerta).display !== 'block') return
