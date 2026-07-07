@@ -12,13 +12,13 @@
 - **Lote D2 — Ponto de controle com cor customizável** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-d2-ponto-controle-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-d2-ponto-controle.md`
 - **Lote E — Controle de Processos: núcleo de filtros e seleção** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-e-filtros-selecao-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-e-filtros-selecao.md`
 - **Lote E2 — Filtro por atribuição e por bloco** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-e2-filtro-atribuicao-bloco-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-e2-filtro-atribuicao-bloco.md`
+- **Lote F — Ações em lote sobre processos** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-f-acoes-lote-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-f-acoes-lote.md`. ⚠️ **Pendente de validação manual numa instância SEI real** — `controle_unidade_gerar` e `documento_receber` dependem de regex sobre `<script>` gerado dinamicamente pelo SEI, não verificável sem instância ao vivo (ver aviso de risco na spec).
 
 ## Roteiro (ordem sugerida)
 
 | # | Lote | Escopo | Fonte |
 |---|------|--------|-------|
 | E3 | **Controle de Processos — agrupar/rolagem/ordenação (Sei Pro)** | Agrupar lista de processos, rolagem infinita, ordenação por cabeçalho persistente. Sem código-fonte lido byte-a-byte (só documentação `pages/*.md`) — avaliar viabilidade de porte ao chegar a vez deste lote. | Sei Pro §2.3 [doc] |
-| F | **Ações em lote sobre processos** | Retirar sobrestamento/reabrir em lote; controle de unidade em lote; forçar reabertura de processo fechado em todas unidades. | Sei++ §1.2 |
 | G | **Visualização de processo (árvore e painel)** | Dados do processo/interessados na árvore; copiar link/número (SEI<4); usar documento como modelo; dropzone → documento externo; anotação estilo post-it (+ atualização na árvore); abrir documento em nova aba; título da aba; ajustes visuais nativos; toolbar/menu rápido da árvore, numeração de documentos, redimensionar árvore, histórico de processos visitados (Sei Pro). | Sei++ §1.2, Sei Pro §2.3 |
 | H | **Documento externo + ações em lote de documentos** | Autopreencher recebimento de documento externo; envio múltiplo de documentos externos (Sei Pro, multi-arquivo); Ações em Lote (ciência/excluir/sigilo/assinar/cancelar); Documentos em Lote via CSV com campos dinâmicos. | Sei++ §1.2, Sei Pro §2.3 |
 | I | **Editor de documentos — formatação e produtividade básica** | Hiperlinks, equações LaTeX, alinhar texto, fonte, copiar formatação, tabela rápida, quebra de página, parágrafos numerados, sumário, nota de rodapé, primeira letra maiúscula automática, salvamento automático, teclas de atalho configuráveis, título da página, URL amigável. | Sei Pro §2.3 [doc] |
