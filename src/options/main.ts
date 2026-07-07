@@ -107,5 +107,45 @@ async function carregarSecaoProcessosNovos(): Promise<void> {
   }
 }
 
+async function carregarAbaGeral(): Promise<void> {
+  try {
+    const store = createSyncConfigStore()
+    const config = await store.get()
+
+    const inputSelecaoMassa = document.getElementById(
+      'geral-selecao-massa-ativo'
+    ) as HTMLInputElement | null
+    const status = document.getElementById('geral-status')
+
+    if (inputSelecaoMassa) {
+      inputSelecaoMassa.checked = config.featureFlags.selecaoEmMassaBlocoAssinatura
+    }
+
+    document.getElementById('geral-salvar')?.addEventListener('click', async () => {
+      try {
+        const atualizado = {
+          ...config,
+          featureFlags: {
+            ...config.featureFlags,
+            selecaoEmMassaBlocoAssinatura: inputSelecaoMassa?.checked ?? true,
+          },
+        }
+        await store.set(atualizado)
+        if (status) {
+          status.textContent = 'Salvo!'
+          setTimeout(() => {
+            status.textContent = ''
+          }, 2000)
+        }
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao salvar configuração da aba Geral:', error)
+      }
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao carregar aba Geral:', error)
+  }
+}
+
+carregarAbaGeral()
 carregarAbaAssinatura()
 carregarSecaoProcessosNovos()
