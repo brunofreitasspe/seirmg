@@ -1,6 +1,14 @@
 import { parseBlocoAssinaturaTable } from '../../features/bloco-assinatura/parser'
-import { createLocalConfigStore } from '../../lib/storage'
+import {
+  deveSelecionar,
+  encontrarIndiceColunaAssinaturas,
+  extrairNomeUsuario,
+  type TipoSelecaoDocumentos,
+} from '../../features/bloco-assinatura/selecaoDocumentos'
+import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
 import { renderBadge } from '../core/badge'
+
+const ID_SELECAO_DOCUMENTOS = 'seirmg-selecao-documentos-assinar'
 
 async function processarPagina(): Promise<void> {
   try {
@@ -19,7 +27,83 @@ async function processarPagina(): Promise<void> {
   }
 }
 
+function estaNaTelaDoBloco(): boolean {
+  const barraLocalizacao = document.querySelector('#divInfraBarraLocalizacao')
+  return (
+    (barraLocalizacao?.textContent?.includes('Bloco de Assinatura') ?? false) &&
+    document.querySelector('#btnAssinar') !== null
+  )
+}
+
+function aplicarSelecao(tipo: TipoSelecaoDocumentos, usuario: string): void {
+  const tabela = document.querySelector('#divInfraAreaTabela')
+  if (!tabela) return
+
+  const cabecalhos = Array.from(tabela.querySelectorAll('tr > th')).map(
+    (th) => th.textContent?.trim() ?? ''
+  )
+  const indiceAssinaturas = encontrarIndiceColunaAssinaturas(cabecalhos)
+
+  const linhas = tabela.querySelectorAll('tbody > tr[id^="trSeq"], tbody > tr[id^="trPos"]')
+  linhas.forEach((linha) => {
+    const checkbox = linha.querySelector<HTMLInputElement>('input[type="checkbox"]')
+    if (!checkbox) return
+
+    const celulaAssinaturas = linha.querySelectorAll('td')[indiceAssinaturas]
+    const textoAssinaturas = celulaAssinaturas?.textContent?.trim() ?? ''
+    const selecionado = deveSelecionar(tipo, textoAssinaturas, usuario)
+
+    if (selecionado !== checkbox.checked) checkbox.click()
+  })
+}
+
+async function montarSelecaoDocumentos(): Promise<void> {
+  try {
+    const syncConfig = await createSyncConfigStore().get()
+    if (!syncConfig.featureFlags.selecaoEmMassaBlocoAssinatura) return
+
+    if (!estaNaTelaDoBloco()) return
+    if (document.getElementById(ID_SELECAO_DOCUMENTOS)) return
+
+    const tituloUsuario = document.querySelector('#lnkUsuarioSistema')?.getAttribute('title') ?? ''
+    const usuario = extrairNomeUsuario(tituloUsuario)
+    if (!usuario) {
+      console.error('[SEIRMG] Falha ao obter o nome do usuário para seleção em massa de documentos.')
+      return
+    }
+
+    const caption = document.querySelector('#divInfraAreaTabela caption.infraCaption')
+    if (!caption) return
+
+    const container = document.createElement('div')
+    container.id = ID_SELECAO_DOCUMENTOS
+    container.innerHTML = `
+      <span>Selecionar:</span>
+      <a href="#" data-tipo="todos">Todos</a>
+      <a href="#" data-tipo="nenhum">Nenhum</a>
+      <a href="#" data-tipo="sem-assinatura">Sem nenhuma assinatura</a>
+      <a href="#" data-tipo="sem-minha-assinatura">Sem a minha assinatura</a>
+      <a href="#" data-tipo="com-minha-assinatura">Com a minha assinatura</a>
+    `
+    caption.insertAdjacentElement('beforeend', container)
+
+    container.addEventListener('click', (evento) => {
+      const alvo = evento.target
+      if (!(alvo instanceof HTMLAnchorElement)) return
+      evento.preventDefault()
+
+      const tipo = alvo.dataset.tipo as TipoSelecaoDocumentos | undefined
+      if (!tipo) return
+
+      aplicarSelecao(tipo, usuario)
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao montar seleção em massa de documentos:', error)
+  }
+}
+
 processarPagina()
+montarSelecaoDocumentos()
 
 const areaTabela = document.querySelector('#divInfraAreaTabela')
 if (areaTabela) {
