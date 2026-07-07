@@ -122,6 +122,34 @@ describe('createSyncConfigStore', () => {
     await store.set(atualizado)
     expect(await store.get()).toEqual(atualizado)
   })
+
+  it('inclui documentoExterno padrão quando vazio', async () => {
+    const store = createSyncConfigStore(criarAreaFalsa())
+    expect((await store.get()).documentoExterno).toEqual({
+      ativo: true,
+      formato: 'N',
+      tipoConferencia: '',
+      nivelAcesso: 'P',
+      hipoteseLegal: '',
+    })
+  })
+
+  it('persiste alteração de documentoExterno', async () => {
+    const area = criarAreaFalsa()
+    const store = createSyncConfigStore(area)
+    const atualizado = {
+      ...DEFAULT_SYNC_CONFIG,
+      documentoExterno: {
+        ativo: false,
+        formato: 'D' as const,
+        tipoConferencia: 'Cópia Simples',
+        nivelAcesso: 'R' as const,
+        hipoteseLegal: '1',
+      },
+    }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
 })
 
 describe('createLocalConfigStore', () => {

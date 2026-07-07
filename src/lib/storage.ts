@@ -67,6 +67,17 @@ export interface PontoControleConfig {
   regras: ConfiguracaoPontoControle[]
 }
 
+export type FormatoDocumento = 'N' | 'D'
+export type NivelAcessoDocumento = 'P' | 'R' | 'S'
+
+export interface DocumentoExternoConfig {
+  ativo: boolean
+  formato: FormatoDocumento
+  tipoConferencia: string
+  nivelAcesso: NivelAcessoDocumento
+  hipoteseLegal: string
+}
+
 export interface SyncConfig {
   schemaVersion: 1
   featureFlags: FeatureFlags
@@ -75,6 +86,7 @@ export interface SyncConfig {
   processosNovos: ProcessosNovosConfig
   controleProcessos: ControleProcessosConfig
   pontoControle: PontoControleConfig
+  documentoExterno: DocumentoExternoConfig
 }
 
 export interface NotificadoState {
@@ -132,6 +144,13 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
   pontoControle: {
     ativo: true,
     regras: [],
+  },
+  documentoExterno: {
+    ativo: true,
+    formato: 'N',
+    tipoConferencia: '',
+    nivelAcesso: 'P',
+    hipoteseLegal: '',
   },
 }
 
