@@ -69,6 +69,40 @@ describe('createSyncConfigStore', () => {
     await store.set(atualizado)
     expect(await store.get()).toEqual(atualizado)
   })
+
+  it('inclui controleProcessos padrão quando vazio', async () => {
+    const store = createSyncConfigStore(criarAreaFalsa())
+    expect((await store.get()).controleProcessos).toEqual({
+      prazos: {
+        ativo: true,
+        exibirDias: true,
+        exibirPrazo: true,
+        alertaDias: 30,
+        criticoDias: 60,
+        alertaPrazo: 10,
+        criticoPrazo: 5,
+      },
+      coresProcesso: { ativo: true, regras: [] },
+      especificacao: { ativo: true, modo: 'mostrar' },
+    })
+  })
+
+  it('persiste alteração de controleProcessos', async () => {
+    const area = criarAreaFalsa()
+    const store = createSyncConfigStore(area)
+    const atualizado = {
+      ...DEFAULT_SYNC_CONFIG,
+      controleProcessos: {
+        ...DEFAULT_SYNC_CONFIG.controleProcessos,
+        coresProcesso: {
+          ativo: false,
+          regras: [{ valor: 'orçamento', cor: '#ff0000' }],
+        },
+      },
+    }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
 })
 
 describe('createLocalConfigStore', () => {

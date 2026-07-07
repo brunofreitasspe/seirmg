@@ -22,12 +22,46 @@ export interface ProcessosNovosConfig {
   tocarSom: boolean
 }
 
+export interface ConfiguracaoCor {
+  valor: string
+  cor: string
+}
+
+export interface PrazosConfig {
+  ativo: boolean
+  exibirDias: boolean
+  exibirPrazo: boolean
+  alertaDias: number
+  criticoDias: number
+  alertaPrazo: number
+  criticoPrazo: number
+}
+
+export interface CoresProcessoConfig {
+  ativo: boolean
+  regras: ConfiguracaoCor[]
+}
+
+export type ModoEspecificacao = 'mostrar' | 'substituir'
+
+export interface EspecificacaoConfig {
+  ativo: boolean
+  modo: ModoEspecificacao
+}
+
+export interface ControleProcessosConfig {
+  prazos: PrazosConfig
+  coresProcesso: CoresProcessoConfig
+  especificacao: EspecificacaoConfig
+}
+
 export interface SyncConfig {
   schemaVersion: 1
   featureFlags: FeatureFlags
   tema: ThemeConfig
   blocoAssinatura: BlocoAssinaturaConfig
   processosNovos: ProcessosNovosConfig
+  controleProcessos: ControleProcessosConfig
 }
 
 export interface NotificadoState {
@@ -61,6 +95,25 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     ativo: true,
     intervaloMinutos: 5,
     tocarSom: true,
+  },
+  controleProcessos: {
+    prazos: {
+      ativo: true,
+      exibirDias: true,
+      exibirPrazo: true,
+      alertaDias: 30,
+      criticoDias: 60,
+      alertaPrazo: 10,
+      criticoPrazo: 5,
+    },
+    coresProcesso: {
+      ativo: true,
+      regras: [],
+    },
+    especificacao: {
+      ativo: true,
+      modo: 'mostrar',
+    },
   },
 }
 
