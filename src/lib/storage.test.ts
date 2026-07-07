@@ -84,6 +84,7 @@ describe('createSyncConfigStore', () => {
       },
       coresProcesso: { ativo: true, regras: [] },
       especificacao: { ativo: true, modo: 'mostrar' },
+      rolagemInfinita: { ativo: false },
     })
   })
 
@@ -98,6 +99,20 @@ describe('createSyncConfigStore', () => {
           ativo: false,
           regras: [{ valor: 'orçamento', cor: '#ff0000' }],
         },
+      },
+    }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
+
+  it('persiste alteração de controleProcessos.rolagemInfinita', async () => {
+    const area = criarAreaFalsa()
+    const store = createSyncConfigStore(area)
+    const atualizado = {
+      ...DEFAULT_SYNC_CONFIG,
+      controleProcessos: {
+        ...DEFAULT_SYNC_CONFIG.controleProcessos,
+        rolagemInfinita: { ativo: true },
       },
     }
     await store.set(atualizado)

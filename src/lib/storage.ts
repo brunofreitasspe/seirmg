@@ -50,10 +50,15 @@ export interface EspecificacaoConfig {
   modo: ModoEspecificacao
 }
 
+export interface RolagemInfinitaConfig {
+  ativo: boolean
+}
+
 export interface ControleProcessosConfig {
   prazos: PrazosConfig
   coresProcesso: CoresProcessoConfig
   especificacao: EspecificacaoConfig
+  rolagemInfinita: RolagemInfinitaConfig
 }
 
 export interface ConfiguracaoPontoControle {
@@ -141,6 +146,9 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     especificacao: {
       ativo: true,
       modo: 'mostrar',
+    },
+    rolagemInfinita: {
+      ativo: false,
     },
   },
   pontoControle: {
