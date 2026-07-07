@@ -5,14 +5,19 @@
     <title>SEIRMG</title>
     <style>
       body { font-family: system-ui, sans-serif; width: 260px; padding: 12px; }
-      #status { font-weight: bold; }
-      #abrir-bloco { margin-top: 8px; width: 100%; }
+      #status, #status-processos { font-weight: bold; }
+      #abrir-bloco, #abrir-processos { margin-top: 8px; width: 100%; }
+      hr { margin: 12px 0; border: none; border-top: 1px solid #ddd; }
     </style>
   </head>
   <body>
     <div id="status">Carregando...</div>
     <div id="contagem"></div>
     <button id="abrir-bloco">Abrir bloco de assinatura</button>
+    <hr />
+    <div id="status-processos">Carregando...</div>
+    <div id="contagem-processos"></div>
+    <button id="abrir-processos">Abrir Controle de Processos</button>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
