@@ -9,12 +9,12 @@
 - **Lote B — Bloco de Assinatura: seleção em massa** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-b-selecao-massa-bloco-assinatura-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-b-selecao-massa-bloco-assinatura.md`
 - **Lote C — Motor de tema (dark mode) + aba Aparência** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-c-tema-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-c-tema.md`
 - **Lote D — Controle de Processos: prazos, cor por especificação e especificação na listagem** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-d-controle-processos-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-d-controle-processos.md`
+- **Lote D2 — Ponto de controle com cor customizável** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-d2-ponto-controle-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-d2-ponto-controle.md`
 
 ## Roteiro (ordem sugerida)
 
 | # | Lote | Escopo | Fonte |
 |---|------|--------|-------|
-| D2 | **Ponto de controle com cor customizável** | Filtro CSS que aproxima uma cor HEX alvo (`colorToFilter.js`, solver SPSA) aplicado aos ícones de ponto de controle (`pontoControleCores.js`), reaproveitando o componente `listaEditavel.ts` do Lote D sem mudanças. Separado do Lote D por ser um algoritmo de natureza bem diferente (otimização numérica vs. leitura de tabela). | Sei++ §1.2 |
 | E | **Controle de Processos — filtros e seleção** | Filtro composto + busca "OU" (`filtra_processos`); filtro por atribuição/info de blocos; seleção múltipla via Shift+clique; confirmação antes de concluir em lote; correção de tabelas nativas (thead); agrupar lista de processos, rolagem infinita e ordenação por cabeçalho persistente (Sei Pro). | Sei++ §1.2, Sei Pro §2.3 |
 | F | **Ações em lote sobre processos** | Retirar sobrestamento/reabrir em lote; controle de unidade em lote; forçar reabertura de processo fechado em todas unidades. | Sei++ §1.2 |
 | G | **Visualização de processo (árvore e painel)** | Dados do processo/interessados na árvore; copiar link/número (SEI<4); usar documento como modelo; dropzone → documento externo; anotação estilo post-it (+ atualização na árvore); abrir documento em nova aba; título da aba; ajustes visuais nativos; toolbar/menu rápido da árvore, numeração de documentos, redimensionar árvore, histórico de processos visitados (Sei Pro). | Sei++ §1.2, Sei Pro §2.3 |
