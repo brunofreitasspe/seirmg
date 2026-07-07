@@ -67,5 +67,13 @@ export default defineManifest({
       js: ['src/content-scripts/procedimento_controlar/index.ts'],
       run_at: 'document_idle',
     },
+    {
+      matches: [
+        '*://*.br/*controlador.php?acao=*',
+        '*://*.org/*controlador.php?acao=*',
+      ],
+      js: ['src/content-scripts/ponto_controle/index.ts'],
+      run_at: 'document_idle',
+    },
   ],
 })
