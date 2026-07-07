@@ -114,7 +114,42 @@
       <span id="processos-status"></span>
     </section>
     <section id="painel-editor" class="painel">
-      <p>Em breve: funcionalidades herdadas do editor de documentos do Sei Pro.</p>
+      <h2>Editor de Documentos</h2>
+      <h3>Autopreencher Documento Externo</h3>
+      <label>
+        <input type="checkbox" id="editor-doc-externo-ativo" />
+        Ativar autopreenchimento ao receber documento externo
+      </label>
+      <br />
+      <label>
+        Formato:
+        <select id="editor-doc-externo-formato">
+          <option value="N">Nato-digital</option>
+          <option value="D">Digitalizado</option>
+        </select>
+      </label>
+      <br />
+      <label>
+        Tipo de conferência (quando digitalizado):
+        <input type="text" id="editor-doc-externo-tipo-conferencia" />
+      </label>
+      <br />
+      <label>
+        Nível de acesso:
+        <select id="editor-doc-externo-nivel-acesso">
+          <option value="P">Público</option>
+          <option value="R">Restrito</option>
+          <option value="S">Sigiloso</option>
+        </select>
+      </label>
+      <br />
+      <label>
+        Hipótese legal (quando restrito/sigiloso):
+        <input type="text" id="editor-doc-externo-hipotese-legal" />
+      </label>
+      <br />
+      <button id="editor-salvar">Salvar</button>
+      <span id="editor-status"></span>
     </section>
     <section id="painel-notificacoes" class="painel">
       <h2>Notificações</h2>

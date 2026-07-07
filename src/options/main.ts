@@ -4,7 +4,9 @@ import {
   createSyncConfigStore,
   type ConfiguracaoCor,
   type ConfiguracaoPontoControle,
+  type FormatoDocumento,
   type ModoEspecificacao,
+  type NivelAcessoDocumento,
   type ThemePreset,
 } from '../lib/storage'
 import { montarListaEditavel } from './listaEditavel'
@@ -312,6 +314,59 @@ async function carregarAbaProcessos(): Promise<void> {
   }
 }
 
+async function carregarAbaEditor(): Promise<void> {
+  try {
+    const store = createSyncConfigStore()
+    const config = await store.get()
+
+    const inputAtivo = document.getElementById('editor-doc-externo-ativo') as HTMLInputElement | null
+    const selectFormato = document.getElementById('editor-doc-externo-formato') as HTMLSelectElement | null
+    const inputTipoConferencia = document.getElementById(
+      'editor-doc-externo-tipo-conferencia'
+    ) as HTMLInputElement | null
+    const selectNivelAcesso = document.getElementById(
+      'editor-doc-externo-nivel-acesso'
+    ) as HTMLSelectElement | null
+    const inputHipoteseLegal = document.getElementById(
+      'editor-doc-externo-hipotese-legal'
+    ) as HTMLInputElement | null
+    const status = document.getElementById('editor-status')
+
+    if (inputAtivo) inputAtivo.checked = config.documentoExterno.ativo
+    if (selectFormato) selectFormato.value = config.documentoExterno.formato
+    if (inputTipoConferencia) inputTipoConferencia.value = config.documentoExterno.tipoConferencia
+    if (selectNivelAcesso) selectNivelAcesso.value = config.documentoExterno.nivelAcesso
+    if (inputHipoteseLegal) inputHipoteseLegal.value = config.documentoExterno.hipoteseLegal
+
+    document.getElementById('editor-salvar')?.addEventListener('click', async () => {
+      try {
+        const atualizado = {
+          ...config,
+          documentoExterno: {
+            ativo: inputAtivo?.checked ?? true,
+            formato: (selectFormato?.value ?? 'N') as FormatoDocumento,
+            tipoConferencia: inputTipoConferencia?.value ?? '',
+            nivelAcesso: (selectNivelAcesso?.value ?? 'P') as NivelAcessoDocumento,
+            hipoteseLegal: inputHipoteseLegal?.value ?? '',
+          },
+        }
+        await store.set(atualizado)
+        if (status) {
+          status.textContent = 'Salvo!'
+          setTimeout(() => {
+            status.textContent = ''
+          }, 2000)
+        }
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao salvar configuração da aba Editor de Documentos:', error)
+      }
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao carregar aba Editor de Documentos:', error)
+  }
+}
+
+carregarAbaEditor()
 carregarAbaProcessos()
 carregarAbaAparencia()
 carregarAbaGeral()
