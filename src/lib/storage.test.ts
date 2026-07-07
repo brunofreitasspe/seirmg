@@ -43,6 +43,22 @@ describe('createSyncConfigStore', () => {
     expect((await store.get()).processosNovos).toEqual({ ativo: true, intervaloMinutos: 5, tocarSom: true })
   })
 
+  it('inclui selecaoEmMassaBlocoAssinatura ativo por padrão', async () => {
+    const store = createSyncConfigStore(criarAreaFalsa())
+    expect((await store.get()).featureFlags.selecaoEmMassaBlocoAssinatura).toBe(true)
+  })
+
+  it('persiste alteração de featureFlags.selecaoEmMassaBlocoAssinatura', async () => {
+    const area = criarAreaFalsa()
+    const store = createSyncConfigStore(area)
+    const atualizado = {
+      ...DEFAULT_SYNC_CONFIG,
+      featureFlags: { ...DEFAULT_SYNC_CONFIG.featureFlags, selecaoEmMassaBlocoAssinatura: false },
+    }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
+
   it('persiste e recupera alterações de processosNovos', async () => {
     const area = criarAreaFalsa()
     const store = createSyncConfigStore(area)

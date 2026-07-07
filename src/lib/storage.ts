@@ -1,5 +1,6 @@
 export interface FeatureFlags {
   blocoAssinaturaNotificacoes: boolean
+  selecaoEmMassaBlocoAssinatura: boolean
 }
 
 export type ThemePreset = 'claro' | 'black' | 'super-black' | 'custom'
@@ -48,6 +49,7 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
   schemaVersion: 1,
   featureFlags: {
     blocoAssinaturaNotificacoes: true,
+    selecaoEmMassaBlocoAssinatura: true,
   },
   tema: { preset: 'claro' },
   blocoAssinatura: {
