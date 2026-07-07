@@ -17,7 +17,14 @@ import {
 } from '../../features/controle-processos/filtroTabela'
 import { linhaCasaBusca, parseTermosBusca } from '../../features/controle-processos/buscaRapida'
 import { calcularIndicesParaClicar } from '../../features/controle-processos/selecaoMultipla'
-import { createSyncConfigStore } from '../../lib/storage'
+import { extrairNomesAtribuidos, linhaCasaAtribuicao } from '../../features/controle-processos/filtroAtribuicao'
+import {
+  linhaCasaBloco,
+  parseListaBlocos,
+  parseProcessosDoBloco,
+} from '../../features/controle-processos/filtroBloco'
+import { fetchText } from '../../lib/result'
+import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
 import type { ControleProcessosConfig } from '../../lib/storage'
 
 const IDS_TABELAS = ['#tblProcessosDetalhado', '#tblProcessosGerados', '#tblProcessosRecebidos']
@@ -291,12 +298,192 @@ function montarConfirmarAntesDeConcluir(): void {
   }
 }
 
+function obterTextoAtribuido(linha: Element): string | null {
+  const link = linha.querySelector('td:nth-child(4) a')
+  return link?.textContent?.trim() ?? null
+}
+
+async function montarFiltroAtribuicao(): Promise<void> {
+  try {
+    const divFiltro = document.getElementById('divFiltro')
+    if (!divFiltro) return
+
+    const textos = IDS_TABELAS.flatMap((idTabela) =>
+      linhasDaTabela(idTabela).map((linha) => obterTextoAtribuido(linha) ?? '')
+    )
+    const nomes = extrairNomesAtribuidos(textos)
+
+    const select = document.createElement('select')
+    select.id = 'seirmg-filtro-atribuicao'
+    select.appendChild(new Option('Ver todos os processos', '*'))
+    select.appendChild(new Option('Ver processos não atribuídos', ''))
+    nomes.forEach((nome) => {
+      select.appendChild(new Option(`Ver processos atribuídos à ${nome}`, nome))
+    })
+
+    const localConfig = await createLocalConfigStore().get()
+    select.value = localConfig.atribuicaoSelecionada ?? '*'
+
+    const aplicar = (valor: string): void => {
+      IDS_TABELAS.forEach((idTabela) => {
+        const linhas = linhasDaTabela(idTabela)
+        let estado = estadoFiltrosPorTabela.get(idTabela) ?? {}
+
+        if (valor === '*') {
+          estado = removerFiltro(estado, 'PorAtribuicao')
+        } else {
+          const resultado: Record<string, boolean> = {}
+          linhas.forEach((linha, index) => {
+            const id = linha.id || String(index)
+            resultado[id] = linhaCasaAtribuicao(obterTextoAtribuido(linha), valor)
+          })
+          estado = registrarFiltro(estado, 'PorAtribuicao', resultado)
+        }
+
+        estadoFiltrosPorTabela.set(idTabela, estado)
+        const ids = linhas.map((linha, index) => linha.id || String(index))
+        aplicarVisibilidade(idTabela, calcularVisibilidade(estado, ids))
+      })
+    }
+
+    select.addEventListener('change', () => {
+      aplicar(select.value)
+      createLocalConfigStore()
+        .get()
+        .then((atual) => createLocalConfigStore().set({ ...atual, atribuicaoSelecionada: select.value }))
+        .catch((error) => {
+          console.error('[SEIRMG] Falha ao salvar preferência de filtro por atribuição:', error)
+        })
+    })
+
+    divFiltro.prepend(select)
+    if (select.value !== '*') aplicar(select.value)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao montar filtro por atribuição:', error)
+  }
+}
+
+const PREFIXOS_BLOCO: Record<string, string> = {
+  INTERNO: 'bloco_interno_listar',
+  ASSINATURA: 'bloco_assinatura_listar',
+  REUNIAO: 'bloco_reuniao_listar',
+}
+
+function montarFiltroBloco(): void {
+  try {
+    const divComandos = document.querySelector('#divComandos')
+    if (!divComandos) return
+
+    const tipos = [
+      { rotulo: 'Blocos Internos', valor: 'INTERNO' },
+      { rotulo: 'Blocos de Assinatura', valor: 'ASSINATURA' },
+      { rotulo: 'Blocos de Reunião', valor: 'REUNIAO' },
+    ].map((tipo) => {
+      const link = document.querySelector<HTMLAnchorElement>(
+        `a[href^="controlador.php?acao=${PREFIXOS_BLOCO[tipo.valor]}"]`
+      )
+      return { ...tipo, href: link?.href ?? '' }
+    })
+
+    const tiposDisponiveis = tipos.filter((tipo) => tipo.href)
+    if (tiposDisponiveis.length === 0) return
+
+    const selectTipo = document.createElement('select')
+    selectTipo.id = 'seirmg-filtro-bloco-tipo'
+    selectTipo.appendChild(new Option('', ''))
+    tiposDisponiveis.forEach((tipo) => selectTipo.appendChild(new Option(tipo.rotulo, tipo.valor)))
+
+    const selectBloco = document.createElement('select')
+    selectBloco.id = 'seirmg-filtro-bloco-numero'
+    selectBloco.appendChild(new Option('', ''))
+    selectBloco.style.display = 'none'
+
+    const aplicarFiltroBloco = (numeros: string[] | null): void => {
+      IDS_TABELAS.forEach((idTabela) => {
+        const linhas = linhasDaTabela(idTabela)
+        let estado = estadoFiltrosPorTabela.get(idTabela) ?? {}
+
+        if (!numeros) {
+          estado = removerFiltro(estado, 'PorBloco')
+        } else {
+          const resultado: Record<string, boolean> = {}
+          linhas.forEach((linha, index) => {
+            const id = linha.id || String(index)
+            const numeroProcesso = linha.querySelector('td:nth-child(3) a')?.textContent?.trim() ?? ''
+            resultado[id] = linhaCasaBloco(numeroProcesso, numeros)
+          })
+          estado = registrarFiltro(estado, 'PorBloco', resultado)
+        }
+
+        estadoFiltrosPorTabela.set(idTabela, estado)
+        const ids = linhas.map((linha, index) => linha.id || String(index))
+        aplicarVisibilidade(idTabela, calcularVisibilidade(estado, ids))
+      })
+    }
+
+    selectTipo.addEventListener('change', () => {
+      selectBloco.innerHTML = ''
+      selectBloco.appendChild(new Option('', ''))
+      selectBloco.style.display = 'none'
+      aplicarFiltroBloco(null)
+
+      const tipoSelecionado = tiposDisponiveis.find((tipo) => tipo.valor === selectTipo.value)
+      if (!tipoSelecionado) return
+
+      fetchText(tipoSelecionado.href)
+        .then((resultado) => {
+          if (!resultado.ok) {
+            console.error('[SEIRMG] Falha ao buscar lista de blocos:', resultado.error)
+            return
+          }
+
+          const doc = new DOMParser().parseFromString(resultado.data, 'text/html')
+          parseListaBlocos(doc).forEach((bloco) => {
+            selectBloco.appendChild(new Option(`${bloco.numero} - ${bloco.descricao}`, bloco.href))
+          })
+          selectBloco.style.display = ''
+        })
+        .catch((error) => {
+          console.error('[SEIRMG] Falha ao buscar lista de blocos:', error)
+        })
+    })
+
+    selectBloco.addEventListener('change', () => {
+      if (!selectBloco.value) {
+        aplicarFiltroBloco(null)
+        return
+      }
+
+      fetchText(selectBloco.value)
+        .then((resultado) => {
+          if (!resultado.ok) {
+            console.error('[SEIRMG] Falha ao buscar processos do bloco:', resultado.error)
+            return
+          }
+
+          const doc = new DOMParser().parseFromString(resultado.data, 'text/html')
+          aplicarFiltroBloco(parseProcessosDoBloco(doc))
+        })
+        .catch((error) => {
+          console.error('[SEIRMG] Falha ao buscar processos do bloco:', error)
+        })
+    })
+
+    divComandos.appendChild(selectTipo)
+    divComandos.appendChild(selectBloco)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao montar filtro por bloco:', error)
+  }
+}
+
 async function bootstrap(): Promise<void> {
   try {
     corrigirTabelasNativas()
     montarBuscaRapida()
     montarSelecaoMultipla()
     montarConfirmarAntesDeConcluir()
+    montarFiltroBloco()
+    await montarFiltroAtribuicao()
 
     const config = await createSyncConfigStore().get()
     aplicarPrazos(config.controleProcessos.prazos)
