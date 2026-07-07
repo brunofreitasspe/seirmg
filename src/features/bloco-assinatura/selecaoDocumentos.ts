@@ -1,0 +1,44 @@
+export type TipoSelecaoDocumentos =
+  | 'todos'
+  | 'nenhum'
+  | 'sem-assinatura'
+  | 'sem-minha-assinatura'
+  | 'com-minha-assinatura'
+
+export function extrairNomeUsuario(tituloUsuario: string): string | null {
+  const matchTraco = tituloUsuario.match(/(.+)\s-\s/)
+  if (matchTraco) return matchTraco[1]
+
+  const matchParenteses = tituloUsuario.match(/(.+)\s\(.*/)
+  if (matchParenteses) return matchParenteses[1]
+
+  return null
+}
+
+const INDICE_COLUNA_ASSINATURAS_PADRAO = 6
+
+export function encontrarIndiceColunaAssinaturas(cabecalhos: string[]): number {
+  const indice = cabecalhos.indexOf('Assinaturas')
+  return indice === -1 ? INDICE_COLUNA_ASSINATURAS_PADRAO : indice
+}
+
+export function deveSelecionar(
+  tipo: TipoSelecaoDocumentos,
+  textoAssinaturas: string,
+  usuario: string
+): boolean {
+  const assinaturas = textoAssinaturas.trim()
+
+  switch (tipo) {
+    case 'todos':
+      return true
+    case 'nenhum':
+      return false
+    case 'sem-assinatura':
+      return assinaturas.length === 0
+    case 'sem-minha-assinatura':
+      return !(assinaturas.length > 0 && assinaturas.includes(usuario))
+    case 'com-minha-assinatura':
+      return assinaturas.length > 0 && assinaturas.includes(usuario)
+  }
+}
