@@ -83,5 +83,13 @@ export default defineManifest({
       js: ['src/content-scripts/controle_unidade_gerar/index.ts'],
       run_at: 'document_idle',
     },
+    {
+      matches: [
+        '*://*.br/*controlador.php?acao=documento_receber*',
+        '*://*.org/*controlador.php?acao=documento_receber*',
+      ],
+      js: ['src/content-scripts/documento_receber/index.ts'],
+      run_at: 'document_idle',
+    },
   ],
 })
