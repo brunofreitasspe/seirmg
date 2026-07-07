@@ -1,6 +1,12 @@
 import bellIconSvg from 'lucide-static/icons/bell.svg?raw'
 import { ativarAba } from './tabs'
-import { createSyncConfigStore, type ThemePreset } from '../lib/storage'
+import {
+  createSyncConfigStore,
+  type ConfiguracaoCor,
+  type ModoEspecificacao,
+  type ThemePreset,
+} from '../lib/storage'
+import { montarListaEditavel } from './listaEditavel'
 import { ALARM_NAME } from '../background/alarms/blocoAssinaturaCheck'
 import { ALARM_NAME_PROCESSOS_NOVOS } from '../background/alarms/processosNovosCheck'
 
@@ -183,6 +189,91 @@ async function carregarAbaAparencia(): Promise<void> {
   }
 }
 
+async function carregarAbaProcessos(): Promise<void> {
+  try {
+    const store = createSyncConfigStore()
+    const config = await store.get()
+
+    const inputPrazosAtivo = document.getElementById('processos-prazos-ativo') as HTMLInputElement | null
+    const inputExibirDias = document.getElementById('processos-prazos-exibir-dias') as HTMLInputElement | null
+    const inputAlertaDias = document.getElementById('processos-prazos-alerta-dias') as HTMLInputElement | null
+    const inputCriticoDias = document.getElementById('processos-prazos-critico-dias') as HTMLInputElement | null
+    const inputExibirPrazo = document.getElementById('processos-prazos-exibir-prazo') as HTMLInputElement | null
+    const inputAlertaPrazo = document.getElementById('processos-prazos-alerta-prazo') as HTMLInputElement | null
+    const inputCriticoPrazo = document.getElementById('processos-prazos-critico-prazo') as HTMLInputElement | null
+    const inputCoresAtivo = document.getElementById('processos-cores-ativo') as HTMLInputElement | null
+    const inputEspecificacaoAtivo = document.getElementById(
+      'processos-especificacao-ativo'
+    ) as HTMLInputElement | null
+    const selectModo = document.getElementById('processos-especificacao-modo') as HTMLSelectElement | null
+    const status = document.getElementById('processos-status')
+
+    if (inputPrazosAtivo) inputPrazosAtivo.checked = config.controleProcessos.prazos.ativo
+    if (inputExibirDias) inputExibirDias.checked = config.controleProcessos.prazos.exibirDias
+    if (inputAlertaDias) inputAlertaDias.value = String(config.controleProcessos.prazos.alertaDias)
+    if (inputCriticoDias) inputCriticoDias.value = String(config.controleProcessos.prazos.criticoDias)
+    if (inputExibirPrazo) inputExibirPrazo.checked = config.controleProcessos.prazos.exibirPrazo
+    if (inputAlertaPrazo) inputAlertaPrazo.value = String(config.controleProcessos.prazos.alertaPrazo)
+    if (inputCriticoPrazo) inputCriticoPrazo.value = String(config.controleProcessos.prazos.criticoPrazo)
+    if (inputCoresAtivo) inputCoresAtivo.checked = config.controleProcessos.coresProcesso.ativo
+    if (inputEspecificacaoAtivo) {
+      inputEspecificacaoAtivo.checked = config.controleProcessos.especificacao.ativo
+    }
+    if (selectModo) selectModo.value = config.controleProcessos.especificacao.modo
+
+    const containerCores = document.getElementById('processos-cores-lista')
+    const listaCores = containerCores
+      ? montarListaEditavel<ConfiguracaoCor>(
+          containerCores,
+          [
+            { chave: 'valor', rotulo: 'Especificação contém', tipo: 'text' },
+            { chave: 'cor', rotulo: 'Cor', tipo: 'color' },
+          ],
+          config.controleProcessos.coresProcesso.regras
+        )
+      : null
+
+    document.getElementById('processos-salvar')?.addEventListener('click', async () => {
+      try {
+        const atualizado = {
+          ...config,
+          controleProcessos: {
+            prazos: {
+              ativo: inputPrazosAtivo?.checked ?? true,
+              exibirDias: inputExibirDias?.checked ?? true,
+              exibirPrazo: inputExibirPrazo?.checked ?? true,
+              alertaDias: Number(inputAlertaDias?.value ?? 30),
+              criticoDias: Number(inputCriticoDias?.value ?? 60),
+              alertaPrazo: Number(inputAlertaPrazo?.value ?? 10),
+              criticoPrazo: Number(inputCriticoPrazo?.value ?? 5),
+            },
+            coresProcesso: {
+              ativo: inputCoresAtivo?.checked ?? true,
+              regras: listaCores?.obterItens() ?? [],
+            },
+            especificacao: {
+              ativo: inputEspecificacaoAtivo?.checked ?? true,
+              modo: (selectModo?.value ?? 'mostrar') as ModoEspecificacao,
+            },
+          },
+        }
+        await store.set(atualizado)
+        if (status) {
+          status.textContent = 'Salvo!'
+          setTimeout(() => {
+            status.textContent = ''
+          }, 2000)
+        }
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao salvar configuração de Processos:', error)
+      }
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao carregar aba Processos:', error)
+  }
+}
+
+carregarAbaProcessos()
 carregarAbaAparencia()
 carregarAbaGeral()
 carregarAbaAssinatura()

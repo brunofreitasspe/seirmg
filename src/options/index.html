@@ -48,7 +48,63 @@
       <span id="aparencia-status"></span>
     </section>
     <section id="painel-processos" class="painel">
-      <p>Em breve: prazos, cores de marcadores e agrupamento.</p>
+      <h2>Processos</h2>
+      <h3>Prazos</h3>
+      <label>
+        <input type="checkbox" id="processos-prazos-ativo" />
+        Ativar cálculo de prazos
+      </label>
+      <br />
+      <label>
+        <input type="checkbox" id="processos-prazos-exibir-dias" />
+        Exibir coluna Dias
+      </label>
+      <label>
+        Alerta (dias):
+        <input type="number" id="processos-prazos-alerta-dias" min="0" />
+      </label>
+      <label>
+        Crítico (dias):
+        <input type="number" id="processos-prazos-critico-dias" min="0" />
+      </label>
+      <br />
+      <label>
+        <input type="checkbox" id="processos-prazos-exibir-prazo" />
+        Exibir coluna Prazo
+      </label>
+      <label>
+        Alerta (prazo):
+        <input type="number" id="processos-prazos-alerta-prazo" min="0" />
+      </label>
+      <label>
+        Crítico (prazo):
+        <input type="number" id="processos-prazos-critico-prazo" min="0" />
+      </label>
+
+      <h3>Cor por especificação</h3>
+      <label>
+        <input type="checkbox" id="processos-cores-ativo" />
+        Ativar cor do processo por especificação
+      </label>
+      <div id="processos-cores-lista"></div>
+
+      <h3>Especificação na listagem</h3>
+      <label>
+        <input type="checkbox" id="processos-especificacao-ativo" />
+        Ativar especificação na listagem
+      </label>
+      <br />
+      <label>
+        Modo:
+        <select id="processos-especificacao-modo">
+          <option value="mostrar">Mostrar como subtítulo</option>
+          <option value="substituir">Substituir número do processo</option>
+        </select>
+      </label>
+
+      <br />
+      <button id="processos-salvar">Salvar</button>
+      <span id="processos-status"></span>
     </section>
     <section id="painel-editor" class="painel">
       <p>Em breve: funcionalidades herdadas do editor de documentos do Sei Pro.</p>
