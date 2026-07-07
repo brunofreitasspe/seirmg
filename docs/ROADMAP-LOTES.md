@@ -10,12 +10,12 @@
 - **Lote C — Motor de tema (dark mode) + aba Aparência** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-c-tema-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-c-tema.md`
 - **Lote D — Controle de Processos: prazos, cor por especificação e especificação na listagem** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-d-controle-processos-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-d-controle-processos.md`
 - **Lote D2 — Ponto de controle com cor customizável** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-d2-ponto-controle-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-d2-ponto-controle.md`
+- **Lote E — Controle de Processos: núcleo de filtros e seleção** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-e-filtros-selecao-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-e-filtros-selecao.md`
 
 ## Roteiro (ordem sugerida)
 
 | # | Lote | Escopo | Fonte |
 |---|------|--------|-------|
-| E | **Controle de Processos — núcleo de filtros e seleção** | Correção de tabelas nativas (thead — também conserta um bug latente do Lote D); motor de filtro genérico + busca rápida "OU" (`filtra_processos`); seleção múltipla via Shift+clique; confirmação antes de concluir em lote. | Sei++ §1.2 |
 | E2 | **Controle de Processos — filtro por atribuição e por bloco** | Filtro por atribuição (`filtraPorAtribuicao.js`, preferência persistida) e filtro por bloco (`carregaInformacaoBlocos.js`, AJAX para 3 telas de bloco) — ambos reaproveitam o motor de filtro do Lote E sem mudanças. | Sei++ §1.2 |
 | E3 | **Controle de Processos — agrupar/rolagem/ordenação (Sei Pro)** | Agrupar lista de processos, rolagem infinita, ordenação por cabeçalho persistente. Sem código-fonte lido byte-a-byte (só documentação `pages/*.md`) — avaliar viabilidade de porte ao chegar a vez deste lote. | Sei Pro §2.3 [doc] |
 | F | **Ações em lote sobre processos** | Retirar sobrestamento/reabrir em lote; controle de unidade em lote; forçar reabertura de processo fechado em todas unidades. | Sei++ §1.2 |
