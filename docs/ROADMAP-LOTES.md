@@ -31,7 +31,7 @@
 | M | **Prazos dedicados + reabertura programada** | Painel "Gerenciar Prazos" dedicado (mais robusto que os do Lote D), reabertura programada de processos com verificação periódica configurável, Prescrições (pequeno, acoplado a este painel). | Sei Pro §2.3 [doc] |
 | N | **Home/Dashboard** | Kanban de processos na home (status), exportar CSV, marcar não visualizado/urgente, upload múltiplo na home. | Sei Pro §2.3 [código] |
 | O | **Integração Planka** | Cliente HTTP configurável, permissão de host dinâmica via `chrome.permissions.request`, tela de status/teste de conexão. Mapeamento processo↔cartão fica fora (decisão já validada, §6.2). | Design arquitetura §"Integração Planka" |
-| P | **Menu e UX diversos** | Ocultar automaticamente/mover menu lateral, atalho publicações, link neutro, onboarding pós-instalação, menu suspenso (Sei Pro), mover ícone de excluir para o final, reprodução de vídeo no visualizador. | Sei++ §1.2, Sei Pro §2.3 |
+| P2 | **Menu e UX diversos (Sei Pro)** | Menu suspenso, mover ícone de excluir para o final, reprodução de vídeo no visualizador. Sem código-fonte lido byte-a-byte. | Sei Pro §2.3 [doc] |
 
 ## Fora de escopo (permanente, decisões já validadas em `ANALISE.md` §6)
 
