@@ -1,5 +1,4 @@
-import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
-import { applyTheme } from '../../lib/theme'
+import { createLocalConfigStore } from '../../lib/storage'
 import { detectarSeiVersionAtLeast4 } from '../../lib/seiVersion'
 import { renderBadge } from './badge'
 
@@ -17,9 +16,6 @@ async function bootstrap(): Promise<void> {
     if (localConfig.baseUrlSei !== urlBase || localConfig.seiVersionAtLeast4 !== seiVersionAtLeast4) {
       await localStore.set({ ...localConfig, baseUrlSei: urlBase, seiVersionAtLeast4 })
     }
-
-    const syncConfig = await createSyncConfigStore().get()
-    applyTheme(document.body, syncConfig.tema)
 
     chrome.runtime.sendMessage({ type: 'seirmg:sei-detectado' }).catch((error) => {
       console.error('[SEIRMG] Falha ao notificar sessão do SEI detectada:', error)
