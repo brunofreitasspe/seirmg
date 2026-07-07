@@ -14,6 +14,7 @@
 - **Lote E2 — Filtro por atribuição e por bloco** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-e2-filtro-atribuicao-bloco-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-e2-filtro-atribuicao-bloco.md`
 - **Lote F — Ações em lote sobre processos** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-f-acoes-lote-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-f-acoes-lote.md`. ⚠️ **Pendente de validação manual numa instância SEI real** — `controle_unidade_gerar` e `documento_receber` dependem de regex sobre `<script>` gerado dinamicamente pelo SEI, não verificável sem instância ao vivo (ver aviso de risco na spec).
 - **Lote G — Visualização de processo: ajustes nativos, título e anotação** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-g-visualizacao-processo-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-g-visualizacao-processo.md`
+- **Lote H — Autopreencher recebimento de documento externo** — spec `docs/superpowers/specs/2026-07-07-seirmg-lote-h-autopreencher-documento-externo-design.md`, plano `docs/superpowers/plans/2026-07-07-seirmg-lote-h-autopreencher-documento-externo.md`
 
 ## Roteiro (ordem sugerida)
 
