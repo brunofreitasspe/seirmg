@@ -55,4 +55,21 @@ describe('createLocalConfigStore', () => {
     await store.set(atualizado)
     expect(await store.get()).toEqual(atualizado)
   })
+
+  it('inclui blocoAssinaturaPendenteAtual vazio por padrão', async () => {
+    const store = createLocalConfigStore(criarAreaFalsa())
+    expect((await store.get()).blocoAssinaturaPendenteAtual).toEqual([])
+  })
+
+  it('persiste blocoAssinaturaPendenteAtual e ultimaVerificacaoImediata', async () => {
+    const area = criarAreaFalsa()
+    const store = createLocalConfigStore(area)
+    const atualizado = {
+      ...DEFAULT_LOCAL_CONFIG,
+      blocoAssinaturaPendenteAtual: ['abc', 'def'],
+      ultimaVerificacaoImediata: '2026-07-06T10:00:00.000Z',
+    }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
 })

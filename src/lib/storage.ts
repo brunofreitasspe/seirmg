@@ -29,6 +29,8 @@ export interface NotificadoState {
 export interface LocalConfig {
   schemaVersion: 1
   blocoAssinaturaNotificado: NotificadoState
+  blocoAssinaturaPendenteAtual: string[]
+  ultimaVerificacaoImediata?: string
   baseUrlSei?: string
   seiVersionAtLeast4?: boolean
 }
@@ -49,6 +51,7 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
 export const DEFAULT_LOCAL_CONFIG: LocalConfig = {
   schemaVersion: 1,
   blocoAssinaturaNotificado: {},
+  blocoAssinaturaPendenteAtual: [],
 }
 
 export interface StorageArea {
