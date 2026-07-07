@@ -212,6 +212,7 @@ function ordenarTabelaPelaColuna(idTabela: string, indiceColuna: number, headers
 
     limparIndicadoresOrdenacao(headers)
     aplicarIndicadorOrdenacao(headers[indiceColuna], direcao)
+    ultimoIndicePorTabela.delete(idTabela)
   } catch (error) {
     console.error('[SEIRMG] Falha ao ordenar tabela:', error)
   }
