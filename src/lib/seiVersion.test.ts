@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { detectarSeiVersionAtLeast4 } from './seiVersion'
+import { detectarSeiVersaoMajor, detectarSeiVersionAtLeast4 } from './seiVersion'
 
 function criarDocumentoComScript(src: string | null): Document {
   const doc = document.implementation.createHTMLDocument('teste')
@@ -26,5 +26,19 @@ describe('detectarSeiVersionAtLeast4', () => {
 
   it('assume true quando a versão não é detectável', () => {
     expect(detectarSeiVersionAtLeast4(criarDocumentoComScript(null))).toBe(true)
+  })
+})
+
+describe('detectarSeiVersaoMajor', () => {
+  it('retorna o primeiro dígito da versão para 4.x', () => {
+    expect(detectarSeiVersaoMajor(criarDocumentoComScript('js/sei.js?4.0.1'))).toBe(4)
+  })
+
+  it('retorna o primeiro dígito da versão para 5.x', () => {
+    expect(detectarSeiVersaoMajor(criarDocumentoComScript('js/sei.js?5.0.0'))).toBe(5)
+  })
+
+  it('retorna null quando a versão não é detectável', () => {
+    expect(detectarSeiVersaoMajor(criarDocumentoComScript(null))).toBeNull()
   })
 })
