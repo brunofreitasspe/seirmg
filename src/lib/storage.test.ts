@@ -203,6 +203,18 @@ describe('createLocalConfigStore', () => {
     expect(await store.get()).toEqual(atualizado)
   })
 
+  it('persiste mostrarIndicadorConfiguracao e linkNeutroControleProcessos', async () => {
+    const area = criarAreaFalsa()
+    const store = createLocalConfigStore(area)
+    const atualizado = {
+      ...DEFAULT_LOCAL_CONFIG,
+      mostrarIndicadorConfiguracao: true,
+      linkNeutroControleProcessos: 'controlador.php?acao=procedimento_controlar&x=1',
+    }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
+
   it('persiste atribuicaoSelecionada', async () => {
     const area = criarAreaFalsa()
     const store = createLocalConfigStore(area)

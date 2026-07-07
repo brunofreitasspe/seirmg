@@ -103,6 +103,8 @@ export interface LocalConfig {
   baseUrlSei?: string
   seiVersionAtLeast4?: boolean
   atribuicaoSelecionada?: string
+  mostrarIndicadorConfiguracao?: boolean
+  linkNeutroControleProcessos?: string
 }
 
 export const DEFAULT_SYNC_CONFIG: SyncConfig = {
