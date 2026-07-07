@@ -56,6 +56,17 @@ export interface ControleProcessosConfig {
   especificacao: EspecificacaoConfig
 }
 
+export interface ConfiguracaoPontoControle {
+  nome: string
+  cor: string
+  filter: string
+}
+
+export interface PontoControleConfig {
+  ativo: boolean
+  regras: ConfiguracaoPontoControle[]
+}
+
 export interface SyncConfig {
   schemaVersion: 1
   featureFlags: FeatureFlags
@@ -63,6 +74,7 @@ export interface SyncConfig {
   blocoAssinatura: BlocoAssinaturaConfig
   processosNovos: ProcessosNovosConfig
   controleProcessos: ControleProcessosConfig
+  pontoControle: PontoControleConfig
 }
 
 export interface NotificadoState {
@@ -115,6 +127,10 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
       ativo: true,
       modo: 'mostrar',
     },
+  },
+  pontoControle: {
+    ativo: true,
+    regras: [],
   },
 }
 

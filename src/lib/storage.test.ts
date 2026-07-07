@@ -103,6 +103,25 @@ describe('createSyncConfigStore', () => {
     await store.set(atualizado)
     expect(await store.get()).toEqual(atualizado)
   })
+
+  it('inclui pontoControle padrão quando vazio', async () => {
+    const store = createSyncConfigStore(criarAreaFalsa())
+    expect((await store.get()).pontoControle).toEqual({ ativo: true, regras: [] })
+  })
+
+  it('persiste alteração de pontoControle', async () => {
+    const area = criarAreaFalsa()
+    const store = createSyncConfigStore(area)
+    const atualizado = {
+      ...DEFAULT_SYNC_CONFIG,
+      pontoControle: {
+        ativo: false,
+        regras: [{ nome: 'Concluído', cor: '#00ff00', filter: 'filter: invert(1);' }],
+      },
+    }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
 })
 
 describe('createLocalConfigStore', () => {
