@@ -115,12 +115,21 @@ async function abrirOuFocarAba(baseUrlSei: string, url: string): Promise<void> {
   }
 }
 
+async function marcarIndicadorConfiguracao(): Promise<void> {
+  const localStore = createLocalConfigStore()
+  const localConfig = await localStore.get()
+  await localStore.set({ ...localConfig, mostrarIndicadorConfiguracao: true })
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   agendarAlarme().catch((error) => {
     console.error('[SEIRMG] Falha ao agendar alarme do bloco de assinatura:', error)
   })
   agendarAlarmeProcessosNovos().catch((error) => {
     console.error('[SEIRMG] Falha ao agendar alarme de processos novos:', error)
+  })
+  marcarIndicadorConfiguracao().catch((error) => {
+    console.error('[SEIRMG] Falha ao marcar indicador de configuração pendente:', error)
   })
 })
 
