@@ -1,11 +1,15 @@
 import { ALARM_NAME, verificarBlocoAssinatura } from './alarms/blocoAssinaturaCheck'
+import { ALARM_NAME_PROCESSOS_NOVOS, verificarProcessosNovos } from './alarms/processosNovosCheck'
 import { processarItensBlocoAssinatura } from './blocoAssinaturaPipeline'
 import { fetchText } from '../lib/result'
+import { fetchListaProcessos } from './processosNovos/fetchListaProcessos'
 import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
 import { passouIntervalo } from '../lib/throttle'
+import { NOTIFICATION_ID_PREFIX, NOTIFICATION_ID_PREFIX_PROCESSO } from './notifications/notify'
 import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
 
 const ACAO_BLOCO_ASSINATURA = 'bloco_assinatura_listar'
+const ACAO_PROCEDIMENTO_CONTROLAR = 'procedimento_controlar'
 const INTERVALO_MINIMO_VERIFICACAO_IMEDIATA_MINUTOS = 2
 
 interface MensagemItensBloco {
@@ -38,6 +42,13 @@ async function agendarAlarme(): Promise<void> {
   chrome.alarms.create(ALARM_NAME, { periodInMinutes: config.blocoAssinatura.intervaloMinutos })
 }
 
+async function agendarAlarmeProcessosNovos(): Promise<void> {
+  const config = await createSyncConfigStore().get()
+  chrome.alarms.create(ALARM_NAME_PROCESSOS_NOVOS, {
+    periodInMinutes: config.processosNovos.intervaloMinutos,
+  })
+}
+
 async function verificarBlocoAssinaturaViaFetch(): Promise<void> {
   const localConfig = await createLocalConfigStore().get()
   if (!localConfig.baseUrlSei) return
@@ -47,6 +58,22 @@ async function verificarBlocoAssinaturaViaFetch(): Promise<void> {
       fetchText(`${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}`),
     parseOptions: { seiVersionAtLeast4: localConfig.seiVersionAtLeast4 ?? true },
   })
+}
+
+function atualizarBadgeIcone(count: number): void {
+  chrome.action.setBadgeText({ text: count > 0 ? String(count) : '' })
+}
+
+async function verificarProcessosNovosViaFetch(): Promise<void> {
+  const localConfig = await createLocalConfigStore().get()
+  if (!localConfig.baseUrlSei) return
+
+  await verificarProcessosNovos({
+    fetchProcessosDocument: () => fetchListaProcessos(localConfig.baseUrlSei as string),
+  })
+
+  const localConfigAtualizado = await createLocalConfigStore().get()
+  atualizarBadgeIcone(localConfigAtualizado.processosNovosBadgeCount)
 }
 
 let verificacaoImediataEmAndamento = false
@@ -77,9 +104,23 @@ async function verificarImediatoSeNecessario(): Promise<void> {
   }
 }
 
+async function abrirOuFocarAba(baseUrlSei: string, url: string): Promise<void> {
+  const [abaExistente] = await chrome.tabs.query({ url: `${baseUrlSei}/*` })
+
+  if (abaExistente?.id) {
+    chrome.tabs.update(abaExistente.id, { active: true, url })
+    if (abaExistente.windowId) chrome.windows.update(abaExistente.windowId, { focused: true })
+  } else {
+    chrome.tabs.create({ url })
+  }
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   agendarAlarme().catch((error) => {
     console.error('[SEIRMG] Falha ao agendar alarme do bloco de assinatura:', error)
+  })
+  agendarAlarmeProcessosNovos().catch((error) => {
+    console.error('[SEIRMG] Falha ao agendar alarme de processos novos:', error)
   })
 })
 
@@ -87,6 +128,13 @@ chrome.alarms.onAlarm.addListener((alarme) => {
   if (alarme.name !== ALARM_NAME) return
   verificarBlocoAssinaturaViaFetch().catch((error) => {
     console.error('[SEIRMG] Falha ao verificar bloco de assinatura via alarme:', error)
+  })
+})
+
+chrome.alarms.onAlarm.addListener((alarme) => {
+  if (alarme.name !== ALARM_NAME_PROCESSOS_NOVOS) return
+  verificarProcessosNovosViaFetch().catch((error) => {
+    console.error('[SEIRMG] Falha ao verificar processos novos via alarme:', error)
   })
 })
 
@@ -112,17 +160,20 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
     const localConfig = await createLocalConfigStore().get()
     if (!localConfig.baseUrlSei) return
 
-    const url = `${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}`
-    const [abaExistente] = await chrome.tabs.query({ url: `${localConfig.baseUrlSei}/*` })
-
-    if (abaExistente?.id) {
-      chrome.tabs.update(abaExistente.id, { active: true, url })
-      if (abaExistente.windowId) chrome.windows.update(abaExistente.windowId, { focused: true })
-    } else {
-      chrome.tabs.create({ url })
+    if (notificationId.startsWith(NOTIFICATION_ID_PREFIX)) {
+      await abrirOuFocarAba(
+        localConfig.baseUrlSei,
+        `${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}`
+      )
+    } else if (notificationId.startsWith(NOTIFICATION_ID_PREFIX_PROCESSO)) {
+      await abrirOuFocarAba(
+        localConfig.baseUrlSei,
+        `${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_PROCEDIMENTO_CONTROLAR}`
+      )
     }
+
     chrome.notifications.clear(notificationId)
   } catch (error) {
-    console.error('[SEIRMG] Falha ao processar clique na notificação do bloco de assinatura:', error)
+    console.error('[SEIRMG] Falha ao processar clique em notificação:', error)
   }
 })
