@@ -75,5 +75,13 @@ export default defineManifest({
       js: ['src/content-scripts/ponto_controle/index.ts'],
       run_at: 'document_idle',
     },
+    {
+      matches: [
+        '*://*.br/*controlador.php?acao=controle_unidade_gerar*',
+        '*://*.org/*controlador.php?acao=controle_unidade_gerar*',
+      ],
+      js: ['src/content-scripts/controle_unidade_gerar/index.ts'],
+      run_at: 'document_idle',
+    },
   ],
 })
