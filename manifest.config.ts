@@ -99,5 +99,13 @@ export default defineManifest({
       js: ['src/content-scripts/procedimento_visualizar/index.ts'],
       run_at: 'document_idle',
     },
+    {
+      matches: [
+        '*://*.br/*controlador.php?acao=anotacao_registrar*',
+        '*://*.org/*controlador.php?acao=anotacao_registrar*',
+      ],
+      js: ['src/content-scripts/anotacao_registrar/index.ts'],
+      run_at: 'document_idle',
+    },
   ],
 })
