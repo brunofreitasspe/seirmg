@@ -207,13 +207,13 @@ function aplicarIndicadorOrdenacao(th: HTMLTableCellElement, direcao: 'asc' | 'd
   th.appendChild(span)
 }
 
-function ordenarTabelaPelaColuna(idTabela: string, indiceColuna: number, headers: HTMLTableCellElement[]): void {
+function aplicarOrdenacaoNaTabela(
+  idTabela: string,
+  indiceColuna: number,
+  direcao: 'asc' | 'desc',
+  headers: HTMLTableCellElement[]
+): void {
   try {
-    const estadoAtual = estadoOrdenacaoPorTabela.get(idTabela)
-    const direcao: 'asc' | 'desc' =
-      estadoAtual?.indiceColuna === indiceColuna && estadoAtual.direcao === 'asc' ? 'desc' : 'asc'
-    estadoOrdenacaoPorTabela.set(idTabela, { indiceColuna, direcao })
-
     const linhas = linhasDaTabela(idTabela)
     const valores = linhas.map((linha, index) => ({
       id: linha.id || String(index),
@@ -239,6 +239,25 @@ function ordenarTabelaPelaColuna(idTabela: string, indiceColuna: number, headers
   } catch (error) {
     console.error('[SEIRMG] Falha ao ordenar tabela:', error)
   }
+}
+
+function ordenarTabelaPelaColuna(idTabela: string, indiceColuna: number, headers: HTMLTableCellElement[]): void {
+  const estadoAtual = estadoOrdenacaoPorTabela.get(idTabela)
+  const direcao: 'asc' | 'desc' =
+    estadoAtual?.indiceColuna === indiceColuna && estadoAtual.direcao === 'asc' ? 'desc' : 'asc'
+  estadoOrdenacaoPorTabela.set(idTabela, { indiceColuna, direcao })
+  aplicarOrdenacaoNaTabela(idTabela, indiceColuna, direcao, headers)
+}
+
+function reaplicarOrdenacaoAtual(idTabela: string): void {
+  const estadoAtual = estadoOrdenacaoPorTabela.get(idTabela)
+  if (!estadoAtual) return
+
+  const tabela = document.querySelector(idTabela)
+  if (!tabela) return
+
+  const headers = Array.from(tabela.querySelectorAll<HTMLTableCellElement>('thead > tr > th'))
+  aplicarOrdenacaoNaTabela(idTabela, estadoAtual.indiceColuna, estadoAtual.direcao, headers)
 }
 
 function montarOrdenacaoTabelas(): void {
