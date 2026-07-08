@@ -301,6 +301,7 @@ async function carregarAbaProcessos(): Promise<void> {
             rolagemInfinita: {
               ativo: inputRolagemInfinitaAtivo?.checked ?? false,
             },
+            agrupamento: config.controleProcessos.agrupamento,
           },
           pontoControle: {
             ativo: inputPontoControleAtivo?.checked ?? true,
