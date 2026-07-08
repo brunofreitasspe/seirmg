@@ -83,7 +83,7 @@ export interface ControleProcessosConfig {
 
 Novo `<select id="seirmg-agrupamento-criterio">` com as opções "Sem agrupamento / Por marcador / Por tipo / Por responsável / Por ponto de controle", inserido via `divFiltro.prepend(select)` — mesma área e mesmo padrão de inserção que `montarFiltroAtribuicao` já usa (`#divFiltro`). Ao `change`, grava `criterio` no `SyncConfig` (`createSyncConfigStore().set(...)`) e chama `reaplicarOrdemDaTabela` nas duas tabelas.
 
-Cabeçalho de grupo: `<tr class="tagintable">` com um único `<td colspan="N">`, `N` calculado dinamicamente a partir de `tabela.querySelector('thead > tr').children.length` (cobre o caso de `aplicarPrazos` já ter adicionado colunas extra), contendo `"{rótulo do grupo} ({quantidade} processos)"`. Reaproveita as classes nativas `tableHeader`/`infraCaption` do SEI para herdar o estilo visual já existente na página (mesmo princípio usado pelo Sei Pro original, `sei-pro.js:445-452`).
+Cabeçalho de grupo: `<tr class="tableHeader infraCaption seirmg-cabecalho-grupo">` com um único `<td colspan="N">`, `N` calculado dinamicamente a partir de `tabela.querySelector('thead > tr').children.length` (cobre o caso de `aplicarPrazos` já ter adicionado colunas extra), contendo `"{rótulo do grupo} ({quantidade} processos)"`. Reaproveita as classes nativas `tableHeader`/`infraCaption` do SEI para herdar o estilo visual já existente na página (mesmo princípio usado pelo Sei Pro original, `sei-pro.js:445-452`).
 
 ### 5. Ponto central de integração — `reaplicarOrdemDaTabela(idTabela: string): void`
 
