@@ -3,6 +3,11 @@ import { ALARM_NAME_PROCESSOS_NOVOS, verificarProcessosNovos } from './alarms/pr
 import { processarItensBlocoAssinatura } from './blocoAssinaturaPipeline'
 import { fetchText } from '../lib/result'
 import { fetchListaProcessos } from './processosNovos/fetchListaProcessos'
+import {
+  extrairInfoRedirecionamentoViaOffscreen,
+  parseBlocoAssinaturaHtmlViaOffscreen,
+  parseProcessosNovosHtmlViaOffscreen,
+} from './offscreenParser'
 import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
 import { passouIntervalo } from '../lib/throttle'
 import { NOTIFICATION_ID_PREFIX, NOTIFICATION_ID_PREFIX_PROCESSO } from './notifications/notify'
@@ -57,6 +62,7 @@ async function verificarBlocoAssinaturaViaFetch(): Promise<void> {
     fetchBlocoAssinaturaHtml: () =>
       fetchText(`${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}`),
     parseOptions: { seiVersionAtLeast4: localConfig.seiVersionAtLeast4 ?? true },
+    parseBlocoAssinaturaHtml: parseBlocoAssinaturaHtmlViaOffscreen,
   })
 }
 
@@ -69,7 +75,11 @@ async function verificarProcessosNovosViaFetch(): Promise<void> {
   if (!localConfig.baseUrlSei) return
 
   await verificarProcessosNovos({
-    fetchProcessosDocument: () => fetchListaProcessos(localConfig.baseUrlSei as string),
+    fetchProcessosItens: () =>
+      fetchListaProcessos(localConfig.baseUrlSei as string, {
+        extrairInfoRedirecionamento: extrairInfoRedirecionamentoViaOffscreen,
+        extrairProcessos: parseProcessosNovosHtmlViaOffscreen,
+      }),
   })
 
   const localConfigAtualizado = await createLocalConfigStore().get()

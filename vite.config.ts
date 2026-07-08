@@ -4,4 +4,11 @@ import manifest from './manifest.config'
 
 export default defineConfig({
   plugins: [crx({ manifest })],
+  build: {
+    rollupOptions: {
+      input: {
+        offscreen: 'src/offscreen/index.html',
+      },
+    },
+  },
 })

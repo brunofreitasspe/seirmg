@@ -52,4 +52,24 @@ describe('verificarBlocoAssinatura', () => {
 
     consoleErrorSpy.mockRestore()
   })
+
+  it('usa parseBlocoAssinaturaHtml injetado em vez do DOMParser direto', async () => {
+    const processarItens = vi.fn()
+    const parseBlocoAssinaturaHtml = vi
+      .fn()
+      .mockResolvedValue([{ id: '/bloco/9', numero: '9', link: '/bloco/9', estado: 'aberto' }])
+
+    await verificarBlocoAssinatura({
+      fetchBlocoAssinaturaHtml: async () => ({ ok: true, data: 'html-qualquer' }),
+      parseOptions: { seiVersionAtLeast4: true },
+      parseBlocoAssinaturaHtml,
+      processarItens,
+    })
+
+    expect(parseBlocoAssinaturaHtml).toHaveBeenCalledWith('html-qualquer', { seiVersionAtLeast4: true })
+    expect(processarItens).toHaveBeenCalledWith(
+      [{ id: '/bloco/9', numero: '9', link: '/bloco/9', estado: 'aberto' }],
+      { sempreNotificarPendentes: true }
+    )
+  })
 })
