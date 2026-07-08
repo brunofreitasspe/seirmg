@@ -754,14 +754,12 @@ function desabilitarSelecaoNaLinha(linha: Element): void {
   celula.setAttribute('onmouseout', 'return infraTooltipOcultar()')
 }
 
-function reaplicarTratamentosNasLinhasNovas(_idTabela: string, config: SyncConfig, linhas: Element[]): void {
+function reaplicarTratamentosNasLinhasNovas(idTabela: string, config: SyncConfig, linhas: Element[]): void {
   aplicarPrazosEmLinhas(config.controleProcessos.prazos, linhas)
   aplicarCorProcessoEmLinhas(config.controleProcessos.coresProcesso, linhas)
   aplicarEspecificacaoEmLinhas(config.controleProcessos.especificacao, linhas)
-  // Cada callback de reaplicarFiltrosAposNovasLinhas já termina chamando reaplicarOrdemDaTabela
-  // (Step 5) — os 3 filtros (busca/atribuição/bloco) sempre se registram aqui, então a
-  // ordenação/agrupamento já é reaplicada por eles, sem precisar de uma chamada extra.
   reaplicarFiltrosAposNovasLinhas.forEach((reaplicar) => reaplicar())
+  reaplicarOrdemDaTabela(idTabela)
   linhas.forEach((linha) => desabilitarSelecaoNaLinha(linha))
 }
 
