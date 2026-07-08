@@ -54,11 +54,18 @@ export interface RolagemInfinitaConfig {
   ativo: boolean
 }
 
+export type CriterioAgrupamento = 'nenhum' | 'marcador' | 'tipo' | 'responsavel' | 'pontoControle'
+
+export interface AgrupamentoConfig {
+  criterio: CriterioAgrupamento
+}
+
 export interface ControleProcessosConfig {
   prazos: PrazosConfig
   coresProcesso: CoresProcessoConfig
   especificacao: EspecificacaoConfig
   rolagemInfinita: RolagemInfinitaConfig
+  agrupamento: AgrupamentoConfig
 }
 
 export interface ConfiguracaoPontoControle {
@@ -149,6 +156,9 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     },
     rolagemInfinita: {
       ativo: false,
+    },
+    agrupamento: {
+      criterio: 'nenhum',
     },
   },
   pontoControle: {
