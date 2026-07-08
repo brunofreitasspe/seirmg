@@ -23,6 +23,14 @@ import {
   parseListaBlocos,
   parseProcessosDoBloco,
 } from '../../features/controle-processos/filtroBloco'
+import {
+  agruparLinhas,
+  extrairNomeMarcador,
+  extrairTextoPontoControle,
+  extrairTipoProcesso,
+  type CriterioAgrupamento,
+  type LinhaParaAgrupar,
+} from '../../features/controle-processos/agrupamento'
 import { detectarTipoColuna, ordenarIds, type TipoColuna } from '../../features/controle-processos/ordenarTabela'
 import {
   extrairCamposOcultos,
@@ -40,7 +48,7 @@ const LIMITE_PAGINAS_ROLAGEM_INFINITA = 200
 function linhasDaTabela(idTabela: string): Element[] {
   const tabela = document.querySelector(idTabela)
   if (!tabela) return []
-  return Array.from(tabela.querySelectorAll('tbody > tr'))
+  return Array.from(tabela.querySelectorAll('tbody > tr:not(.seirmg-cabecalho-grupo)'))
 }
 
 function definirTiposPrazo(
@@ -215,21 +223,20 @@ function aplicarIndicadorOrdenacao(th: HTMLTableCellElement, direcao: 'asc' | 'd
   th.appendChild(span)
 }
 
-function aplicarOrdenacaoNaTabela(
-  idTabela: string,
-  indiceColuna: number,
-  direcao: 'asc' | 'desc',
-  headers: HTMLTableCellElement[]
-): void {
+function calcularOrdemIds(linhas: Element[], indiceColuna: number, direcao: 'asc' | 'desc'): string[] {
+  const valores = linhas.map((linha, index) => ({
+    id: linha.id || String(index),
+    valor: linha.children[indiceColuna]?.textContent?.trim() ?? '',
+  }))
+
+  const tipo: TipoColuna = detectarTipoColuna(valores.map((item) => item.valor))
+  return ordenarIds(valores, tipo, direcao)
+}
+
+function aplicarOrdenacaoNaTabela(idTabela: string, indiceColuna: number, direcao: 'asc' | 'desc'): void {
   try {
     const linhas = linhasDaTabela(idTabela)
-    const valores = linhas.map((linha, index) => ({
-      id: linha.id || String(index),
-      valor: linha.children[indiceColuna]?.textContent?.trim() ?? '',
-    }))
-
-    const tipo: TipoColuna = detectarTipoColuna(valores.map((item) => item.valor))
-    const ordemIds = ordenarIds(valores, tipo, direcao)
+    const ordemIds = calcularOrdemIds(linhas, indiceColuna, direcao)
 
     const tabela = document.querySelector(idTabela)
     const tbody = tabela?.querySelector('tbody')
@@ -240,10 +247,6 @@ function aplicarOrdenacaoNaTabela(
       const linha = linhaPorId.get(id)
       if (linha) tbody.appendChild(linha)
     })
-
-    limparIndicadoresOrdenacao(headers)
-    aplicarIndicadorOrdenacao(headers[indiceColuna], direcao)
-    ultimoIndicePorTabela.delete(idTabela)
   } catch (error) {
     console.error('[SEIRMG] Falha ao ordenar tabela:', error)
   }
@@ -254,18 +257,142 @@ function ordenarTabelaPelaColuna(idTabela: string, indiceColuna: number, headers
   const direcao: 'asc' | 'desc' =
     estadoAtual?.indiceColuna === indiceColuna && estadoAtual.direcao === 'asc' ? 'desc' : 'asc'
   estadoOrdenacaoPorTabela.set(idTabela, { indiceColuna, direcao })
-  aplicarOrdenacaoNaTabela(idTabela, indiceColuna, direcao, headers)
+  limparIndicadoresOrdenacao(headers)
+  aplicarIndicadorOrdenacao(headers[indiceColuna], direcao)
+  reaplicarOrdemDaTabela(idTabela)
 }
 
 function reaplicarOrdenacaoAtual(idTabela: string): void {
   const estadoAtual = estadoOrdenacaoPorTabela.get(idTabela)
   if (!estadoAtual) return
+  aplicarOrdenacaoNaTabela(idTabela, estadoAtual.indiceColuna, estadoAtual.direcao)
+}
 
+const criterioAgrupamentoAtivo: CriterioAgrupamento = 'nenhum'
+
+const ROTULO_GRUPO_SEM_CHAVE = 'Sem Grupo'
+
+function criarCabecalhoDeGrupo(idTabela: string, rotulo: string, quantidade: number): HTMLTableRowElement {
+  const tabela = document.querySelector(idTabela)
+  const colunas = tabela?.querySelectorAll('thead > tr > th').length ?? 1
+  const tr = document.createElement('tr')
+  tr.className = 'tableHeader infraCaption seirmg-cabecalho-grupo'
+  const td = document.createElement('td')
+  td.colSpan = colunas
+  td.textContent = `${rotulo} (${quantidade} processo${quantidade === 1 ? '' : 's'})`
+  tr.appendChild(td)
+  return tr
+}
+
+function removerCabecalhosDeGrupo(idTabela: string): void {
+  document.querySelectorAll(`${idTabela} tbody > tr.seirmg-cabecalho-grupo`).forEach((tr) => tr.remove())
+}
+
+function calcularOrdemDentroDoGrupo(idTabela: string, linhas: Element[]): Map<string, number> | undefined {
+  const estadoOrdenacao = estadoOrdenacaoPorTabela.get(idTabela)
+  if (!estadoOrdenacao) return undefined
+
+  const ordemIds = calcularOrdemIds(linhas, estadoOrdenacao.indiceColuna, estadoOrdenacao.direcao)
+  return new Map(ordemIds.map((id, posicao) => [id, posicao]))
+}
+
+function extrairChaveDeAgrupamento(linha: Element, criterio: Exclude<CriterioAgrupamento, 'nenhum'>): string | null {
+  if (criterio === 'responsavel') {
+    return obterTextoAtribuido(linha)
+  }
+
+  const seletores: Record<Exclude<CriterioAgrupamento, 'nenhum' | 'responsavel'>, string> = {
+    marcador: "td > a[href*='acao=andamento_marcador_gerenciar']",
+    tipo: '.processoVisualizado, .processoNaoVisualizado',
+    pontoControle: "td > a[href*='acao=andamento_situacao_gerenciar']",
+  }
+  const extratores: Record<
+    Exclude<CriterioAgrupamento, 'nenhum' | 'responsavel'>,
+    (onmouseover: string) => string
+  > = {
+    marcador: extrairNomeMarcador,
+    tipo: extrairTipoProcesso,
+    pontoControle: extrairTextoPontoControle,
+  }
+
+  const elemento = linha.querySelector<HTMLElement>(seletores[criterio])
+  const onmouseover = elemento?.getAttribute('onmouseover')
+  if (!onmouseover) return null
+
+  return extratores[criterio](onmouseover) || null
+}
+
+function aplicarAgrupamento(idTabela: string, criterio: Exclude<CriterioAgrupamento, 'nenhum'>): void {
+  removerCabecalhosDeGrupo(idTabela)
+
+  const tabela = document.querySelector(idTabela)
+  const tbody = tabela?.querySelector('tbody')
+  if (!tabela || !tbody) return
+
+  const linhas = linhasDaTabela(idTabela)
+  const linhaPorId = new Map(linhas.map((linha, index) => [linha.id || String(index), linha]))
+
+  const linhasParaAgrupar: LinhaParaAgrupar[] = linhas.map((linha, index) => ({
+    id: linha.id || String(index),
+    chaveGrupo: extrairChaveDeAgrupamento(linha, criterio),
+  }))
+
+  const grupos = agruparLinhas(linhasParaAgrupar, calcularOrdemDentroDoGrupo(idTabela, linhas))
+
+  grupos.forEach((grupo) => {
+    tbody.appendChild(criarCabecalhoDeGrupo(idTabela, grupo.chaveGrupo ?? ROTULO_GRUPO_SEM_CHAVE, grupo.ids.length))
+    grupo.ids.forEach((id) => {
+      const linha = linhaPorId.get(id)
+      if (linha) tbody.appendChild(linha)
+    })
+  })
+}
+
+function ocultarCabecalhosDeGrupoVazios(idTabela: string): void {
   const tabela = document.querySelector(idTabela)
   if (!tabela) return
 
-  const headers = Array.from(tabela.querySelectorAll<HTMLTableCellElement>('thead > tr > th'))
-  aplicarOrdenacaoNaTabela(idTabela, estadoAtual.indiceColuna, estadoAtual.direcao, headers)
+  let cabecalhoAtual: HTMLElement | null = null
+  let grupoTemLinhaVisivel = false
+
+  const fecharGrupoAnterior = (): void => {
+    if (cabecalhoAtual) cabecalhoAtual.style.display = grupoTemLinhaVisivel ? 'table-row' : 'none'
+  }
+
+  Array.from(tabela.querySelectorAll('tbody > tr')).forEach((linha) => {
+    const linhaEl = linha as HTMLElement
+    if (linhaEl.classList.contains('seirmg-cabecalho-grupo')) {
+      fecharGrupoAnterior()
+      cabecalhoAtual = linhaEl
+      grupoTemLinhaVisivel = false
+    } else if (linhaEl.style.display !== 'none') {
+      grupoTemLinhaVisivel = true
+    }
+  })
+  fecharGrupoAnterior()
+}
+
+function reaplicarOrdemDaTabela(idTabela: string): void {
+  try {
+    const linhas = linhasDaTabela(idTabela)
+    const estado = estadoFiltrosPorTabela.get(idTabela) ?? {}
+    const ids = linhas.map((linha, index) => linha.id || String(index))
+    aplicarVisibilidade(idTabela, calcularVisibilidade(estado, ids))
+
+    const tabelaSuportaAgrupamento = idTabela === '#tblProcessosRecebidos' || idTabela === '#tblProcessosGerados'
+    const criterio = criterioAgrupamentoAtivo
+    if (tabelaSuportaAgrupamento && criterio !== 'nenhum') {
+      aplicarAgrupamento(idTabela, criterio)
+    } else {
+      removerCabecalhosDeGrupo(idTabela)
+      reaplicarOrdenacaoAtual(idTabela)
+    }
+
+    ocultarCabecalhosDeGrupoVazios(idTabela)
+    ultimoIndicePorTabela.delete(idTabela)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao reaplicar ordem da tabela:', error)
+  }
 }
 
 function montarOrdenacaoTabelas(): void {
@@ -344,8 +471,7 @@ function montarBuscaRapida(): void {
           }
 
           estadoFiltrosPorTabela.set(idTabela, estado)
-          const ids = linhas.map((linha, index) => linha.id || String(index))
-          aplicarVisibilidade(idTabela, calcularVisibilidade(estado, ids))
+          reaplicarOrdemDaTabela(idTabela)
         })
       } catch (error) {
         console.error('[SEIRMG] Falha ao aplicar busca rápida:', error)
@@ -468,8 +594,7 @@ async function montarFiltroAtribuicao(): Promise<void> {
         }
 
         estadoFiltrosPorTabela.set(idTabela, estado)
-        const ids = linhas.map((linha, index) => linha.id || String(index))
-        aplicarVisibilidade(idTabela, calcularVisibilidade(estado, ids))
+        reaplicarOrdemDaTabela(idTabela)
       })
     }
 
@@ -549,8 +674,7 @@ function montarFiltroBloco(): void {
         }
 
         estadoFiltrosPorTabela.set(idTabela, estado)
-        const ids = linhas.map((linha, index) => linha.id || String(index))
-        aplicarVisibilidade(idTabela, calcularVisibilidade(estado, ids))
+        reaplicarOrdemDaTabela(idTabela)
       })
     }
 
@@ -626,12 +750,14 @@ function desabilitarSelecaoNaLinha(linha: Element): void {
   celula.setAttribute('onmouseout', 'return infraTooltipOcultar()')
 }
 
-function reaplicarTratamentosNasLinhasNovas(idTabela: string, config: SyncConfig, linhas: Element[]): void {
+function reaplicarTratamentosNasLinhasNovas(_idTabela: string, config: SyncConfig, linhas: Element[]): void {
   aplicarPrazosEmLinhas(config.controleProcessos.prazos, linhas)
   aplicarCorProcessoEmLinhas(config.controleProcessos.coresProcesso, linhas)
   aplicarEspecificacaoEmLinhas(config.controleProcessos.especificacao, linhas)
+  // Cada callback de reaplicarFiltrosAposNovasLinhas já termina chamando reaplicarOrdemDaTabela
+  // (Step 5) — os 3 filtros (busca/atribuição/bloco) sempre se registram aqui, então a
+  // ordenação/agrupamento já é reaplicada por eles, sem precisar de uma chamada extra.
   reaplicarFiltrosAposNovasLinhas.forEach((reaplicar) => reaplicar())
-  reaplicarOrdenacaoAtual(idTabela)
   linhas.forEach((linha) => desabilitarSelecaoNaLinha(linha))
 }
 
