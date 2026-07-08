@@ -272,7 +272,7 @@ function reaplicarOrdenacaoAtual(idTabela: string): void {
   aplicarOrdenacaoNaTabela(idTabela, estadoAtual.indiceColuna, estadoAtual.direcao)
 }
 
-const criterioAgrupamentoAtivo: CriterioAgrupamento = 'nenhum'
+let criterioAgrupamentoAtivo: CriterioAgrupamento = 'nenhum'
 
 const ROTULO_GRUPO_SEM_CHAVE = 'Sem Grupo'
 
@@ -859,6 +859,60 @@ async function iniciarRemocaoPaginacao(
   }
 }
 
+const ROTULOS_OPCAO_AGRUPAMENTO: Array<{ valor: CriterioAgrupamento; rotulo: string }> = [
+  { valor: 'nenhum', rotulo: 'Sem agrupamento' },
+  { valor: 'marcador', rotulo: 'Por marcador' },
+  { valor: 'tipo', rotulo: 'Por tipo' },
+  { valor: 'responsavel', rotulo: 'Por responsável' },
+  { valor: 'pontoControle', rotulo: 'Por ponto de controle' },
+]
+
+const TABELAS_COM_AGRUPAMENTO = ['#tblProcessosRecebidos', '#tblProcessosGerados']
+
+function montarAgrupamento(config: SyncConfig): void {
+  try {
+    const divFiltro = document.getElementById('divFiltro')
+    if (!divFiltro) return
+
+    criterioAgrupamentoAtivo = config.controleProcessos.agrupamento.criterio
+
+    const select = document.createElement('select')
+    select.id = 'seirmg-agrupamento-criterio'
+    ROTULOS_OPCAO_AGRUPAMENTO.forEach(({ valor, rotulo }) => {
+      select.appendChild(new Option(rotulo, valor))
+    })
+    select.value = criterioAgrupamentoAtivo
+
+    select.addEventListener('change', () => {
+      criterioAgrupamentoAtivo = select.value as CriterioAgrupamento
+      TABELAS_COM_AGRUPAMENTO.forEach((idTabela) => reaplicarOrdemDaTabela(idTabela))
+
+      createSyncConfigStore()
+        .get()
+        .then((atual) =>
+          createSyncConfigStore().set({
+            ...atual,
+            controleProcessos: {
+              ...atual.controleProcessos,
+              agrupamento: { criterio: criterioAgrupamentoAtivo },
+            },
+          })
+        )
+        .catch((error) => {
+          console.error('[SEIRMG] Falha ao salvar critério de agrupamento:', error)
+        })
+    })
+
+    divFiltro.prepend(select)
+
+    if (criterioAgrupamentoAtivo !== 'nenhum') {
+      TABELAS_COM_AGRUPAMENTO.forEach((idTabela) => reaplicarOrdemDaTabela(idTabela))
+    }
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao montar agrupamento:', error)
+  }
+}
+
 async function bootstrap(): Promise<void> {
   try {
     corrigirTabelasNativas()
@@ -873,6 +927,7 @@ async function bootstrap(): Promise<void> {
     aplicarPrazos(config.controleProcessos.prazos)
     aplicarCorProcesso(config.controleProcessos.coresProcesso)
     aplicarEspecificacao(config.controleProcessos.especificacao)
+    montarAgrupamento(config)
 
     if (config.controleProcessos.rolagemInfinita.ativo) {
       const tabelasRolagem: Array<{ tipo: 'Recebidos' | 'Gerados'; idTabela: string }> = [
