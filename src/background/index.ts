@@ -58,12 +58,16 @@ async function verificarBlocoAssinaturaViaFetch(): Promise<void> {
   const localConfig = await createLocalConfigStore().get()
   if (!localConfig.baseUrlSei) return
 
+  const url = `${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}`
+  console.log('[SEIRMG][diagnostico] verificarBlocoAssinaturaViaFetch: GET', url, new Date().toISOString())
+
   await verificarBlocoAssinatura({
-    fetchBlocoAssinaturaHtml: () =>
-      fetchText(`${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}`),
+    fetchBlocoAssinaturaHtml: () => fetchText(url),
     parseOptions: { seiVersionAtLeast4: localConfig.seiVersionAtLeast4 ?? true },
     parseBlocoAssinaturaHtml: parseBlocoAssinaturaHtmlViaOffscreen,
   })
+
+  console.log('[SEIRMG][diagnostico] verificarBlocoAssinaturaViaFetch: concluído', new Date().toISOString())
 }
 
 function atualizarBadgeIcone(count: number): void {
@@ -74,6 +78,12 @@ async function verificarProcessosNovosViaFetch(): Promise<void> {
   const localConfig = await createLocalConfigStore().get()
   if (!localConfig.baseUrlSei) return
 
+  console.log(
+    '[SEIRMG][diagnostico] verificarProcessosNovosViaFetch: iniciando',
+    localConfig.baseUrlSei,
+    new Date().toISOString()
+  )
+
   await verificarProcessosNovos({
     fetchProcessosItens: () =>
       fetchListaProcessos(localConfig.baseUrlSei as string, {
@@ -81,6 +91,8 @@ async function verificarProcessosNovosViaFetch(): Promise<void> {
         extrairProcessos: parseProcessosNovosHtmlViaOffscreen,
       }),
   })
+
+  console.log('[SEIRMG][diagnostico] verificarProcessosNovosViaFetch: concluído', new Date().toISOString())
 
   const localConfigAtualizado = await createLocalConfigStore().get()
   atualizarBadgeIcone(localConfigAtualizado.processosNovosBadgeCount)
@@ -104,11 +116,14 @@ async function verificarImediatoSeNecessario(): Promise<void> {
         INTERVALO_MINIMO_VERIFICACAO_IMEDIATA_MINUTOS
       )
     ) {
+      console.log('[SEIRMG][diagnostico] verificarImediatoSeNecessario: throttled, pulando', agoraIso)
       return
     }
 
+    console.log('[SEIRMG][diagnostico] verificarImediatoSeNecessario: iniciando fetch', agoraIso)
     await localStore.set({ ...localConfig, ultimaVerificacaoImediata: agoraIso })
     await verificarBlocoAssinaturaViaFetch()
+    console.log('[SEIRMG][diagnostico] verificarImediatoSeNecessario: fetch concluído', new Date().toISOString())
   } finally {
     verificacaoImediataEmAndamento = false
   }
@@ -167,8 +182,13 @@ chrome.runtime.onMessage.addListener((mensagem) => {
   })
 })
 
-chrome.runtime.onMessage.addListener((mensagem) => {
+chrome.runtime.onMessage.addListener((mensagem, remetente) => {
   if (!ehMensagemSeiDetectado(mensagem)) return
+  console.log(
+    '[SEIRMG][diagnostico] seirmg:sei-detectado recebido de',
+    remetente.tab?.url,
+    new Date().toISOString()
+  )
   verificarImediatoSeNecessario().catch((error) => {
     console.error('[SEIRMG] Falha ao verificar imediatamente após detectar sessão do SEI:', error)
   })
