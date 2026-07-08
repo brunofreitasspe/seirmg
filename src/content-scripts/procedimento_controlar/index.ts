@@ -253,13 +253,17 @@ function aplicarOrdenacaoNaTabela(idTabela: string, indiceColuna: number, direca
 }
 
 function ordenarTabelaPelaColuna(idTabela: string, indiceColuna: number, headers: HTMLTableCellElement[]): void {
-  const estadoAtual = estadoOrdenacaoPorTabela.get(idTabela)
-  const direcao: 'asc' | 'desc' =
-    estadoAtual?.indiceColuna === indiceColuna && estadoAtual.direcao === 'asc' ? 'desc' : 'asc'
-  estadoOrdenacaoPorTabela.set(idTabela, { indiceColuna, direcao })
-  limparIndicadoresOrdenacao(headers)
-  aplicarIndicadorOrdenacao(headers[indiceColuna], direcao)
-  reaplicarOrdemDaTabela(idTabela)
+  try {
+    const estadoAtual = estadoOrdenacaoPorTabela.get(idTabela)
+    const direcao: 'asc' | 'desc' =
+      estadoAtual?.indiceColuna === indiceColuna && estadoAtual.direcao === 'asc' ? 'desc' : 'asc'
+    estadoOrdenacaoPorTabela.set(idTabela, { indiceColuna, direcao })
+    limparIndicadoresOrdenacao(headers)
+    aplicarIndicadorOrdenacao(headers[indiceColuna], direcao)
+    reaplicarOrdemDaTabela(idTabela)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao ordenar tabela pela coluna:', error)
+  }
 }
 
 function reaplicarOrdenacaoAtual(idTabela: string): void {
