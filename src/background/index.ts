@@ -16,6 +16,11 @@ import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
 const ACAO_BLOCO_ASSINATURA = 'bloco_assinatura_listar'
 const ACAO_PROCEDIMENTO_CONTROLAR = 'procedimento_controlar'
 const INTERVALO_MINIMO_VERIFICACAO_IMEDIATA_MINUTOS = 2
+const ATRASO_VERIFICACAO_IMEDIATA_MS = 5000
+
+function aguardar(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
 
 interface MensagemItensBloco {
   type: 'seirmg:bloco-assinatura:itens'
@@ -120,8 +125,16 @@ async function verificarImediatoSeNecessario(): Promise<void> {
       return
     }
 
-    console.log('[SEIRMG][diagnostico] verificarImediatoSeNecessario: iniciando fetch', agoraIso)
+    console.log('[SEIRMG][diagnostico] verificarImediatoSeNecessario: agendando fetch', agoraIso)
     await localStore.set({ ...localConfig, ultimaVerificacaoImediata: agoraIso })
+
+    // Dá tempo do SEI terminar a própria inicialização de sessão/unidade antes de
+    // fazer uma requisição autenticada concorrente (ver histórico de investigação:
+    // disparar o fetch imediatamente após o carregamento da página coincidiu com
+    // deslogamentos aleatórios, em uma página com inicializando=1 no querystring).
+    await aguardar(ATRASO_VERIFICACAO_IMEDIATA_MS)
+
+    console.log('[SEIRMG][diagnostico] verificarImediatoSeNecessario: iniciando fetch', new Date().toISOString())
     await verificarBlocoAssinaturaViaFetch()
     console.log('[SEIRMG][diagnostico] verificarImediatoSeNecessario: fetch concluído', new Date().toISOString())
   } finally {
