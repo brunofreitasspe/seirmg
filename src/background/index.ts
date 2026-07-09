@@ -101,7 +101,11 @@ async function verificarBlocoAssinaturaViaFetch(): Promise<void> {
   console.log('[SEIRMG][diagnostico] verificarBlocoAssinaturaViaFetch: GET', url, new Date().toISOString())
 
   await verificarBlocoAssinatura({
-    fetchBlocoAssinaturaHtml: () => fetchTextComGate(url),
+    fetchBlocoAssinaturaHtml: () =>
+      fetchTextComGate(url, {
+        referrer: localConfig.baseUrlSei,
+        referrerPolicy: 'strict-origin-when-cross-origin',
+      }),
     parseOptions: { seiVersionAtLeast4: localConfig.seiVersionAtLeast4 ?? true },
     parseBlocoAssinaturaHtml: parseBlocoAssinaturaHtmlViaOffscreen,
   })

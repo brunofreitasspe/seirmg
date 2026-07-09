@@ -39,8 +39,9 @@ export async function fetchListaProcessos(
   const url = `${baseUrlSei}/controlador.php?acao=procedimento_controlar`
   const corpo = new URLSearchParams()
   corpo.append('hdnTipoVisualizacao', 'D')
+  const opcoesReferrer = { referrer: baseUrlSei, referrerPolicy: 'strict-origin-when-cross-origin' } as const
 
-  const primeiraTentativa = await fetchTextFn(url, { method: 'POST', body: corpo })
+  const primeiraTentativa = await fetchTextFn(url, { method: 'POST', body: corpo, ...opcoesReferrer })
   if (!primeiraTentativa.ok) return primeiraTentativa
 
   const info = await extrairInfo(primeiraTentativa.data)
@@ -55,6 +56,7 @@ export async function fetchListaProcessos(
   const segundaTentativa = await fetchTextFn(`${baseUrlSei}${info.acaoRedirecionamento}`, {
     method: 'POST',
     body: corpo,
+    ...opcoesReferrer,
   })
   if (!segundaTentativa.ok) return segundaTentativa
 
