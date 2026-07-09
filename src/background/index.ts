@@ -1,13 +1,10 @@
-import { ALARM_NAME, verificarBlocoAssinatura } from './alarms/blocoAssinaturaCheck'
+import { ALARM_NAME } from './alarms/blocoAssinaturaCheck'
 import { ALARM_NAME_PROCESSOS_NOVOS, verificarProcessosNovos } from './alarms/processosNovosCheck'
 import { processarItensBlocoAssinatura } from './blocoAssinaturaPipeline'
 import { fetchTextComGate, registrarNavegacaoReal } from './sessionGate'
+import { verificarBlocoAssinaturaViaAbaOculta } from './blocoAssinaturaAbaOculta'
 import { fetchListaProcessos } from './processosNovos/fetchListaProcessos'
-import {
-  extrairInfoRedirecionamentoViaOffscreen,
-  parseBlocoAssinaturaHtmlViaOffscreen,
-  parseProcessosNovosHtmlViaOffscreen,
-} from './offscreenParser'
+import { extrairInfoRedirecionamentoViaOffscreen, parseProcessosNovosHtmlViaOffscreen } from './offscreenParser'
 import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
 import { NOTIFICATION_ID_PREFIX, NOTIFICATION_ID_PREFIX_PROCESSO } from './notifications/notify'
 import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
@@ -18,6 +15,7 @@ const ACAO_PROCEDIMENTO_CONTROLAR = 'procedimento_controlar'
 interface MensagemItensBloco {
   type: 'seirmg:bloco-assinatura:itens'
   itens: BlocoAssinaturaItem[]
+  origem?: 'alarme'
 }
 
 interface MensagemSeiDetectado {
@@ -93,24 +91,16 @@ async function agendarAlarmeProcessosNovos(): Promise<void> {
   })
 }
 
-async function verificarBlocoAssinaturaViaFetch(): Promise<void> {
+async function checarBlocoAssinaturaViaAlarme(): Promise<void> {
   const localConfig = await createLocalConfigStore().get()
   if (!localConfig.baseUrlSei) return
 
-  const url = `${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}`
-  console.log('[SEIRMG][diagnostico] verificarBlocoAssinaturaViaFetch: GET', url, new Date().toISOString())
+  const url = `${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}&seirmgOrigem=alarme`
+  console.log('[SEIRMG][diagnostico] checarBlocoAssinaturaViaAlarme: iniciando', url, new Date().toISOString())
 
-  await verificarBlocoAssinatura({
-    fetchBlocoAssinaturaHtml: () =>
-      fetchTextComGate(url, {
-        referrer: localConfig.baseUrlSei,
-        referrerPolicy: 'strict-origin-when-cross-origin',
-      }),
-    parseOptions: { seiVersionAtLeast4: localConfig.seiVersionAtLeast4 ?? true },
-    parseBlocoAssinaturaHtml: parseBlocoAssinaturaHtmlViaOffscreen,
-  })
+  await verificarBlocoAssinaturaViaAbaOculta(url)
 
-  console.log('[SEIRMG][diagnostico] verificarBlocoAssinaturaViaFetch: concluído', new Date().toISOString())
+  console.log('[SEIRMG][diagnostico] checarBlocoAssinaturaViaAlarme: concluído', new Date().toISOString())
 }
 
 function atualizarBadgeIcone(count: number): void {
@@ -172,7 +162,7 @@ chrome.runtime.onInstalled.addListener(() => {
 
 chrome.alarms.onAlarm.addListener((alarme) => {
   if (alarme.name !== ALARM_NAME) return
-  verificarBlocoAssinaturaViaFetch().catch((error) => {
+  checarBlocoAssinaturaViaAlarme().catch((error) => {
     console.error('[SEIRMG] Falha ao verificar bloco de assinatura via alarme:', error)
   })
 })
@@ -186,7 +176,8 @@ chrome.alarms.onAlarm.addListener((alarme) => {
 
 chrome.runtime.onMessage.addListener((mensagem) => {
   if (!ehMensagemItensBloco(mensagem)) return
-  processarItensBlocoAssinatura(mensagem.itens).catch((error) => {
+  const deps = mensagem.origem === 'alarme' ? { sempreNotificarPendentes: true } : undefined
+  processarItensBlocoAssinatura(mensagem.itens, deps).catch((error) => {
     console.error(
       '[SEIRMG] Falha ao processar itens do bloco de assinatura recebidos via mensagem:',
       error
