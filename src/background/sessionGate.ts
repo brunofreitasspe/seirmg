@@ -1,9 +1,11 @@
 import { fetchText, type FetchWithTimeoutOptions, type Result } from '../lib/result'
 import { createLocalConfigStore } from '../lib/storage'
 import { ehPaginaDeLogin, calcularEsperaPosNavegacao, circuitBreakerAberto } from '../lib/sessionGate'
+import { notificarSessaoInvalida } from './notifications/notify'
 
 const ATRASO_POS_NAVEGACAO_MS = 1500
 const DURACAO_CIRCUIT_BREAKER_MINUTOS = 5
+const COR_BADGE_SESSAO_INVALIDA = '#e46e64'
 
 function aguardar(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms))
@@ -29,6 +31,9 @@ export async function abrirCircuitBreaker(): Promise<void> {
     ...config,
     sessaoInvalidaAte: new Date(Date.now() + DURACAO_CIRCUIT_BREAKER_MINUTOS * 60 * 1000).toISOString(),
   })
+  chrome.action.setBadgeText({ text: '!' })
+  chrome.action.setBadgeBackgroundColor({ color: COR_BADGE_SESSAO_INVALIDA })
+  notificarSessaoInvalida()
   console.error(
     '[SEIRMG] Sessão do SEI parece inválida (tela de login detectada) — pausando chamadas por',
     DURACAO_CIRCUIT_BREAKER_MINUTOS,
@@ -44,7 +49,7 @@ export async function registrarNavegacaoReal(): Promise<void> {
     ultimaNavegacaoRealSei: new Date().toISOString(),
     sessaoInvalidaAte: undefined,
   })
-  console.log('[SEIRMG][diagnostico] registrarNavegacaoReal: navegação real registrada', new Date().toISOString())
+  chrome.action.setBadgeText({ text: '' })
 }
 
 export function fetchTextComGate(
@@ -57,22 +62,11 @@ export function fetchTextComGate(
       const agoraIso = new Date().toISOString()
 
       if (circuitBreakerAberto(config.sessaoInvalidaAte, agoraIso)) {
-        console.log(
-          '[SEIRMG][diagnostico] fetchTextComGate: circuit breaker aberto até',
-          config.sessaoInvalidaAte,
-          '— pulando',
-          url
-        )
         return { ok: false, error: 'Sessão do SEI inválida — chamadas de fundo pausadas temporariamente' }
       }
 
-      console.log('[SEIRMG][diagnostico] fetchTextComGate: solicitado', url, agoraIso)
-
       const espera = calcularEsperaPosNavegacao(config.ultimaNavegacaoRealSei, agoraIso, ATRASO_POS_NAVEGACAO_MS)
-      if (espera > 0) {
-        console.log('[SEIRMG][diagnostico] fetchTextComGate: aguardando', espera, 'ms pós-navegação antes de', url)
-        await aguardar(espera)
-      }
+      if (espera > 0) await aguardar(espera)
 
       const resultado = await fetchText(url, options)
       if (resultado.ok && ehPaginaDeLogin(resultado.data)) {
@@ -80,12 +74,6 @@ export function fetchTextComGate(
         return { ok: false, error: 'Sessão do SEI inválida (tela de login detectada)' }
       }
 
-      console.log(
-        '[SEIRMG][diagnostico] fetchTextComGate: concluído',
-        url,
-        resultado.ok ? 'ok' : `erro: ${resultado.error}`,
-        new Date().toISOString()
-      )
       return resultado
     } catch (error) {
       return { ok: false, error: error instanceof Error ? error.message : String(error) }

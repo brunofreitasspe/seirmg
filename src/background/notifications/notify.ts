@@ -16,3 +16,16 @@ export function notificarNovoBloco(item: BlocoAssinaturaItem, tocarSom: boolean)
     silent: !tocarSom,
   })
 }
+
+export const NOTIFICATION_ID_SESSAO_INVALIDA = 'seirmg-sessao-invalida'
+
+export function notificarSessaoInvalida(): void {
+  chrome.notifications.create(NOTIFICATION_ID_SESSAO_INVALIDA, {
+    type: 'basic',
+    iconUrl: chrome.runtime.getURL('src/assets/icons/icon-128.png'),
+    title: 'SEIRMG — Sessão do SEI parece ter caído',
+    message:
+      'A extensão vai pausar as checagens de fundo por alguns minutos. Se estiver navegando, talvez precise logar de novo.',
+    priority: 1,
+  })
+}

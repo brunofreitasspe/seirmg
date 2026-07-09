@@ -1,6 +1,6 @@
 import { ALARM_NAME } from './alarms/blocoAssinaturaCheck'
 import { processarItensBlocoAssinatura } from './blocoAssinaturaPipeline'
-import { fetchTextComGate, registrarNavegacaoReal } from './sessionGate'
+import { fetchTextComGate, registrarNavegacaoReal, abrirCircuitBreaker } from './sessionGate'
 import { verificarBlocoAssinaturaViaAbaOculta } from './blocoAssinaturaAbaOculta'
 import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
 import { NOTIFICATION_ID_PREFIX } from './notifications/notify'
@@ -27,12 +27,6 @@ interface MensagemFetchSei {
 
 interface MensagemTelaLoginDetectada {
   type: 'seirmg:tela-login-detectada'
-  url: string
-}
-
-interface MensagemDiagnostico {
-  type: 'seirmg:diagnostico'
-  mensagem: string
 }
 
 function ehMensagemItensBloco(mensagem: unknown): mensagem is MensagemItensBloco {
@@ -67,14 +61,6 @@ function ehMensagemTelaLoginDetectada(mensagem: unknown): mensagem is MensagemTe
   )
 }
 
-function ehMensagemDiagnostico(mensagem: unknown): mensagem is MensagemDiagnostico {
-  return (
-    typeof mensagem === 'object' &&
-    mensagem !== null &&
-    (mensagem as { type?: unknown }).type === 'seirmg:diagnostico'
-  )
-}
-
 async function agendarAlarme(): Promise<void> {
   const config = await createSyncConfigStore().get()
   chrome.alarms.create(ALARM_NAME, { periodInMinutes: config.blocoAssinatura.intervaloMinutos })
@@ -85,11 +71,7 @@ async function checarBlocoAssinaturaViaAlarme(): Promise<void> {
   if (!localConfig.baseUrlSei) return
 
   const url = `${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}&seirmgOrigem=alarme`
-  console.log('[SEIRMG][diagnostico] checarBlocoAssinaturaViaAlarme: iniciando', url, new Date().toISOString())
-
   await verificarBlocoAssinaturaViaAbaOculta(url)
-
-  console.log('[SEIRMG][diagnostico] checarBlocoAssinaturaViaAlarme: concluído', new Date().toISOString())
 }
 
 async function abrirOuFocarAba(baseUrlSei: string, url: string): Promise<void> {
@@ -140,13 +122,8 @@ chrome.runtime.onMessage.addListener((mensagem) => {
   })
 })
 
-chrome.runtime.onMessage.addListener((mensagem, remetente) => {
+chrome.runtime.onMessage.addListener((mensagem) => {
   if (!ehMensagemSeiDetectado(mensagem)) return
-  console.log(
-    '[SEIRMG][diagnostico] seirmg:sei-detectado recebido de',
-    remetente.tab?.url,
-    new Date().toISOString()
-  )
   registrarNavegacaoReal().catch((error) => {
     console.error('[SEIRMG] Falha ao registrar navegação real:', error)
   })
@@ -154,12 +131,6 @@ chrome.runtime.onMessage.addListener((mensagem, remetente) => {
 
 chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
   if (!ehMensagemFetchSei(mensagem)) return false
-  console.log(
-    '[SEIRMG][diagnostico] seirmg:fetch-sei recebido de content script:',
-    mensagem.url,
-    mensagem.method ?? 'GET',
-    new Date().toISOString()
-  )
   fetchTextComGate(mensagem.url, {
     method: mensagem.method,
     body: mensagem.body !== undefined ? new URLSearchParams(mensagem.body) : undefined,
@@ -169,20 +140,11 @@ chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
   return true
 })
 
-chrome.runtime.onMessage.addListener((mensagem, remetente) => {
-  if (!ehMensagemTelaLoginDetectada(mensagem)) return
-  console.error(
-    '[SEIRMG][diagnostico] TELA DE LOGIN DETECTADA NA ABA REAL:',
-    mensagem.url,
-    'aba id:',
-    remetente.tab?.id,
-    new Date().toISOString()
-  )
-})
-
 chrome.runtime.onMessage.addListener((mensagem) => {
-  if (!ehMensagemDiagnostico(mensagem)) return
-  console.log('[SEIRMG][diagnostico][content-script]', mensagem.mensagem)
+  if (!ehMensagemTelaLoginDetectada(mensagem)) return
+  abrirCircuitBreaker().catch((error) => {
+    console.error('[SEIRMG] Falha ao abrir circuit breaker após detectar tela de login na aba real:', error)
+  })
 })
 
 chrome.notifications.onClicked.addListener(async (notificationId) => {
