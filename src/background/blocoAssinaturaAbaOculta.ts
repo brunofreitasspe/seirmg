@@ -55,24 +55,14 @@ export function verificarBlocoAssinaturaViaAbaOculta(url: string): Promise<void>
   return serializar(async () => {
     try {
       if (await circuitBreakerEstaAberto()) {
-        console.log('[SEIRMG][diagnostico] verificarBlocoAssinaturaViaAbaOculta: circuit breaker aberto, pulando')
         return
       }
 
-      console.log(
-        '[SEIRMG][diagnostico] verificarBlocoAssinaturaViaAbaOculta: abrindo aba oculta',
-        url,
-        new Date().toISOString()
-      )
       const tab = await chrome.tabs.create({ url, active: false })
       if (!tab.id) return
 
       try {
         const itens = await aguardarMensagemOuTimeout(tab.id)
-        console.log(
-          '[SEIRMG][diagnostico] verificarBlocoAssinaturaViaAbaOculta: aba concluída/timeout',
-          new Date().toISOString()
-        )
 
         if (itens !== undefined) {
           await processarItensBlocoAssinatura(itens, { sempreNotificarPendentes: true })
