@@ -130,7 +130,7 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
   tema: { preset: 'claro' },
   blocoAssinatura: {
     ativo: true,
-    intervaloMinutos: 15,
+    intervaloMinutos: 5,
     tocarSom: true,
   },
   processosNovos: {
