@@ -12,7 +12,14 @@ gerada uma vez) configurada no ambiente do n8n.
 2. **Postgres (Execute Query)** — credencial do banco de usuários:
    `SELECT id, nome, email, senha_hash, senha_salt, ativo FROM usuarios WHERE email = $1`
    Parâmetro: `{{$json.body.email}}`
-3. **IF** — condição: nenhuma linha retornada OU `ativo` é `false`.
+   **Importante:** habilite a opção **"Always Output Data"** nas Settings
+   deste node. Sem isso, quando o e-mail não existir a query não retorna
+   nenhuma linha, o node não emite nenhum item, e o IF do passo seguinte
+   nunca executa em nenhum dos dois ramos — a requisição fica pendurada até
+   estourar o timeout do webhook, em vez de responder 401.
+3. **IF** — duas condições combinadas com **OR**: `{{$json.id}}` está vazio
+   (cobre o caso de nenhuma linha retornada, que com "Always Output Data"
+   vira um item `{}` sem o campo `id`) OU `{{$json.ativo}}` é `false`.
    - Ramo verdadeiro → **Respond to Webhook**: status 401,
      body `{ "error": "Credenciais inválidas" }`.
 4. **Code** (ramo falso do IF acima) — cole exatamente:
@@ -152,8 +159,15 @@ LIMIT 1
 ```
 
    Parâmetro: `{{$('Webhook').first().json.body.processo}}`
+   **Importante:** habilite **"Always Output Data"** nas Settings deste
+   node também, pelo mesmo motivo do passo 2 do Workflow 1 — sem isso, um
+   processo sem card correspondente faz o IF do passo seguinte não
+   executar em nenhum ramo, e a requisição fica pendurada em vez de
+   responder 404.
 
-5. **IF** — condição: nenhuma linha retornada.
+5. **IF** — condição: `{{$json.tipoProcesso}}` está vazio (com "Always
+   Output Data" habilitado, nenhuma linha encontrada vira um item `{}`
+   sem esse campo).
    - Ramo verdadeiro → **Respond to Webhook**: status 404,
      body `{ "error": "Processo não encontrado no Planka" }`.
 6. **Respond to Webhook** (ramo falso) — status 200, body `{{$json}}`.
