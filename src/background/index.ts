@@ -1,16 +1,12 @@
 import { ALARM_NAME } from './alarms/blocoAssinaturaCheck'
-import { ALARM_NAME_PROCESSOS_NOVOS, verificarProcessosNovos } from './alarms/processosNovosCheck'
 import { processarItensBlocoAssinatura } from './blocoAssinaturaPipeline'
 import { fetchTextComGate, registrarNavegacaoReal } from './sessionGate'
 import { verificarBlocoAssinaturaViaAbaOculta } from './blocoAssinaturaAbaOculta'
-import { fetchListaProcessos } from './processosNovos/fetchListaProcessos'
-import { extrairInfoRedirecionamentoViaOffscreen, parseProcessosNovosHtmlViaOffscreen } from './offscreenParser'
 import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
-import { NOTIFICATION_ID_PREFIX, NOTIFICATION_ID_PREFIX_PROCESSO } from './notifications/notify'
+import { NOTIFICATION_ID_PREFIX } from './notifications/notify'
 import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
 
 const ACAO_BLOCO_ASSINATURA = 'bloco_assinatura_listar'
-const ACAO_PROCEDIMENTO_CONTROLAR = 'procedimento_controlar'
 
 interface MensagemItensBloco {
   type: 'seirmg:bloco-assinatura:itens'
@@ -84,13 +80,6 @@ async function agendarAlarme(): Promise<void> {
   chrome.alarms.create(ALARM_NAME, { periodInMinutes: config.blocoAssinatura.intervaloMinutos })
 }
 
-async function agendarAlarmeProcessosNovos(): Promise<void> {
-  const config = await createSyncConfigStore().get()
-  chrome.alarms.create(ALARM_NAME_PROCESSOS_NOVOS, {
-    periodInMinutes: config.processosNovos.intervaloMinutos,
-  })
-}
-
 async function checarBlocoAssinaturaViaAlarme(): Promise<void> {
   const localConfig = await createLocalConfigStore().get()
   if (!localConfig.baseUrlSei) return
@@ -101,34 +90,6 @@ async function checarBlocoAssinaturaViaAlarme(): Promise<void> {
   await verificarBlocoAssinaturaViaAbaOculta(url)
 
   console.log('[SEIRMG][diagnostico] checarBlocoAssinaturaViaAlarme: concluído', new Date().toISOString())
-}
-
-function atualizarBadgeIcone(count: number): void {
-  chrome.action.setBadgeText({ text: count > 0 ? String(count) : '' })
-}
-
-async function verificarProcessosNovosViaFetch(): Promise<void> {
-  const localConfig = await createLocalConfigStore().get()
-  if (!localConfig.baseUrlSei) return
-
-  console.log(
-    '[SEIRMG][diagnostico] verificarProcessosNovosViaFetch: iniciando',
-    localConfig.baseUrlSei,
-    new Date().toISOString()
-  )
-
-  await verificarProcessosNovos({
-    fetchProcessosItens: () =>
-      fetchListaProcessos(localConfig.baseUrlSei as string, {
-        extrairInfoRedirecionamento: extrairInfoRedirecionamentoViaOffscreen,
-        extrairProcessos: parseProcessosNovosHtmlViaOffscreen,
-      }),
-  })
-
-  console.log('[SEIRMG][diagnostico] verificarProcessosNovosViaFetch: concluído', new Date().toISOString())
-
-  const localConfigAtualizado = await createLocalConfigStore().get()
-  atualizarBadgeIcone(localConfigAtualizado.processosNovosBadgeCount)
 }
 
 async function abrirOuFocarAba(baseUrlSei: string, url: string): Promise<void> {
@@ -152,9 +113,6 @@ chrome.runtime.onInstalled.addListener(() => {
   agendarAlarme().catch((error) => {
     console.error('[SEIRMG] Falha ao agendar alarme do bloco de assinatura:', error)
   })
-  agendarAlarmeProcessosNovos().catch((error) => {
-    console.error('[SEIRMG] Falha ao agendar alarme de processos novos:', error)
-  })
   marcarIndicadorConfiguracao().catch((error) => {
     console.error('[SEIRMG] Falha ao marcar indicador de configuração pendente:', error)
   })
@@ -164,13 +122,6 @@ chrome.alarms.onAlarm.addListener((alarme) => {
   if (alarme.name !== ALARM_NAME) return
   checarBlocoAssinaturaViaAlarme().catch((error) => {
     console.error('[SEIRMG] Falha ao verificar bloco de assinatura via alarme:', error)
-  })
-})
-
-chrome.alarms.onAlarm.addListener((alarme) => {
-  if (alarme.name !== ALARM_NAME_PROCESSOS_NOVOS) return
-  verificarProcessosNovosViaFetch().catch((error) => {
-    console.error('[SEIRMG] Falha ao verificar processos novos via alarme:', error)
   })
 })
 
@@ -243,11 +194,6 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
       await abrirOuFocarAba(
         localConfig.baseUrlSei,
         `${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}`
-      )
-    } else if (notificationId.startsWith(NOTIFICATION_ID_PREFIX_PROCESSO)) {
-      await abrirOuFocarAba(
-        localConfig.baseUrlSei,
-        `${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_PROCEDIMENTO_CONTROLAR}`
       )
     }
 

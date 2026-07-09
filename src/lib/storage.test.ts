@@ -38,11 +38,6 @@ describe('createSyncConfigStore', () => {
     expect(await store.get()).toEqual(atualizado)
   })
 
-  it('inclui processosNovos padrão (ativo, 5 min, som) quando vazio', async () => {
-    const store = createSyncConfigStore(criarAreaFalsa())
-    expect((await store.get()).processosNovos).toEqual({ ativo: true, intervaloMinutos: 5, tocarSom: true })
-  })
-
   it('inclui selecaoEmMassaBlocoAssinatura ativo por padrão', async () => {
     const store = createSyncConfigStore(criarAreaFalsa())
     expect((await store.get()).featureFlags.selecaoEmMassaBlocoAssinatura).toBe(true)
@@ -54,17 +49,6 @@ describe('createSyncConfigStore', () => {
     const atualizado = {
       ...DEFAULT_SYNC_CONFIG,
       featureFlags: { ...DEFAULT_SYNC_CONFIG.featureFlags, selecaoEmMassaBlocoAssinatura: false },
-    }
-    await store.set(atualizado)
-    expect(await store.get()).toEqual(atualizado)
-  })
-
-  it('persiste e recupera alterações de processosNovos', async () => {
-    const area = criarAreaFalsa()
-    const store = createSyncConfigStore(area)
-    const atualizado = {
-      ...DEFAULT_SYNC_CONFIG,
-      processosNovos: { ativo: false, intervaloMinutos: 10, tocarSom: false },
     }
     await store.set(atualizado)
     expect(await store.get()).toEqual(atualizado)
@@ -215,22 +199,6 @@ describe('createLocalConfigStore', () => {
     expect(await store.get()).toEqual(atualizado)
   })
 
-  it('inclui processosNovosBadgeCount zero por padrão', async () => {
-    const store = createLocalConfigStore(criarAreaFalsa())
-    expect((await store.get()).processosNovosBadgeCount).toBe(0)
-  })
-
-  it('persiste processosNovosNotificado e processosNovosBadgeCount', async () => {
-    const area = criarAreaFalsa()
-    const store = createLocalConfigStore(area)
-    const atualizado = {
-      ...DEFAULT_LOCAL_CONFIG,
-      processosNovosNotificado: { p1: { notificadoEm: '2026-07-06T10:00:00.000Z' } },
-      processosNovosBadgeCount: 3,
-    }
-    await store.set(atualizado)
-    expect(await store.get()).toEqual(atualizado)
-  })
 
   it('persiste mostrarIndicadorConfiguracao e linkNeutroControleProcessos', async () => {
     const area = criarAreaFalsa()

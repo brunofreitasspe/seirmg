@@ -16,12 +16,6 @@ export interface BlocoAssinaturaConfig {
   tocarSom: boolean
 }
 
-export interface ProcessosNovosConfig {
-  ativo: boolean
-  intervaloMinutos: number
-  tocarSom: boolean
-}
-
 export interface ConfiguracaoCor {
   valor: string
   cor: string
@@ -95,7 +89,6 @@ export interface SyncConfig {
   featureFlags: FeatureFlags
   tema: ThemeConfig
   blocoAssinatura: BlocoAssinaturaConfig
-  processosNovos: ProcessosNovosConfig
   controleProcessos: ControleProcessosConfig
   pontoControle: PontoControleConfig
   documentoExterno: DocumentoExternoConfig
@@ -109,8 +102,6 @@ export interface LocalConfig {
   schemaVersion: 1
   blocoAssinaturaNotificado: NotificadoState
   blocoAssinaturaPendenteAtual: string[]
-  processosNovosNotificado: NotificadoState
-  processosNovosBadgeCount: number
   baseUrlSei?: string
   seiVersionAtLeast4?: boolean
   atribuicaoSelecionada?: string
@@ -129,11 +120,6 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
   },
   tema: { preset: 'claro' },
   blocoAssinatura: {
-    ativo: true,
-    intervaloMinutos: 5,
-    tocarSom: true,
-  },
-  processosNovos: {
     ativo: true,
     intervaloMinutos: 5,
     tocarSom: true,
@@ -180,8 +166,6 @@ export const DEFAULT_LOCAL_CONFIG: LocalConfig = {
   schemaVersion: 1,
   blocoAssinaturaNotificado: {},
   blocoAssinaturaPendenteAtual: [],
-  processosNovosNotificado: {},
-  processosNovosBadgeCount: 0,
 }
 
 export interface StorageArea {

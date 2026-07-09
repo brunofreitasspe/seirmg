@@ -22,23 +22,6 @@ async function render(): Promise<void> {
     if (contagem) {
       contagem.textContent = total > 0 ? `${total} bloco(s) com pendência de assinatura` : ''
     }
-
-    const totalProcessos = localConfig.processosNovosBadgeCount
-    const statusProcessos = document.getElementById('status-processos')
-    const contagemProcessos = document.getElementById('contagem-processos')
-    if (statusProcessos) {
-      statusProcessos.textContent =
-        totalProcessos > 0 ? 'Processos novos encontrados' : 'Nenhum processo novo'
-    }
-    if (contagemProcessos) {
-      contagemProcessos.textContent =
-        totalProcessos > 0 ? `${totalProcessos} processo(s) não visualizado(s)` : ''
-    }
-
-    if (totalProcessos > 0) {
-      await createLocalConfigStore().set({ ...localConfig, processosNovosBadgeCount: 0 })
-      chrome.action.setBadgeText({ text: '' })
-    }
   } catch (error) {
     console.error('[SEIRMG] Falha ao renderizar popup:', error)
   }
@@ -54,19 +37,6 @@ document.getElementById('abrir-bloco')?.addEventListener('click', async () => {
     )
   } catch (error) {
     console.error('[SEIRMG] Falha ao abrir bloco de assinatura:', error)
-  }
-})
-
-document.getElementById('abrir-processos')?.addEventListener('click', async () => {
-  try {
-    const localConfig = await createLocalConfigStore().get()
-    if (!localConfig.baseUrlSei) return
-    await abrirOuFocarAba(
-      localConfig.baseUrlSei,
-      `${localConfig.baseUrlSei}/controlador.php?acao=procedimento_controlar`
-    )
-  } catch (error) {
-    console.error('[SEIRMG] Falha ao abrir Controle de Processos:', error)
   }
 })
 
