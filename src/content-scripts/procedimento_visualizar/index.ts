@@ -8,7 +8,7 @@ import {
   parseAnotacaoDados,
   type AnotacaoDados,
 } from '../../features/procedimento-visualizar/anotacao'
-import { fetchText } from '../../lib/result'
+import { fetchText } from '../../lib/fetchViaBackground'
 
 function ajustarElementosNativos(): void {
   try {
