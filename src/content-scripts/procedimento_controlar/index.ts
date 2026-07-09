@@ -43,6 +43,37 @@ import type { ControleProcessosConfig, SyncConfig } from '../../lib/storage'
 
 const IDS_TABELAS = ['#tblProcessosDetalhado', '#tblProcessosGerados', '#tblProcessosRecebidos']
 
+const ESTILO_FILTROS_E_ESPECIFICACAO = `
+  .seirmg-filtro-rotulo {
+    font-size: .85em;
+    color: #444;
+    margin-right: .25em;
+  }
+  .seirmg-select-filtro {
+    font: inherit;
+    font-size: .95em;
+    margin: 0 .75em 0 0;
+    padding: 1px 2px;
+    vertical-align: middle;
+    cursor: pointer;
+  }
+  .seirmg-especificacao {
+    font-size: .85em;
+    color: #666;
+    font-style: italic;
+    display: block;
+    margin-top: 2px;
+  }
+`
+
+function injetarEstilos(): void {
+  if (document.getElementById('seirmg-estilo-controle-processos')) return
+  const style = document.createElement('style')
+  style.id = 'seirmg-estilo-controle-processos'
+  style.textContent = ESTILO_FILTROS_E_ESPECIFICACAO
+  document.head.appendChild(style)
+}
+
 const LIMITE_PAGINAS_ROLAGEM_INFINITA = 200
 
 function linhasDaTabela(idTabela: string): Element[] {
@@ -165,7 +196,7 @@ function aplicarEspecificacaoEmLinhas(config: ControleProcessosConfig['especific
       const especificacao = extrairEspecificacaoParaExibicao(onmouseover)
       const span = document.createElement('span')
       span.textContent = especificacao
-      span.style.cssText = 'font-size:.9em;color:darkblue;display:block;'
+      span.className = 'seirmg-especificacao'
       span.title = 'Especificação'
       processo.insertAdjacentElement('afterend', span)
     } else {
@@ -570,8 +601,13 @@ async function montarFiltroAtribuicao(): Promise<void> {
     )
     const nomes = extrairNomesAtribuidos(textos)
 
+    const rotulo = document.createElement('span')
+    rotulo.className = 'seirmg-filtro-rotulo'
+    rotulo.textContent = 'Atribuição:'
+
     const select = document.createElement('select')
     select.id = 'seirmg-filtro-atribuicao'
+    select.className = 'seirmg-select-filtro'
     select.appendChild(new Option('Ver todos os processos', '*'))
     select.appendChild(new Option('Ver processos não atribuídos', ''))
     nomes.forEach((nome) => {
@@ -614,7 +650,7 @@ async function montarFiltroAtribuicao(): Promise<void> {
         })
     })
 
-    divFiltro.prepend(select)
+    divFiltro.prepend(rotulo, select)
     if (select.value !== '*') aplicar(select.value)
   } catch (error) {
     console.error('[SEIRMG] Falha ao montar filtro por atribuição:', error)
@@ -646,13 +682,19 @@ function montarFiltroBloco(): void {
     const tiposDisponiveis = tipos.filter((tipo) => tipo.href)
     if (tiposDisponiveis.length === 0) return
 
+    const rotuloTipo = document.createElement('span')
+    rotuloTipo.className = 'seirmg-filtro-rotulo'
+    rotuloTipo.textContent = 'Bloco:'
+
     const selectTipo = document.createElement('select')
     selectTipo.id = 'seirmg-filtro-bloco-tipo'
+    selectTipo.className = 'seirmg-select-filtro'
     selectTipo.appendChild(new Option('', ''))
     tiposDisponiveis.forEach((tipo) => selectTipo.appendChild(new Option(tipo.rotulo, tipo.valor)))
 
     const selectBloco = document.createElement('select')
     selectBloco.id = 'seirmg-filtro-bloco-numero'
+    selectBloco.className = 'seirmg-select-filtro'
     selectBloco.appendChild(new Option('', ''))
     selectBloco.style.display = 'none'
 
@@ -732,6 +774,7 @@ function montarFiltroBloco(): void {
         })
     })
 
+    divComandos.appendChild(rotuloTipo)
     divComandos.appendChild(selectTipo)
     divComandos.appendChild(selectBloco)
   } catch (error) {
@@ -913,6 +956,7 @@ function montarAgrupamento(config: SyncConfig): void {
 
 async function bootstrap(): Promise<void> {
   try {
+    injetarEstilos()
     corrigirTabelasNativas()
     montarBuscaRapida()
     montarSelecaoMultipla()
