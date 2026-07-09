@@ -4,7 +4,7 @@ import {
   extrairHrefArvore,
   resolverUrl,
 } from '../../features/controle-processos/reaberturaEmBloco'
-import { fetchText } from '../../lib/result'
+import { fetchText } from '../../lib/fetchViaBackground'
 
 const ID_DIALOG = 'seirmg-reabertura-em-bloco-status'
 
