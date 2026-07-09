@@ -48,30 +48,42 @@ function moverLinkMenu(): void {
   }
 }
 
-function montarAtalhoPublicacoes(baseUrlSei: string): void {
+function inserirLinkPublicacoes(url: string): void {
+  const a = document.createElement('a')
+  a.href = url
+  a.title = 'Publicações Eletrônicas'
+  a.target = '_blank'
+  a.textContent = 'Publicações Eletrônicas'
+
+  const div = document.createElement('div')
+  div.className = 'seirmg-atalho-publicacoes-eletronicas'
+  div.appendChild(a)
+
+  document.getElementById('divInfraBarraSistemaPadraoD')?.prepend(div)
+}
+
+async function montarAtalhoPublicacoes(baseUrlSei: string): Promise<void> {
   try {
     const url = `${baseUrlSei}/publicacoes/controlador_publicacoes.php?acao=publicacao_pesquisar&id_orgao_publicacao=0`
-    fetch(url)
-      .then((response) => {
-        if (!response.ok) throw new Error('Página de publicações não existe')
+    const localStore = createLocalConfigStore()
+    const localConfig = await localStore.get()
 
-        const a = document.createElement('a')
-        a.href = url
-        a.title = 'Publicações Eletrônicas'
-        a.target = '_blank'
-        a.textContent = 'Publicações Eletrônicas'
+    // Evita refazer esse fetch em toda navegação: é a mesma pergunta ("este
+    // SEI tem o módulo de publicações?") sempre com a mesma resposta, então
+    // uma checagem por instalação basta — reduz a exposição da sessão a
+    // requisições concorrentes com a navegação real (ver investigação de
+    // deslogamento automático).
+    if (localConfig.atalhoPublicacoesDisponivel !== undefined) {
+      if (localConfig.atalhoPublicacoesDisponivel) inserirLinkPublicacoes(url)
+      return
+    }
 
-        const div = document.createElement('div')
-        div.className = 'seirmg-atalho-publicacoes-eletronicas'
-        div.appendChild(a)
-
-        document.getElementById('divInfraBarraSistemaPadraoD')?.prepend(div)
-      })
-      .catch((error) => {
-        console.error('[SEIRMG] Falha ao verificar/montar atalho de publicações eletrônicas:', error)
-      })
+    const response = await fetch(url)
+    const disponivel = response.ok
+    await localStore.set({ ...localConfig, atalhoPublicacoesDisponivel: disponivel })
+    if (disponivel) inserirLinkPublicacoes(url)
   } catch (error) {
-    console.error('[SEIRMG] Falha ao montar atalho de publicações eletrônicas:', error)
+    console.error('[SEIRMG] Falha ao verificar/montar atalho de publicações eletrônicas:', error)
   }
 }
 

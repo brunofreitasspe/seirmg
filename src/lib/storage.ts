@@ -119,6 +119,7 @@ export interface LocalConfig {
   linkNeutroControleProcessos?: string
   ultimaNavegacaoRealSei?: string
   sessaoInvalidaAte?: string
+  atalhoPublicacoesDisponivel?: boolean
 }
 
 export const DEFAULT_SYNC_CONFIG: SyncConfig = {
