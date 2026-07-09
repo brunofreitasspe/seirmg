@@ -9,6 +9,19 @@ function detectarUrlBaseSei(): string {
   return `${window.location.origin}${window.location.pathname.split('/controlador')[0]}`
 }
 
+function notificarSeTelaDeLogin(): void {
+  try {
+    if (document.getElementById('frmLogin') === null) return
+    chrome.runtime
+      .sendMessage({ type: 'seirmg:tela-login-detectada', url: window.location.href })
+      .catch((error) => {
+        console.error('[SEIRMG] Falha ao notificar tela de login detectada:', error)
+      })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao verificar se a página atual é a tela de login:', error)
+  }
+}
+
 function ocultarMenuAutomaticamente(): void {
   try {
     const menu = document.getElementById('divInfraAreaTelaE')
@@ -151,6 +164,8 @@ async function indicarConfiguracao(): Promise<void> {
 }
 
 async function bootstrap(): Promise<void> {
+  notificarSeTelaDeLogin()
+
   try {
     const localStore = createLocalConfigStore()
     const localConfig = await localStore.get()

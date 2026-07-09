@@ -38,6 +38,11 @@ interface MensagemFetchSei {
   body?: string
 }
 
+interface MensagemTelaLoginDetectada {
+  type: 'seirmg:tela-login-detectada'
+  url: string
+}
+
 function ehMensagemItensBloco(mensagem: unknown): mensagem is MensagemItensBloco {
   return (
     typeof mensagem === 'object' &&
@@ -59,6 +64,14 @@ function ehMensagemFetchSei(mensagem: unknown): mensagem is MensagemFetchSei {
     typeof mensagem === 'object' &&
     mensagem !== null &&
     (mensagem as { type?: unknown }).type === 'seirmg:fetch-sei'
+  )
+}
+
+function ehMensagemTelaLoginDetectada(mensagem: unknown): mensagem is MensagemTelaLoginDetectada {
+  return (
+    typeof mensagem === 'object' &&
+    mensagem !== null &&
+    (mensagem as { type?: unknown }).type === 'seirmg:tela-login-detectada'
   )
 }
 
@@ -227,6 +240,12 @@ chrome.runtime.onMessage.addListener((mensagem, remetente) => {
 
 chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
   if (!ehMensagemFetchSei(mensagem)) return false
+  console.log(
+    '[SEIRMG][diagnostico] seirmg:fetch-sei recebido de content script:',
+    mensagem.url,
+    mensagem.method ?? 'GET',
+    new Date().toISOString()
+  )
   fetchTextComGate(mensagem.url, {
     method: mensagem.method,
     body: mensagem.body !== undefined ? new URLSearchParams(mensagem.body) : undefined,
@@ -234,6 +253,17 @@ chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
     .then(responder)
     .catch((error) => responder({ ok: false, error: String(error) }))
   return true
+})
+
+chrome.runtime.onMessage.addListener((mensagem, remetente) => {
+  if (!ehMensagemTelaLoginDetectada(mensagem)) return
+  console.error(
+    '[SEIRMG][diagnostico] TELA DE LOGIN DETECTADA NA ABA REAL:',
+    mensagem.url,
+    'aba id:',
+    remetente.tab?.id,
+    new Date().toISOString()
+  )
 })
 
 chrome.notifications.onClicked.addListener(async (notificationId) => {
