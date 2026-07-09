@@ -31,6 +31,13 @@ interface MensagemSeiDetectado {
   type: 'seirmg:sei-detectado'
 }
 
+interface MensagemFetchSei {
+  type: 'seirmg:fetch-sei'
+  url: string
+  method?: string
+  body?: string
+}
+
 function ehMensagemItensBloco(mensagem: unknown): mensagem is MensagemItensBloco {
   return (
     typeof mensagem === 'object' &&
@@ -44,6 +51,14 @@ function ehMensagemSeiDetectado(mensagem: unknown): mensagem is MensagemSeiDetec
     typeof mensagem === 'object' &&
     mensagem !== null &&
     (mensagem as { type?: unknown }).type === 'seirmg:sei-detectado'
+  )
+}
+
+function ehMensagemFetchSei(mensagem: unknown): mensagem is MensagemFetchSei {
+  return (
+    typeof mensagem === 'object' &&
+    mensagem !== null &&
+    (mensagem as { type?: unknown }).type === 'seirmg:fetch-sei'
   )
 }
 
@@ -208,6 +223,17 @@ chrome.runtime.onMessage.addListener((mensagem, remetente) => {
   verificarImediatoSeNecessario().catch((error) => {
     console.error('[SEIRMG] Falha ao verificar imediatamente após detectar sessão do SEI:', error)
   })
+})
+
+chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
+  if (!ehMensagemFetchSei(mensagem)) return false
+  fetchTextComGate(mensagem.url, {
+    method: mensagem.method,
+    body: mensagem.body !== undefined ? new URLSearchParams(mensagem.body) : undefined,
+  })
+    .then(responder)
+    .catch((error) => responder({ ok: false, error: String(error) }))
+  return true
 })
 
 chrome.notifications.onClicked.addListener(async (notificationId) => {
