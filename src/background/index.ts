@@ -1,7 +1,7 @@
 import { ALARM_NAME, verificarBlocoAssinatura } from './alarms/blocoAssinaturaCheck'
 import { ALARM_NAME_PROCESSOS_NOVOS, verificarProcessosNovos } from './alarms/processosNovosCheck'
 import { processarItensBlocoAssinatura } from './blocoAssinaturaPipeline'
-import { fetchTextComGate } from './sessionGate'
+import { fetchTextComGate, registrarNavegacaoReal } from './sessionGate'
 import { fetchListaProcessos } from './processosNovos/fetchListaProcessos'
 import {
   extrairInfoRedirecionamentoViaOffscreen,
@@ -202,6 +202,9 @@ chrome.runtime.onMessage.addListener((mensagem, remetente) => {
     remetente.tab?.url,
     new Date().toISOString()
   )
+  registrarNavegacaoReal().catch((error) => {
+    console.error('[SEIRMG] Falha ao registrar navegação real:', error)
+  })
   verificarImediatoSeNecessario().catch((error) => {
     console.error('[SEIRMG] Falha ao verificar imediatamente após detectar sessão do SEI:', error)
   })
