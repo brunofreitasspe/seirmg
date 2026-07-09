@@ -230,11 +230,15 @@ function montarPainelAnotacao(): void {
           idProtocolo: dadosAtuais.idProtocolo,
           tipoPagina: dadosAtuais.tipoPagina,
         })
-        await fetch(new URL(dadosAtuais.postUrl, window.location.href).href, {
+        const params = new URLSearchParams(corpo)
+        const resultado = await fetchText(new URL(dadosAtuais.postUrl, window.location.href).href, {
           method: 'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body: corpo,
+          body: params,
         })
+        if (!resultado.ok) {
+          console.error('[SEIRMG] Falha ao salvar anotação:', resultado.error)
+          return
+        }
         await carregar()
       } catch (error) {
         console.error('[SEIRMG] Falha ao salvar anotação:', error)
