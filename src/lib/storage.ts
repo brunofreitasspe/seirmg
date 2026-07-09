@@ -117,6 +117,8 @@ export interface LocalConfig {
   atribuicaoSelecionada?: string
   mostrarIndicadorConfiguracao?: boolean
   linkNeutroControleProcessos?: string
+  ultimaNavegacaoRealSei?: string
+  sessaoInvalidaAte?: string
 }
 
 export const DEFAULT_SYNC_CONFIG: SyncConfig = {
