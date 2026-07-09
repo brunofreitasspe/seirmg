@@ -17,9 +17,17 @@ async function processarPagina(): Promise<void> {
       seiVersionAtLeast4: localConfig.seiVersionAtLeast4 ?? true,
     })
 
-    chrome.runtime.sendMessage({ type: 'seirmg:bloco-assinatura:itens', itens }).catch((error) => {
-      console.error('[SEIRMG] Falha ao enviar itens do bloco de assinatura:', error)
-    })
+    const ehChecagemViaAlarme = new URLSearchParams(window.location.search).get('seirmgOrigem') === 'alarme'
+
+    chrome.runtime
+      .sendMessage({
+        type: 'seirmg:bloco-assinatura:itens',
+        itens,
+        ...(ehChecagemViaAlarme ? { origem: 'alarme' as const } : {}),
+      })
+      .catch((error) => {
+        console.error('[SEIRMG] Falha ao enviar itens do bloco de assinatura:', error)
+      })
 
     await renderBadge()
   } catch (error) {
