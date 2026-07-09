@@ -53,13 +53,19 @@ export function fetchTextComGate(
 ): Promise<Result<string>> {
   return serializar(async () => {
     try {
-      if (await circuitBreakerEstaAberto()) {
-        console.log('[SEIRMG][diagnostico] fetchTextComGate: circuit breaker aberto — pulando', url)
+      const config = await createLocalConfigStore().get()
+      const agoraIso = new Date().toISOString()
+
+      if (circuitBreakerAberto(config.sessaoInvalidaAte, agoraIso)) {
+        console.log(
+          '[SEIRMG][diagnostico] fetchTextComGate: circuit breaker aberto até',
+          config.sessaoInvalidaAte,
+          '— pulando',
+          url
+        )
         return { ok: false, error: 'Sessão do SEI inválida — chamadas de fundo pausadas temporariamente' }
       }
 
-      const config = await createLocalConfigStore().get()
-      const agoraIso = new Date().toISOString()
       console.log('[SEIRMG][diagnostico] fetchTextComGate: solicitado', url, agoraIso)
 
       const espera = calcularEsperaPosNavegacao(config.ultimaNavegacaoRealSei, agoraIso, ATRASO_POS_NAVEGACAO_MS)
