@@ -3,7 +3,7 @@ import {
   extrairUrlUnidadeSelecionarReabertura,
   processoFechadoEmTodasUnidades,
 } from '../../features/documento-receber/forcarReabertura'
-import { fetchText } from '../../lib/result'
+import { fetchText } from '../../lib/fetchViaBackground'
 import { createSyncConfigStore } from '../../lib/storage'
 import type { DocumentoExternoConfig } from '../../lib/storage'
 
