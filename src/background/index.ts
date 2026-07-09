@@ -9,14 +9,11 @@ import {
   parseProcessosNovosHtmlViaOffscreen,
 } from './offscreenParser'
 import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
-import { passouIntervalo } from '../lib/throttle'
 import { NOTIFICATION_ID_PREFIX, NOTIFICATION_ID_PREFIX_PROCESSO } from './notifications/notify'
 import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
 
 const ACAO_BLOCO_ASSINATURA = 'bloco_assinatura_listar'
 const ACAO_PROCEDIMENTO_CONTROLAR = 'procedimento_controlar'
-const INTERVALO_MINIMO_VERIFICACAO_IMEDIATA_MINUTOS = 2
-const PAUSA_MINIMA_VERIFICACAO_IMEDIATA_MS = 5000
 
 interface MensagemItensBloco {
   type: 'seirmg:bloco-assinatura:itens'
@@ -140,57 +137,6 @@ async function verificarProcessosNovosViaFetch(): Promise<void> {
   atualizarBadgeIcone(localConfigAtualizado.processosNovosBadgeCount)
 }
 
-let verificacaoImediataEmAndamento = false
-
-async function dispararVerificacaoImediataSeNecessario(): Promise<void> {
-  if (verificacaoImediataEmAndamento) return
-  verificacaoImediataEmAndamento = true
-
-  try {
-    const localStore = createLocalConfigStore()
-    const localConfig = await localStore.get()
-    const agoraIso = new Date().toISOString()
-
-    if (
-      !passouIntervalo(
-        localConfig.ultimaVerificacaoImediata,
-        agoraIso,
-        INTERVALO_MINIMO_VERIFICACAO_IMEDIATA_MINUTOS
-      )
-    ) {
-      console.log('[SEIRMG][diagnostico] verificarImediatoSeNecessario: throttled, pulando', agoraIso)
-      return
-    }
-
-    console.log('[SEIRMG][diagnostico] verificarImediatoSeNecessario: pausa na navegação detectada, iniciando fetch', agoraIso)
-    await localStore.set({ ...localConfig, ultimaVerificacaoImediata: agoraIso })
-
-    await verificarBlocoAssinaturaViaFetch()
-    console.log('[SEIRMG][diagnostico] verificarImediatoSeNecessario: fetch concluído', new Date().toISOString())
-  } finally {
-    verificacaoImediataEmAndamento = false
-  }
-}
-
-let debounceVerificacaoImediata: ReturnType<typeof setTimeout> | null = null
-
-// Em vez de um delay fixo após uma única navegação, espera até que a navegação
-// realmente pare por PAUSA_MINIMA_VERIFICACAO_IMEDIATA_MS: cada seirmg:sei-detectado
-// novo reinicia a espera. Um delay fixo não é suficiente porque não há como saber
-// se o usuário vai navegar de novo dentro da janela — e navegar de novo enquanto
-// esse fetch de fundo está em trânsito foi confirmado, em uso real, como gatilho
-// de deslogamento (a navegação seguinte à checagem recebe a tela de login).
-function agendarVerificacaoImediataComDebounce(): void {
-  if (debounceVerificacaoImediata !== null) clearTimeout(debounceVerificacaoImediata)
-
-  debounceVerificacaoImediata = setTimeout(() => {
-    debounceVerificacaoImediata = null
-    dispararVerificacaoImediataSeNecessario().catch((error) => {
-      console.error('[SEIRMG] Falha ao verificar imediatamente após pausa na navegação:', error)
-    })
-  }, PAUSA_MINIMA_VERIFICACAO_IMEDIATA_MS)
-}
-
 async function abrirOuFocarAba(baseUrlSei: string, url: string): Promise<void> {
   const [abaExistente] = await chrome.tabs.query({ url: `${baseUrlSei}/*` })
 
@@ -254,7 +200,6 @@ chrome.runtime.onMessage.addListener((mensagem, remetente) => {
   registrarNavegacaoReal().catch((error) => {
     console.error('[SEIRMG] Falha ao registrar navegação real:', error)
   })
-  agendarVerificacaoImediataComDebounce()
 })
 
 chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {

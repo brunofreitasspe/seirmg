@@ -109,7 +109,6 @@ export interface LocalConfig {
   schemaVersion: 1
   blocoAssinaturaNotificado: NotificadoState
   blocoAssinaturaPendenteAtual: string[]
-  ultimaVerificacaoImediata?: string
   processosNovosNotificado: NotificadoState
   processosNovosBadgeCount: number
   baseUrlSei?: string
