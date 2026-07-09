@@ -39,6 +39,11 @@ interface MensagemTelaLoginDetectada {
   url: string
 }
 
+interface MensagemDiagnostico {
+  type: 'seirmg:diagnostico'
+  mensagem: string
+}
+
 function ehMensagemItensBloco(mensagem: unknown): mensagem is MensagemItensBloco {
   return (
     typeof mensagem === 'object' &&
@@ -68,6 +73,14 @@ function ehMensagemTelaLoginDetectada(mensagem: unknown): mensagem is MensagemTe
     typeof mensagem === 'object' &&
     mensagem !== null &&
     (mensagem as { type?: unknown }).type === 'seirmg:tela-login-detectada'
+  )
+}
+
+function ehMensagemDiagnostico(mensagem: unknown): mensagem is MensagemDiagnostico {
+  return (
+    typeof mensagem === 'object' &&
+    mensagem !== null &&
+    (mensagem as { type?: unknown }).type === 'seirmg:diagnostico'
   )
 }
 
@@ -270,6 +283,11 @@ chrome.runtime.onMessage.addListener((mensagem, remetente) => {
     remetente.tab?.id,
     new Date().toISOString()
   )
+})
+
+chrome.runtime.onMessage.addListener((mensagem) => {
+  if (!ehMensagemDiagnostico(mensagem)) return
+  console.log('[SEIRMG][diagnostico][content-script]', mensagem.mensagem)
 })
 
 chrome.notifications.onClicked.addListener(async (notificationId) => {

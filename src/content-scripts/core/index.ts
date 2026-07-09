@@ -9,6 +9,12 @@ function detectarUrlBaseSei(): string {
   return `${window.location.origin}${window.location.pathname.split('/controlador')[0]}`
 }
 
+function logDiagnostico(mensagem: string): void {
+  const linha = `${mensagem} ${new Date().toISOString()}`
+  console.log('[SEIRMG][diagnostico]', linha)
+  chrome.runtime.sendMessage({ type: 'seirmg:diagnostico', mensagem: linha }).catch(() => {})
+}
+
 function notificarSeTelaDeLogin(): void {
   try {
     if (document.getElementById('frmLogin') === null) return
@@ -87,13 +93,18 @@ async function montarAtalhoPublicacoes(baseUrlSei: string): Promise<void> {
     // requisições concorrentes com a navegação real (ver investigação de
     // deslogamento automático).
     if (localConfig.atalhoPublicacoesDisponivel !== undefined) {
+      logDiagnostico(
+        `montarAtalhoPublicacoes: usando cache (${localConfig.atalhoPublicacoesDisponivel}), sem fetch`
+      )
       if (localConfig.atalhoPublicacoesDisponivel) inserirLinkPublicacoes(url)
       return
     }
 
+    logDiagnostico(`montarAtalhoPublicacoes: cache vazio, fazendo fetch AGORA para ${url}`)
     const response = await fetch(url)
     const disponivel = response.ok
     await localStore.set({ ...localConfig, atalhoPublicacoesDisponivel: disponivel })
+    logDiagnostico(`montarAtalhoPublicacoes: fetch concluído, disponivel=${disponivel}`)
     if (disponivel) inserirLinkPublicacoes(url)
   } catch (error) {
     console.error('[SEIRMG] Falha ao verificar/montar atalho de publicações eletrônicas:', error)
