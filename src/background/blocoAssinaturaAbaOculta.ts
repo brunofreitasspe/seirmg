@@ -47,31 +47,35 @@ async function paginaEhTelaDeLogin(tabId: number): Promise<boolean> {
 
 export function verificarBlocoAssinaturaViaAbaOculta(url: string): Promise<void> {
   return serializar(async () => {
-    if (await circuitBreakerEstaAberto()) {
-      console.log('[SEIRMG][diagnostico] verificarBlocoAssinaturaViaAbaOculta: circuit breaker aberto, pulando')
-      return
-    }
-
-    console.log(
-      '[SEIRMG][diagnostico] verificarBlocoAssinaturaViaAbaOculta: abrindo aba oculta',
-      url,
-      new Date().toISOString()
-    )
-    const tab = await chrome.tabs.create({ url, active: false })
-    if (!tab.id) return
-
     try {
-      await aguardarMensagemOuTimeout(tab.id)
+      if (await circuitBreakerEstaAberto()) {
+        console.log('[SEIRMG][diagnostico] verificarBlocoAssinaturaViaAbaOculta: circuit breaker aberto, pulando')
+        return
+      }
+
       console.log(
-        '[SEIRMG][diagnostico] verificarBlocoAssinaturaViaAbaOculta: aba concluída/timeout',
+        '[SEIRMG][diagnostico] verificarBlocoAssinaturaViaAbaOculta: abrindo aba oculta',
+        url,
         new Date().toISOString()
       )
+      const tab = await chrome.tabs.create({ url, active: false })
+      if (!tab.id) return
 
-      if (await paginaEhTelaDeLogin(tab.id)) {
-        await abrirCircuitBreaker()
+      try {
+        await aguardarMensagemOuTimeout(tab.id)
+        console.log(
+          '[SEIRMG][diagnostico] verificarBlocoAssinaturaViaAbaOculta: aba concluída/timeout',
+          new Date().toISOString()
+        )
+
+        if (await paginaEhTelaDeLogin(tab.id)) {
+          await abrirCircuitBreaker()
+        }
+      } finally {
+        chrome.tabs.remove(tab.id).catch(() => {})
       }
-    } finally {
-      chrome.tabs.remove(tab.id).catch(() => {})
+    } catch (error) {
+      console.error('[SEIRMG] Falha ao verificar bloco de assinatura via aba oculta:', error)
     }
   })
 }
