@@ -1,4 +1,4 @@
-import { fetchText as fetchTextReal } from '../../lib/result'
+import { fetchTextComGate as fetchTextReal } from '../sessionGate'
 import type { Result } from '../../lib/result'
 import { parseProcessosControlarTable } from '../../features/processos-novos/parser'
 import type { ProcessoItem } from '../../features/processos-novos/types'

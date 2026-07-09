@@ -1,7 +1,7 @@
 import { ALARM_NAME, verificarBlocoAssinatura } from './alarms/blocoAssinaturaCheck'
 import { ALARM_NAME_PROCESSOS_NOVOS, verificarProcessosNovos } from './alarms/processosNovosCheck'
 import { processarItensBlocoAssinatura } from './blocoAssinaturaPipeline'
-import { fetchText } from '../lib/result'
+import { fetchTextComGate } from './sessionGate'
 import { fetchListaProcessos } from './processosNovos/fetchListaProcessos'
 import {
   extrairInfoRedirecionamentoViaOffscreen,
@@ -67,7 +67,7 @@ async function verificarBlocoAssinaturaViaFetch(): Promise<void> {
   console.log('[SEIRMG][diagnostico] verificarBlocoAssinaturaViaFetch: GET', url, new Date().toISOString())
 
   await verificarBlocoAssinatura({
-    fetchBlocoAssinaturaHtml: () => fetchText(url),
+    fetchBlocoAssinaturaHtml: () => fetchTextComGate(url),
     parseOptions: { seiVersionAtLeast4: localConfig.seiVersionAtLeast4 ?? true },
     parseBlocoAssinaturaHtml: parseBlocoAssinaturaHtmlViaOffscreen,
   })
