@@ -1,35 +1,41 @@
 import { serializar, circuitBreakerEstaAberto, abrirCircuitBreaker } from './sessionGate'
+import { processarItensBlocoAssinatura } from './blocoAssinaturaPipeline'
+import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
 
 const TIMEOUT_ABA_OCULTA_MS = 15000
 
-function ehMensagemItensBlocoDaAba(
+function extrairItensBlocoDaAba(
   mensagem: unknown,
   remetente: chrome.runtime.MessageSender,
   tabId: number
-): boolean {
-  return (
+): BlocoAssinaturaItem[] | undefined {
+  if (
     remetente.tab?.id === tabId &&
     typeof mensagem === 'object' &&
     mensagem !== null &&
     (mensagem as { type?: unknown }).type === 'seirmg:bloco-assinatura:itens'
-  )
+  ) {
+    return (mensagem as { itens: BlocoAssinaturaItem[] }).itens
+  }
+  return undefined
 }
 
-function aguardarMensagemOuTimeout(tabId: number): Promise<void> {
+function aguardarMensagemOuTimeout(tabId: number): Promise<BlocoAssinaturaItem[] | undefined> {
   return new Promise((resolve) => {
     let resolvido = false
-    const finalizar = (): void => {
+    const finalizar = (itens: BlocoAssinaturaItem[] | undefined): void => {
       if (resolvido) return
       resolvido = true
       chrome.runtime.onMessage.removeListener(listener)
       clearTimeout(timer)
-      resolve()
+      resolve(itens)
     }
     const listener = (mensagem: unknown, remetente: chrome.runtime.MessageSender): void => {
-      if (ehMensagemItensBlocoDaAba(mensagem, remetente, tabId)) finalizar()
+      const itens = extrairItensBlocoDaAba(mensagem, remetente, tabId)
+      if (itens !== undefined) finalizar(itens)
     }
     chrome.runtime.onMessage.addListener(listener)
-    const timer = setTimeout(finalizar, TIMEOUT_ABA_OCULTA_MS)
+    const timer = setTimeout(() => finalizar(undefined), TIMEOUT_ABA_OCULTA_MS)
   })
 }
 
@@ -62,11 +68,15 @@ export function verificarBlocoAssinaturaViaAbaOculta(url: string): Promise<void>
       if (!tab.id) return
 
       try {
-        await aguardarMensagemOuTimeout(tab.id)
+        const itens = await aguardarMensagemOuTimeout(tab.id)
         console.log(
           '[SEIRMG][diagnostico] verificarBlocoAssinaturaViaAbaOculta: aba concluída/timeout',
           new Date().toISOString()
         )
+
+        if (itens !== undefined) {
+          await processarItensBlocoAssinatura(itens, { sempreNotificarPendentes: true })
+        }
 
         if (await paginaEhTelaDeLogin(tab.id)) {
           await abrirCircuitBreaker()

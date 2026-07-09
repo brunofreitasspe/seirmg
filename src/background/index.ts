@@ -176,8 +176,12 @@ chrome.alarms.onAlarm.addListener((alarme) => {
 
 chrome.runtime.onMessage.addListener((mensagem) => {
   if (!ehMensagemItensBloco(mensagem)) return
-  const deps = mensagem.origem === 'alarme' ? { sempreNotificarPendentes: true } : undefined
-  processarItensBlocoAssinatura(mensagem.itens, deps).catch((error) => {
+  // Mensagens com origem 'alarme' são processadas exclusivamente (e exatamente uma vez por
+  // ciclo) pelo listener interno de blocoAssinaturaAbaOculta.ts, que já capturou os itens da
+  // PRIMEIRA mensagem correlacionada antes de se remover. Processar aqui de novo duplicaria
+  // notificações (e o som) quando o content script reenviar via MutationObserver.
+  if (mensagem.origem === 'alarme') return
+  processarItensBlocoAssinatura(mensagem.itens).catch((error) => {
     console.error(
       '[SEIRMG] Falha ao processar itens do bloco de assinatura recebidos via mensagem:',
       error
