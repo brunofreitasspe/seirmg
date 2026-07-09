@@ -1,4 +1,3 @@
-import { parseBlocoAssinaturaTable, type ParseBlocoAssinaturaOptions } from '../features/bloco-assinatura/parser'
 import { parseProcessosControlarTable } from '../features/processos-novos/parser'
 
 function extrairInfoRedirecionamento(html: string): {
@@ -15,9 +14,8 @@ function extrairInfoRedirecionamento(html: string): {
 
 interface MensagemParseHtml {
   type: 'seirmg:parse-html'
-  parser: 'blocoAssinatura' | 'processosNovos' | 'infoRedirecionamento'
+  parser: 'processosNovos' | 'infoRedirecionamento'
   html: string
-  options?: ParseBlocoAssinaturaOptions
 }
 
 function ehMensagemParseHtml(mensagem: unknown): mensagem is MensagemParseHtml {
@@ -34,9 +32,7 @@ chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
   try {
     const doc = new DOMParser().parseFromString(mensagem.html, 'text/html')
 
-    if (mensagem.parser === 'blocoAssinatura') {
-      responder(parseBlocoAssinaturaTable(doc, mensagem.options ?? { seiVersionAtLeast4: true }))
-    } else if (mensagem.parser === 'processosNovos') {
+    if (mensagem.parser === 'processosNovos') {
       responder(parseProcessosControlarTable(doc))
     } else {
       responder(extrairInfoRedirecionamento(mensagem.html))

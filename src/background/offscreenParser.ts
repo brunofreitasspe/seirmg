@@ -1,5 +1,3 @@
-import type { ParseBlocoAssinaturaOptions } from '../features/bloco-assinatura/parser'
-import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
 import type { ProcessoItem } from '../features/processos-novos/types'
 import type { InfoRedirecionamento } from './processosNovos/fetchListaProcessos'
 
@@ -7,7 +5,6 @@ const OFFSCREEN_URL = 'src/offscreen/index.html'
 const TIPO_MENSAGEM_PARSE_HTML = 'seirmg:parse-html'
 
 type MensagemParseHtml =
-  | { type: typeof TIPO_MENSAGEM_PARSE_HTML; parser: 'blocoAssinatura'; html: string; options: ParseBlocoAssinaturaOptions }
   | { type: typeof TIPO_MENSAGEM_PARSE_HTML; parser: 'processosNovos'; html: string }
   | { type: typeof TIPO_MENSAGEM_PARSE_HTML; parser: 'infoRedirecionamento'; html: string }
 
@@ -39,13 +36,6 @@ async function garantirDocumentoOffscreen(): Promise<void> {
 async function enviarParaOffscreen<T>(mensagem: MensagemParseHtml): Promise<T> {
   await garantirDocumentoOffscreen()
   return chrome.runtime.sendMessage(mensagem) as Promise<T>
-}
-
-export function parseBlocoAssinaturaHtmlViaOffscreen(
-  html: string,
-  options: ParseBlocoAssinaturaOptions
-): Promise<BlocoAssinaturaItem[]> {
-  return enviarParaOffscreen({ type: TIPO_MENSAGEM_PARSE_HTML, parser: 'blocoAssinatura', html, options })
 }
 
 export function parseProcessosNovosHtmlViaOffscreen(html: string): Promise<ProcessoItem[]> {
