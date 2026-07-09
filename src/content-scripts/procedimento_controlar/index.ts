@@ -37,7 +37,7 @@ import {
   extrairLinhasValidas,
   extrairNroItens,
 } from '../../features/controle-processos/rolagemInfinita'
-import { fetchText } from '../../lib/result'
+import { fetchText } from '../../lib/fetchViaBackground'
 import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
 import type { ControleProcessosConfig, SyncConfig } from '../../lib/storage'
 
