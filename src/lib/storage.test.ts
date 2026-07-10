@@ -229,6 +229,7 @@ describe('createLocalConfigStore', () => {
         urlCadastro: 'https://n8n.exemplo.com/form/abc123',
         urlLogin: 'https://n8n.exemplo.com/webhook/seirmg-login',
         urlConsulta: 'https://n8n.exemplo.com/webhook/seirmg-consultar-processo',
+        urlVerificarLote: 'https://n8n.exemplo.com/webhook/seirmg-verificar-processos-lote',
         email: 'usuario@exemplo.com',
         token: 'aaa.bbb.ccc',
         tokenExp: 1799999999,

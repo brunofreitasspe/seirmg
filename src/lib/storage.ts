@@ -101,6 +101,7 @@ export interface PlankaConfig {
   urlCadastro?: string
   urlLogin?: string
   urlConsulta?: string
+  urlVerificarLote?: string
   email?: string
   token?: string
   tokenExp?: number
