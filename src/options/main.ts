@@ -1,4 +1,10 @@
+import settingsIconSvg from 'lucide-static/icons/settings.svg?raw'
+import paletteIconSvg from 'lucide-static/icons/palette.svg?raw'
+import listChecksIconSvg from 'lucide-static/icons/list-checks.svg?raw'
+import fileEditIconSvg from 'lucide-static/icons/file-edit.svg?raw'
 import bellIconSvg from 'lucide-static/icons/bell.svg?raw'
+import plugIconSvg from 'lucide-static/icons/plug.svg?raw'
+import infoIconSvg from 'lucide-static/icons/info.svg?raw'
 import { ativarAba } from './tabs'
 import {
   createLocalConfigStore,
@@ -22,10 +28,23 @@ interface RegraPontoControleEditavel {
 const botoesAba = document.querySelectorAll('.aba-btn')
 const paineis = document.querySelectorAll('.painel')
 
-const botaoNotificacoes = document.querySelector('[data-aba="notificacoes"]')
-if (botaoNotificacoes) {
-  botaoNotificacoes.innerHTML = `${bellIconSvg} Notificações`
+const ICONES_ABA: Record<string, string> = {
+  geral: settingsIconSvg,
+  aparencia: paletteIconSvg,
+  processos: listChecksIconSvg,
+  editor: fileEditIconSvg,
+  notificacoes: bellIconSvg,
+  integracoes: plugIconSvg,
+  sobre: infoIconSvg,
 }
+
+botoesAba.forEach((botao) => {
+  const aba = botao.getAttribute('data-aba')
+  const icone = aba ? ICONES_ABA[aba] : undefined
+  if (!icone) return
+  const rotulo = botao.textContent?.trim() ?? ''
+  botao.innerHTML = `${icone}<span>${rotulo}</span>`
+})
 
 botoesAba.forEach((botao) => {
   botao.addEventListener('click', () => {
