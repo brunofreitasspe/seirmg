@@ -226,9 +226,10 @@ describe('createLocalConfigStore', () => {
     const atualizado = {
       ...DEFAULT_LOCAL_CONFIG,
       planka: {
-        baseUrl: 'https://n8n.exemplo.com',
-        email: 'usuario@exemplo.com',
         urlCadastro: 'https://n8n.exemplo.com/form/abc123',
+        urlLogin: 'https://n8n.exemplo.com/webhook/seirmg-login',
+        urlConsulta: 'https://n8n.exemplo.com/webhook/seirmg-consultar-processo',
+        email: 'usuario@exemplo.com',
         token: 'aaa.bbb.ccc',
         tokenExp: 1799999999,
       },

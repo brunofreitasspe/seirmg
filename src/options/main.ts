@@ -336,9 +336,12 @@ async function carregarAbaIntegracoes(): Promise<void> {
   try {
     const store = createLocalConfigStore()
 
-    const inputBaseUrl = document.getElementById('integracoes-planka-base-url') as HTMLInputElement | null
     const inputUrlCadastro = document.getElementById(
       'integracoes-planka-url-cadastro'
+    ) as HTMLInputElement | null
+    const inputUrlLogin = document.getElementById('integracoes-planka-url-login') as HTMLInputElement | null
+    const inputUrlConsulta = document.getElementById(
+      'integracoes-planka-url-consulta'
     ) as HTMLInputElement | null
     const inputEmail = document.getElementById('integracoes-planka-email') as HTMLInputElement | null
     const inputSenha = document.getElementById('integracoes-planka-senha') as HTMLInputElement | null
@@ -354,8 +357,9 @@ async function carregarAbaIntegracoes(): Promise<void> {
       const config = await store.get()
       const planka = config.planka
 
-      if (inputBaseUrl) inputBaseUrl.value = planka?.baseUrl ?? ''
       if (inputUrlCadastro) inputUrlCadastro.value = planka?.urlCadastro ?? ''
+      if (inputUrlLogin) inputUrlLogin.value = planka?.urlLogin ?? ''
+      if (inputUrlConsulta) inputUrlConsulta.value = planka?.urlConsulta ?? ''
       if (inputEmail) inputEmail.value = planka?.email ?? ''
 
       if (linkCadastro) {
@@ -377,24 +381,27 @@ async function carregarAbaIntegracoes(): Promise<void> {
 
     document.getElementById('integracoes-planka-entrar')?.addEventListener('click', async () => {
       try {
-        const baseUrl = (inputBaseUrl?.value.trim() ?? '').replace(/\/+$/, '')
         const urlCadastro = inputUrlCadastro?.value.trim() ?? ''
+        const urlLogin = (inputUrlLogin?.value.trim() ?? '').replace(/\/+$/, '')
+        const urlConsulta = (inputUrlConsulta?.value.trim() ?? '').replace(/\/+$/, '')
         const email = inputEmail?.value.trim() ?? ''
         const senha = inputSenha?.value ?? ''
 
-        if (!baseUrl || !email || !senha) {
-          if (status) status.textContent = 'Preencha URL, e-mail e senha.'
+        if (!urlLogin || !urlConsulta || !email || !senha) {
+          if (status) status.textContent = 'Preencha URL de login, URL de consulta, e-mail e senha.'
           return
         }
 
-        const origem = `${new URL(baseUrl).origin}/*`
-        const concedida = await chrome.permissions.request({ origins: [origem] })
+        const origens = Array.from(
+          new Set([`${new URL(urlLogin).origin}/*`, `${new URL(urlConsulta).origin}/*`])
+        )
+        const concedida = await chrome.permissions.request({ origins: origens })
         if (!concedida) {
           if (status) status.textContent = 'Permissão negada — não é possível conectar sem acesso ao domínio.'
           return
         }
 
-        const resposta = await fetch(`${baseUrl}/webhook/seirmg-login`, {
+        const resposta = await fetch(urlLogin, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, senha }),
@@ -421,7 +428,7 @@ async function carregarAbaIntegracoes(): Promise<void> {
         const config = await store.get()
         await store.set({
           ...config,
-          planka: { baseUrl, email, urlCadastro, token: corpo.token, tokenExp },
+          planka: { urlCadastro, urlLogin, urlConsulta, email, token: corpo.token, tokenExp },
         })
 
         if (status) status.textContent = ''

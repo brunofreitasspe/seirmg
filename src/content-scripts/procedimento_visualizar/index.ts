@@ -331,9 +331,9 @@ async function consultarEExibirPlanka(): Promise<void> {
   const planka = localConfig.planka
 
   if (!tokenValido(planka?.tokenExp, new Date().toISOString())) return
-  if (!planka?.baseUrl || !planka.token) return
+  if (!planka?.urlConsulta || !planka.token) return
 
-  const resposta = await fetch(`${planka.baseUrl}/webhook/seirmg-consultar-processo`, {
+  const resposta = await fetch(planka.urlConsulta, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

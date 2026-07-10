@@ -99,9 +99,10 @@ export interface NotificadoState {
 }
 
 export interface PlankaConfig {
-  baseUrl?: string
-  email?: string
   urlCadastro?: string
+  urlLogin?: string
+  urlConsulta?: string
+  email?: string
   token?: string
   tokenExp?: number
 }
