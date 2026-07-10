@@ -437,3 +437,49 @@ body.seirmg-theme-super-black,
 .seirmg-theme-custom .infraBotao {
   color: var(--seirmg-accent-color) !important;
 }
+
+/* ===== Painel lateral — procedimento_visualizar ===== */
+
+p.seirmg-tipo-processo {
+  margin: 0 0 0 1.2em;
+  font-size: 12px;
+}
+
+#seirmg-interessados,
+#seirmg-atribuicao {
+  margin-left: 1.2em;
+}
+
+p.seirmg-interessado,
+p.seirmg-atribuido-para {
+  margin: 3px 0 0 0;
+  font-size: 12px;
+}
+
+p.seirmg-atribuido-para.seirmg-sem-atribuicao {
+  color: red;
+}
+
+p.seirmg-atribuido-para.seirmg-atribuido-para-mais {
+  font-size: 11px;
+  color: #757575;
+}
+
+span.seirmg-copiar-sigla {
+  display: inline-flex;
+  cursor: pointer;
+  margin-left: 4px;
+  opacity: 0.6;
+}
+
+span.seirmg-copiar-sigla svg {
+  width: 12px;
+  height: 12px;
+}
+
+.seirmg-tooltip-copiado {
+  display: inline-block;
+  margin-left: 6px;
+  font-size: 10px;
+  color: #017fff;
+}

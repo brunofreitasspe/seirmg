@@ -20,13 +20,17 @@ export function montarEstiloPlanka(): void {
   document.head.appendChild(style)
 }
 
-export function montarConteudoCardPlanka(dados: RespostaConsultaPlanka): HTMLElement | null {
+export function montarConteudoCardPlanka(
+  dados: RespostaConsultaPlanka,
+  opcoes: { mostrarPillTipo?: boolean } = {}
+): HTMLElement | null {
+  const mostrarPillTipo = opcoes.mostrarPillTipo ?? true
   const divConteudo = document.createElement('div')
 
   const pills = document.createElement('div')
   pills.className = 'seirmg-planka-pills'
 
-  if (dados.tipoProcesso) {
+  if (mostrarPillTipo && dados.tipoProcesso) {
     const pillTipo = document.createElement('span')
     pillTipo.className = 'seirmg-planka-pill seirmg-planka-pill-tipo'
     pillTipo.textContent = `📋 ${dados.tipoProcesso}`

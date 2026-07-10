@@ -8,11 +8,21 @@ import {
   parseAnotacaoDados,
   type AnotacaoDados,
 } from '../../features/procedimento-visualizar/anotacao'
+import {
+  extrairUrlEdicaoProcesso,
+  extrairTipoProcesso,
+  extrairInteressados,
+  obterUnidadeAtual,
+  extrairAtribuicao,
+  type InteressadoExtraido,
+  type DadosAtribuicao,
+} from '../../features/procedimento-visualizar/painelLateral'
 import { fetchText } from '../../lib/fetchViaBackground'
 import { createLocalConfigStore } from '../../lib/storage'
 import { tokenValido } from '../../features/planka/token'
 import { montarEstiloPlanka, montarConteudoCardPlanka, type RespostaConsultaPlanka } from '../shared/plankaCard'
 import { limparTokenPlanka } from '../shared/plankaToken'
+import copyIconSvg from 'lucide-static/icons/copy.svg?raw'
 
 function ajustarElementosNativos(): void {
   try {
@@ -267,27 +277,13 @@ function montarPainelAnotacao(): void {
   }
 }
 
-function renderizarCardPlanka(dados: RespostaConsultaPlanka): void {
-  montarEstiloPlanka()
-
-  const conteudo = montarConteudoCardPlanka(dados)
-  if (!conteudo) return
-  conteudo.id = 'seirmg-planka'
-
-  const container = document.getElementById('container') ?? document.body
-  container.appendChild(conteudo)
-}
-
-async function consultarEExibirPlanka(): Promise<void> {
-  const numero = obterNumeroProcesso()
-  if (!numero) return
-
+async function consultarDadosPlanka(numero: string): Promise<RespostaConsultaPlanka | null> {
   const localStore = createLocalConfigStore()
   const localConfig = await localStore.get()
   const planka = localConfig.planka
 
-  if (!tokenValido(planka?.tokenExp, new Date().toISOString())) return
-  if (!planka?.urlConsulta || !planka.token) return
+  if (!tokenValido(planka?.tokenExp, new Date().toISOString())) return null
+  if (!planka?.urlConsulta || !planka.token) return null
 
   const resposta = await fetch(planka.urlConsulta, {
     method: 'POST',
@@ -300,34 +296,182 @@ async function consultarEExibirPlanka(): Promise<void> {
 
   if (resposta.status === 401) {
     await limparTokenPlanka()
-    return
+    return null
   }
-  if (resposta.status === 404) return
+  if (resposta.status === 404) return null
   if (!resposta.ok) {
     console.error('[SEIRMG] Consulta ao Planka falhou:', resposta.status)
-    return
+    return null
   }
 
-  const dados = (await resposta.json()) as RespostaConsultaPlanka
-  renderizarCardPlanka(dados)
+  return (await resposta.json()) as RespostaConsultaPlanka
 }
 
-function montarPainelPlanka(): void {
+function criarSeparador(titulo: string): HTMLDivElement {
+  const separador = document.createElement('div')
+  separador.className = 'seirmg-separador'
+  const span = document.createElement('span')
+  span.textContent = titulo
+  separador.appendChild(span)
+  return separador
+}
+
+function criarIconeCopiar(sigla: string, ancora: HTMLElement): HTMLSpanElement {
+  const icone = document.createElement('span')
+  icone.innerHTML = copyIconSvg
+  icone.title = 'Copiar sigla do interessado'
+  icone.className = 'seirmg-copiar-sigla'
+  icone.addEventListener('click', (evento) => {
+    evento.stopPropagation()
+    navigator.clipboard.writeText(sigla).then(() => {
+      const tooltip = document.createElement('div')
+      tooltip.className = 'seirmg-tooltip-copiado'
+      tooltip.textContent = 'Copiado!'
+      ancora.appendChild(tooltip)
+      setTimeout(() => tooltip.remove(), 1000)
+    })
+  })
+  return icone
+}
+
+function renderizarInteressados(container: HTMLElement, interessados: InteressadoExtraido[]): void {
+  container.appendChild(criarSeparador('Interessado(s)'))
+  const div = document.createElement('div')
+  div.id = 'seirmg-interessados'
+
+  if (interessados.length === 0) {
+    const p = document.createElement('p')
+    p.className = 'seirmg-interessado'
+    p.textContent = 'Nenhum interessado especificado.'
+    div.appendChild(p)
+  } else {
+    interessados.forEach((interessado) => {
+      const p = document.createElement('p')
+      p.className = 'seirmg-interessado'
+      const spanNome = document.createElement('span')
+      spanNome.textContent = interessado.nome
+      p.appendChild(spanNome)
+      if (interessado.sigla) {
+        const spanSigla = document.createElement('span')
+        spanSigla.textContent = ` (${interessado.sigla})`
+        p.appendChild(spanSigla)
+        p.appendChild(criarIconeCopiar(interessado.sigla, p))
+      }
+      div.appendChild(p)
+    })
+  }
+
+  container.appendChild(div)
+}
+
+function renderizarAtribuicao(container: HTMLElement, dados: DadosAtribuicao): void {
+  container.appendChild(criarSeparador(dados.sigiloso ? 'Credencial para' : 'Atribuído para'))
+  const div = document.createElement('div')
+  div.id = 'seirmg-atribuicao'
+
+  if (dados.usuarios.length === 0) {
+    const p = document.createElement('p')
+    p.className = 'seirmg-atribuido-para seirmg-sem-atribuicao'
+    p.textContent = '(processo sem atribuição)'
+    div.appendChild(p)
+  } else {
+    dados.usuarios.forEach((usuario) => {
+      const p = document.createElement('p')
+      p.className = 'seirmg-atribuido-para'
+      p.title = dados.sigiloso
+        ? `Credencial para ${usuario.nome} (${usuario.login}).`
+        : `Atribuído para ${usuario.nome} (${usuario.login}).`
+      p.textContent = usuario.login
+      div.appendChild(p)
+    })
+    if (dados.sigiloso && dados.mais) {
+      const p = document.createElement('p')
+      p.className = 'seirmg-atribuido-para seirmg-atribuido-para-mais'
+      p.textContent = `+${dados.mais}`
+      p.title = `Mais ${dados.mais} usuário(s) de outra(s) área(s).`
+      div.appendChild(p)
+    }
+  }
+
+  container.appendChild(div)
+}
+
+async function montarPainelTipoEInteressados(): Promise<void> {
+  const numero = obterNumeroProcesso()
+  const headHtml = document.head.innerHTML
+  const url = extrairUrlEdicaoProcesso(headHtml)
+  if (!url) return
+
+  const resultado = await fetchText(new URL(url, window.location.href).href)
+  if (!resultado.ok) {
+    console.error('[SEIRMG] Falha ao buscar dados do processo:', resultado.error)
+    return
+  }
+  const doc = new DOMParser().parseFromString(resultado.data, 'text/html')
+
+  const container = document.getElementById('container') ?? document.body
+
+  container.appendChild(criarSeparador('Tipo do processo'))
+  const divTipo = document.createElement('div')
+  divTipo.id = 'seirmg-tipo-processo'
+  const pTipo = document.createElement('p')
+  pTipo.className = 'seirmg-tipo-processo'
+  pTipo.textContent = extrairTipoProcesso(doc)
+  divTipo.appendChild(pTipo)
+  container.appendChild(divTipo)
+
+  renderizarInteressados(container, extrairInteressados(doc))
+
+  if (numero) {
+    consultarDadosPlanka(numero)
+      .then((dadosPlanka) => {
+        if (!dadosPlanka) return
+        montarEstiloPlanka()
+        const conteudoPlanka = montarConteudoCardPlanka(dadosPlanka, { mostrarPillTipo: false })
+        if (conteudoPlanka) divTipo.appendChild(conteudoPlanka)
+      })
+      .catch((error) => {
+        console.error('[SEIRMG] Falha ao consultar dados do Planka:', error)
+      })
+  }
+}
+
+async function montarPainelAtribuicao(): Promise<void> {
+  const localConfig = await createLocalConfigStore().get()
+  const unidadeAtual = obterUnidadeAtual(localConfig.seiVersionAtLeast4 ?? true, window.parent.document)
+  if (!unidadeAtual) return
+
+  const scriptTag = Array.from(document.querySelectorAll('script')).find((elemento) =>
+    elemento.textContent?.includes('var objArvore')
+  )
+  if (!scriptTag) return
+
+  const dados = extrairAtribuicao(scriptTag.innerHTML, unidadeAtual)
+  if (!dados) return
+
+  const container = document.getElementById('container') ?? document.body
+  renderizarAtribuicao(container, dados)
+}
+
+function montarPainelLateral(): void {
   try {
     esperarElemento('body.infraArvore', "a[target$='Visualizacao']", () => {
-      consultarEExibirPlanka().catch((error) => {
-        console.error('[SEIRMG] Falha ao consultar dados do Planka:', error)
+      montarPainelTipoEInteressados().catch((error) => {
+        console.error('[SEIRMG] Falha ao montar painel de tipo/interessados:', error)
+      })
+      montarPainelAtribuicao().catch((error) => {
+        console.error('[SEIRMG] Falha ao montar painel de atribuição:', error)
       })
     })
   } catch (error) {
-    console.error('[SEIRMG] Falha ao montar painel do Planka:', error)
+    console.error('[SEIRMG] Falha ao montar painel lateral:', error)
   }
 }
 
 function bootstrap(): void {
   ajustarElementosNativos()
   alterarTitulo()
-  montarPainelPlanka()
+  montarPainelLateral()
   montarPainelAnotacao()
 }
 
