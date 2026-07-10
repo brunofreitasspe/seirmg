@@ -40,6 +40,9 @@ import {
 import { fetchText } from '../../lib/fetchViaBackground'
 import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
 import type { ControleProcessosConfig, SyncConfig } from '../../lib/storage'
+import { montarCorpoVerificacaoLote, extrairEncontrados } from '../../features/planka/lote'
+import { tokenValido } from '../../features/planka/token'
+import { montarEstiloPlanka, montarConteudoCardPlanka, type RespostaConsultaPlanka } from '../shared/plankaCard'
 
 const IDS_TABELAS = ['#tblProcessosDetalhado', '#tblProcessosGerados', '#tblProcessosRecebidos']
 
@@ -64,6 +67,30 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     display: block;
     margin-top: 2px;
   }
+  .seirmg-planka-link {
+    font-size: .85em;
+    display: block;
+    margin-top: 2px;
+    color: #017fff;
+    text-decoration: none;
+  }
+  .seirmg-planka-link:hover {
+    text-decoration: underline;
+  }
+  .seirmg-planka-popover {
+    position: absolute;
+    z-index: 1000;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .15);
+    padding: 10px;
+    max-width: 320px;
+  }
+  .seirmg-planka-popover-mensagem {
+    font-size: 13px;
+    color: #666;
+  }
 `
 
 function injetarEstilos(): void {
@@ -72,6 +99,179 @@ function injetarEstilos(): void {
   style.id = 'seirmg-estilo-controle-processos'
   style.textContent = ESTILO_FILTROS_E_ESPECIFICACAO
   document.head.appendChild(style)
+}
+
+let popoverPlankaAtual: HTMLElement | null = null
+
+function fecharPopoverPlanka(): void {
+  popoverPlankaAtual?.remove()
+  popoverPlankaAtual = null
+}
+
+function abrirPopoverPlanka(link: HTMLElement, conteudo: HTMLElement): void {
+  fecharPopoverPlanka()
+
+  const popover = document.createElement('div')
+  popover.className = 'seirmg-planka-popover'
+  popover.appendChild(conteudo)
+  document.body.appendChild(popover)
+
+  const retanguloLink = link.getBoundingClientRect()
+  popover.style.top = `${window.scrollY + retanguloLink.bottom + 4}px`
+  popover.style.left = `${window.scrollX + retanguloLink.left}px`
+
+  popoverPlankaAtual = popover
+}
+
+function abrirPopoverMensagemPlanka(link: HTMLElement, mensagem: string): void {
+  const p = document.createElement('div')
+  p.className = 'seirmg-planka-popover-mensagem'
+  p.textContent = mensagem
+  abrirPopoverPlanka(link, p)
+}
+
+document.addEventListener('click', () => {
+  try {
+    fecharPopoverPlanka()
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao fechar popover do Planka:', error)
+  }
+})
+
+async function consultarEAbrirPopoverPlanka(
+  link: HTMLAnchorElement,
+  nup: string,
+  urlConsulta: string,
+  token: string
+): Promise<void> {
+  try {
+    const resposta = await fetch(urlConsulta, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ processo: nup }),
+    })
+
+    if (resposta.status === 404) {
+      abrirPopoverMensagemPlanka(link, 'Nenhum card encontrado no Planka.')
+      return
+    }
+
+    if (resposta.status === 401) {
+      const localStore = createLocalConfigStore()
+      const localConfig = await localStore.get()
+      if (localConfig.planka) {
+        await localStore.set({
+          ...localConfig,
+          planka: { ...localConfig.planka, token: undefined, tokenExp: undefined },
+        })
+      }
+      abrirPopoverMensagemPlanka(link, 'Erro ao consultar o Planka.')
+      return
+    }
+
+    if (!resposta.ok) {
+      console.error('[SEIRMG] Consulta ao Planka falhou:', resposta.status)
+      abrirPopoverMensagemPlanka(link, 'Erro ao consultar o Planka.')
+      return
+    }
+
+    const dados = (await resposta.json()) as RespostaConsultaPlanka
+    montarEstiloPlanka()
+    const conteudo = montarConteudoCardPlanka(dados)
+    abrirPopoverPlanka(link, conteudo ?? criarMensagemPlankaVazia())
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao consultar o Planka:', error)
+    abrirPopoverMensagemPlanka(link, 'Erro ao consultar o Planka.')
+  }
+}
+
+function criarMensagemPlankaVazia(): HTMLElement {
+  const p = document.createElement('div')
+  p.className = 'seirmg-planka-popover-mensagem'
+  p.textContent = 'Nenhum card encontrado no Planka.'
+  return p
+}
+
+async function verificarProcessosEmLotePlanka(
+  urlVerificarLote: string,
+  token: string,
+  nups: string[]
+): Promise<Set<string>> {
+  if (nups.length === 0) return new Set()
+
+  try {
+    const resposta = await fetch(urlVerificarLote, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(montarCorpoVerificacaoLote(nups)),
+    })
+
+    if (resposta.status === 401) {
+      const localStore = createLocalConfigStore()
+      const localConfig = await localStore.get()
+      if (localConfig.planka) {
+        await localStore.set({
+          ...localConfig,
+          planka: { ...localConfig.planka, token: undefined, tokenExp: undefined },
+        })
+      }
+      return new Set()
+    }
+
+    if (!resposta.ok) {
+      console.error('[SEIRMG] Verificação em lote do Planka falhou:', resposta.status)
+      return new Set()
+    }
+
+    return extrairEncontrados(await resposta.json())
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao verificar processos em lote no Planka:', error)
+    return new Set()
+  }
+}
+
+async function aplicarLinksPlankaEmLinhas(linhas: Element[]): Promise<void> {
+  try {
+    const localConfig = await createLocalConfigStore().get()
+    const planka = localConfig.planka
+    if (!planka?.urlVerificarLote || !planka.urlConsulta || !planka.token) return
+    if (!tokenValido(planka.tokenExp, new Date().toISOString())) return
+
+    const urlVerificarLote = planka.urlVerificarLote
+    const urlConsulta = planka.urlConsulta
+    const token = planka.token
+
+    const linhasPorNup = new Map<string, HTMLElement>()
+    linhas.forEach((linha) => {
+      const processo = linha.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')
+      const nup = processo?.textContent?.trim()
+      if (processo && nup) linhasPorNup.set(nup, processo)
+    })
+    if (linhasPorNup.size === 0) return
+
+    const encontrados = await verificarProcessosEmLotePlanka(urlVerificarLote, token, [...linhasPorNup.keys()])
+
+    encontrados.forEach((nup) => {
+      const processo = linhasPorNup.get(nup)
+      if (!processo) return
+
+      const link = document.createElement('a')
+      link.href = '#'
+      link.className = 'seirmg-planka-link'
+      link.textContent = '📋 Ver Planka'
+      link.addEventListener('click', (evento) => {
+        evento.preventDefault()
+        evento.stopPropagation()
+        consultarEAbrirPopoverPlanka(link, nup, urlConsulta, token).catch((error) => {
+          console.error('[SEIRMG] Falha ao abrir o card do Planka:', error)
+        })
+      })
+
+      processo.insertAdjacentElement('afterend', link)
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao aplicar links do Planka nas linhas:', error)
+  }
 }
 
 const LIMITE_PAGINAS_ROLAGEM_INFINITA = 200
@@ -801,6 +1001,9 @@ function reaplicarTratamentosNasLinhasNovas(idTabela: string, config: SyncConfig
   aplicarPrazosEmLinhas(config.controleProcessos.prazos, linhas)
   aplicarCorProcessoEmLinhas(config.controleProcessos.coresProcesso, linhas)
   aplicarEspecificacaoEmLinhas(config.controleProcessos.especificacao, linhas)
+  aplicarLinksPlankaEmLinhas(linhas).catch((error) => {
+    console.error('[SEIRMG] Falha ao aplicar links do Planka nas linhas novas:', error)
+  })
   reaplicarFiltrosAposNovasLinhas.forEach((reaplicar) => reaplicar())
   reaplicarOrdemDaTabela(idTabela)
   linhas.forEach((linha) => desabilitarSelecaoNaLinha(linha))
@@ -970,6 +1173,11 @@ async function bootstrap(): Promise<void> {
     aplicarCorProcesso(config.controleProcessos.coresProcesso)
     aplicarEspecificacao(config.controleProcessos.especificacao)
     montarAgrupamento(config)
+
+    const todasAsLinhas = IDS_TABELAS.flatMap((idTabela) => linhasDaTabela(idTabela))
+    aplicarLinksPlankaEmLinhas(todasAsLinhas).catch((error) => {
+      console.error('[SEIRMG] Falha ao aplicar links do Planka:', error)
+    })
 
     if (config.controleProcessos.rolagemInfinita.ativo) {
       const tabelasRolagem: Array<{ tipo: 'Recebidos' | 'Gerados'; idTabela: string }> = [
