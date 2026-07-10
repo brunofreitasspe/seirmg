@@ -81,6 +81,7 @@ export interface DocumentoExternoConfig {
   tipoConferencia: string
   nivelAcesso: NivelAcessoDocumento
   hipoteseLegal: string
+  tipoDocumentoPadraoArrastar: string
 }
 
 export interface SyncConfig {
@@ -168,6 +169,7 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     tipoConferencia: '',
     nivelAcesso: 'P',
     hipoteseLegal: '',
+    tipoDocumentoPadraoArrastar: 'Anexo',
   },
 }
 

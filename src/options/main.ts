@@ -288,6 +288,9 @@ async function carregarAbaEditor(): Promise<void> {
     const inputHipoteseLegal = document.getElementById(
       'editor-doc-externo-hipotese-legal'
     ) as HTMLInputElement | null
+    const inputTipoPadraoArrastar = document.getElementById(
+      'editor-doc-externo-tipo-padrao-arrastar'
+    ) as HTMLInputElement | null
     const status = document.getElementById('editor-status')
 
     if (inputAtivo) inputAtivo.checked = config.documentoExterno.ativo
@@ -295,6 +298,9 @@ async function carregarAbaEditor(): Promise<void> {
     if (inputTipoConferencia) inputTipoConferencia.value = config.documentoExterno.tipoConferencia
     if (selectNivelAcesso) selectNivelAcesso.value = config.documentoExterno.nivelAcesso
     if (inputHipoteseLegal) inputHipoteseLegal.value = config.documentoExterno.hipoteseLegal
+    if (inputTipoPadraoArrastar) {
+      inputTipoPadraoArrastar.value = config.documentoExterno.tipoDocumentoPadraoArrastar
+    }
 
     document.getElementById('editor-salvar')?.addEventListener('click', async () => {
       try {
@@ -306,6 +312,7 @@ async function carregarAbaEditor(): Promise<void> {
             tipoConferencia: inputTipoConferencia?.value ?? '',
             nivelAcesso: (selectNivelAcesso?.value ?? 'P') as NivelAcessoDocumento,
             hipoteseLegal: inputHipoteseLegal?.value ?? '',
+            tipoDocumentoPadraoArrastar: inputTipoPadraoArrastar?.value.trim() || 'Anexo',
           },
         }
         await store.set(atualizado)

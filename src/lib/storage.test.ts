@@ -145,6 +145,7 @@ describe('createSyncConfigStore', () => {
       tipoConferencia: '',
       nivelAcesso: 'P',
       hipoteseLegal: '',
+      tipoDocumentoPadraoArrastar: 'Anexo',
     })
   })
 
@@ -159,6 +160,7 @@ describe('createSyncConfigStore', () => {
         tipoConferencia: 'Cópia Simples',
         nivelAcesso: 'R' as const,
         hipoteseLegal: '1',
+        tipoDocumentoPadraoArrastar: 'Ofício',
       },
     }
     await store.set(atualizado)
