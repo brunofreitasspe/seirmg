@@ -94,8 +94,12 @@ visual" já usada no resto da integração.
   infinita, só para as linhas que acabaram de entrar.
 - Para cada NUP retornado em `encontrados`, insere o link na linha correspondente:
   `processo.insertAdjacentElement('afterend', link)` — mesmo ponto de inserção já usado
-  por `aplicarEspecificacaoEmLinhas` (nas linhas que têm as duas coisas, aparecem lado a
-  lado, especificação antes por ser aplicada primeiro no `bootstrap`).
+  por `aplicarEspecificacaoEmLinhas`. Como a especificação é inserida de forma síncrona
+  no `bootstrap()` e o link do Planka só é inserido depois que a chamada em lote resolve
+  (mais tarde), nas linhas que têm as duas coisas a ordem final é NUP → link do Planka →
+  especificação (não o contrário — `insertAdjacentElement('afterend', ...)` sempre coloca
+  o novo elemento logo após o nó âncora, então o último a ser inserido fica mais perto do
+  NUP). Puramente cosmético, ambos são `display: block`.
 - Texto do link: `📋 Ver Planka`, `href="#"`, com `preventDefault()` no clique.
 - Falha na chamada em lote (rede, 401, 5xx): nenhum link aparece nessa leva de linhas,
   `console.error` (mesmo padrão de log do resto da integração) — nunca um widget

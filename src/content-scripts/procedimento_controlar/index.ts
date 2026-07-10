@@ -43,6 +43,7 @@ import type { ControleProcessosConfig, SyncConfig } from '../../lib/storage'
 import { montarCorpoVerificacaoLote, extrairEncontrados } from '../../features/planka/lote'
 import { tokenValido } from '../../features/planka/token'
 import { montarEstiloPlanka, montarConteudoCardPlanka, type RespostaConsultaPlanka } from '../shared/plankaCard'
+import { limparTokenPlanka } from '../shared/plankaToken'
 
 const IDS_TABELAS = ['#tblProcessosDetalhado', '#tblProcessosGerados', '#tblProcessosRecebidos']
 
@@ -113,6 +114,7 @@ function abrirPopoverPlanka(link: HTMLElement, conteudo: HTMLElement): void {
 
   const popover = document.createElement('div')
   popover.className = 'seirmg-planka-popover'
+  popover.addEventListener('click', (evento) => evento.stopPropagation())
   popover.appendChild(conteudo)
   document.body.appendChild(popover)
 
@@ -157,14 +159,7 @@ async function consultarEAbrirPopoverPlanka(
     }
 
     if (resposta.status === 401) {
-      const localStore = createLocalConfigStore()
-      const localConfig = await localStore.get()
-      if (localConfig.planka) {
-        await localStore.set({
-          ...localConfig,
-          planka: { ...localConfig.planka, token: undefined, tokenExp: undefined },
-        })
-      }
+      await limparTokenPlanka()
       abrirPopoverMensagemPlanka(link, 'Erro ao consultar o Planka.')
       return
     }
@@ -207,14 +202,7 @@ async function verificarProcessosEmLotePlanka(
     })
 
     if (resposta.status === 401) {
-      const localStore = createLocalConfigStore()
-      const localConfig = await localStore.get()
-      if (localConfig.planka) {
-        await localStore.set({
-          ...localConfig,
-          planka: { ...localConfig.planka, token: undefined, tokenExp: undefined },
-        })
-      }
+      await limparTokenPlanka()
       return new Set()
     }
 
@@ -241,33 +229,40 @@ async function aplicarLinksPlankaEmLinhas(linhas: Element[]): Promise<void> {
     const urlConsulta = planka.urlConsulta
     const token = planka.token
 
-    const linhasPorNup = new Map<string, HTMLElement>()
+    const linhasPorNup = new Map<string, HTMLElement[]>()
     linhas.forEach((linha) => {
       const processo = linha.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')
       const nup = processo?.textContent?.trim()
-      if (processo && nup) linhasPorNup.set(nup, processo)
+      if (!processo || !nup) return
+      const elementos = linhasPorNup.get(nup) ?? []
+      elementos.push(processo)
+      linhasPorNup.set(nup, elementos)
     })
     if (linhasPorNup.size === 0) return
 
     const encontrados = await verificarProcessosEmLotePlanka(urlVerificarLote, token, [...linhasPorNup.keys()])
 
     encontrados.forEach((nup) => {
-      const processo = linhasPorNup.get(nup)
-      if (!processo) return
+      const processos = linhasPorNup.get(nup)
+      if (!processos) return
 
-      const link = document.createElement('a')
-      link.href = '#'
-      link.className = 'seirmg-planka-link'
-      link.textContent = '📋 Ver Planka'
-      link.addEventListener('click', (evento) => {
-        evento.preventDefault()
-        evento.stopPropagation()
-        consultarEAbrirPopoverPlanka(link, nup, urlConsulta, token).catch((error) => {
-          console.error('[SEIRMG] Falha ao abrir o card do Planka:', error)
+      processos.forEach((processo) => {
+        if (processo.nextElementSibling?.classList.contains('seirmg-planka-link')) return
+
+        const link = document.createElement('a')
+        link.href = '#'
+        link.className = 'seirmg-planka-link'
+        link.textContent = '📋 Ver Planka'
+        link.addEventListener('click', (evento) => {
+          evento.preventDefault()
+          evento.stopPropagation()
+          consultarEAbrirPopoverPlanka(link, nup, urlConsulta, token).catch((error) => {
+            console.error('[SEIRMG] Falha ao abrir o card do Planka:', error)
+          })
         })
-      })
 
-      processo.insertAdjacentElement('afterend', link)
+        processo.insertAdjacentElement('afterend', link)
+      })
     })
   } catch (error) {
     console.error('[SEIRMG] Falha ao aplicar links do Planka nas linhas:', error)

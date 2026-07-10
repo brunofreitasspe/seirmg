@@ -12,6 +12,7 @@ import { fetchText } from '../../lib/fetchViaBackground'
 import { createLocalConfigStore } from '../../lib/storage'
 import { tokenValido } from '../../features/planka/token'
 import { montarEstiloPlanka, montarConteudoCardPlanka, type RespostaConsultaPlanka } from '../shared/plankaCard'
+import { limparTokenPlanka } from '../shared/plankaToken'
 
 function ajustarElementosNativos(): void {
   try {
@@ -298,7 +299,7 @@ async function consultarEExibirPlanka(): Promise<void> {
   })
 
   if (resposta.status === 401) {
-    await localStore.set({ ...localConfig, planka: { ...planka, token: undefined, tokenExp: undefined } })
+    await limparTokenPlanka()
     return
   }
   if (resposta.status === 404) return
