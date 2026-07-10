@@ -98,6 +98,14 @@ export interface NotificadoState {
   [itemId: string]: { notificadoEm: string }
 }
 
+export interface PlankaConfig {
+  baseUrl?: string
+  email?: string
+  urlCadastro?: string
+  token?: string
+  tokenExp?: number
+}
+
 export interface LocalConfig {
   schemaVersion: 1
   blocoAssinaturaNotificado: NotificadoState
@@ -110,6 +118,7 @@ export interface LocalConfig {
   ultimaNavegacaoRealSei?: string
   sessaoInvalidaAte?: string
   atalhoPublicacoesDisponivel?: boolean
+  planka?: PlankaConfig
 }
 
 export const DEFAULT_SYNC_CONFIG: SyncConfig = {

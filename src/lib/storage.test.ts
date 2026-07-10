@@ -219,4 +219,21 @@ describe('createLocalConfigStore', () => {
     await store.set(atualizado)
     expect(await store.get()).toEqual(atualizado)
   })
+
+  it('persiste planka', async () => {
+    const area = criarAreaFalsa()
+    const store = createLocalConfigStore(area)
+    const atualizado = {
+      ...DEFAULT_LOCAL_CONFIG,
+      planka: {
+        baseUrl: 'https://n8n.exemplo.com',
+        email: 'usuario@exemplo.com',
+        urlCadastro: 'https://n8n.exemplo.com/form/abc123',
+        token: 'aaa.bbb.ccc',
+        tokenExp: 1799999999,
+      },
+    }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
 })
