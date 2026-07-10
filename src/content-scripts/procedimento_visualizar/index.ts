@@ -346,7 +346,11 @@ async function consultarEExibirPlanka(): Promise<void> {
     await localStore.set({ ...localConfig, planka: { ...planka, token: undefined, tokenExp: undefined } })
     return
   }
-  if (!resposta.ok) return
+  if (resposta.status === 404) return
+  if (!resposta.ok) {
+    console.error('[SEIRMG] Consulta ao Planka falhou:', resposta.status)
+    return
+  }
 
   const dados = (await resposta.json()) as RespostaConsultaPlanka
   renderizarCardPlanka(dados)

@@ -377,7 +377,7 @@ async function carregarAbaIntegracoes(): Promise<void> {
 
     document.getElementById('integracoes-planka-entrar')?.addEventListener('click', async () => {
       try {
-        const baseUrl = inputBaseUrl?.value.trim() ?? ''
+        const baseUrl = (inputBaseUrl?.value.trim() ?? '').replace(/\/+$/, '')
         const urlCadastro = inputUrlCadastro?.value.trim() ?? ''
         const email = inputEmail?.value.trim() ?? ''
         const senha = inputSenha?.value ?? ''
