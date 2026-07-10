@@ -347,7 +347,6 @@ async function carregarAbaIntegracoes(): Promise<void> {
     const inputSenha = document.getElementById('integracoes-planka-senha') as HTMLInputElement | null
     const divConectado = document.getElementById('integracoes-planka-conectado')
     const spanEmailConectado = document.getElementById('integracoes-planka-email-conectado')
-    const divFormulario = document.getElementById('integracoes-planka-formulario')
     const linkCadastro = document.getElementById(
       'integracoes-planka-link-cadastro'
     ) as HTMLAnchorElement | null
@@ -373,7 +372,6 @@ async function carregarAbaIntegracoes(): Promise<void> {
 
       const conectado = tokenValido(planka?.tokenExp, new Date().toISOString())
       if (divConectado) divConectado.style.display = conectado ? 'block' : 'none'
-      if (divFormulario) divFormulario.style.display = conectado ? 'none' : 'block'
       if (spanEmailConectado) spanEmailConectado.textContent = planka?.email ?? ''
     }
 
