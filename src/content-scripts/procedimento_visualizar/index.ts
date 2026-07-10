@@ -266,10 +266,9 @@ function montarPainelAnotacao(): void {
           idProtocolo: dadosAtuais.idProtocolo,
           tipoPagina: dadosAtuais.tipoPagina,
         })
-        const params = new URLSearchParams(corpo)
         const resultado = await fetchText(new URL(dadosAtuais.postUrl, window.location.href).href, {
           method: 'POST',
-          body: params,
+          bodyRaw: corpo,
         })
         if (!resultado.ok) {
           console.error('[SEIRMG] Falha ao salvar anotação:', resultado.error)
@@ -335,13 +334,18 @@ function criarIconeCopiar(sigla: string, ancora: HTMLElement): HTMLSpanElement {
   icone.className = 'seirmg-copiar-sigla'
   icone.addEventListener('click', (evento) => {
     evento.stopPropagation()
-    navigator.clipboard.writeText(sigla).then(() => {
-      const tooltip = document.createElement('div')
-      tooltip.className = 'seirmg-tooltip-copiado'
-      tooltip.textContent = 'Copiado!'
-      ancora.appendChild(tooltip)
-      setTimeout(() => tooltip.remove(), 1000)
-    })
+    navigator.clipboard
+      .writeText(sigla)
+      .then(() => {
+        const tooltip = document.createElement('div')
+        tooltip.className = 'seirmg-tooltip-copiado'
+        tooltip.textContent = 'Copiado!'
+        ancora.appendChild(tooltip)
+        setTimeout(() => tooltip.remove(), 1000)
+      })
+      .catch((error) => {
+        console.error('[SEIRMG] Falha ao copiar sigla para a área de transferência:', error)
+      })
   })
   return icone
 }
@@ -468,12 +472,15 @@ async function montarPainelAtribuicao(): Promise<void> {
 function montarPainelLateral(): void {
   try {
     esperarElemento('body.infraArvore', "a[target$='Visualizacao']", () => {
-      montarPainelTipoEInteressados().catch((error) => {
-        console.error('[SEIRMG] Falha ao montar painel de tipo/interessados:', error)
-      })
-      montarPainelAtribuicao().catch((error) => {
-        console.error('[SEIRMG] Falha ao montar painel de atribuição:', error)
-      })
+      montarPainelTipoEInteressados()
+        .catch((error) => {
+          console.error('[SEIRMG] Falha ao montar painel de tipo/interessados:', error)
+        })
+        .finally(() => {
+          montarPainelAtribuicao().catch((error) => {
+            console.error('[SEIRMG] Falha ao montar painel de atribuição:', error)
+          })
+        })
     })
   } catch (error) {
     console.error('[SEIRMG] Falha ao montar painel lateral:', error)
@@ -525,7 +532,7 @@ async function criarDocumentoExternoPorArraste(arquivo: File): Promise<void> {
 
   const respostaFinal = await fetchText(new URL(campos.urlEnvio, window.location.href).href, {
     method: 'POST',
-    body: new URLSearchParams(corpo),
+    bodyRaw: corpo,
   })
   if (!respostaFinal.ok) throw new Error(respostaFinal.error)
   if (!respostaIndicaSucesso(respostaFinal.data)) {
@@ -581,18 +588,22 @@ function montarDropzone(): void {
       overlay.textContent = 'Criando documento(s)...'
       overlay.style.display = 'flex'
 
-      Promise.allSettled(arquivos.map((arquivo) => criarDocumentoExternoPorArraste(arquivo))).then((resultados) => {
-        overlay.style.display = 'none'
-        const falhas = arquivos.filter((_, indice) => resultados[indice]?.status === 'rejected')
-        if (falhas.length > 0) {
-          alert(
-            `Ocorreu um erro ao incluir documento externo com o(s) seguinte(s) anexo(s): ${falhas
-              .map((arquivo) => arquivo.name)
-              .join(', ')}. Verifique se o processo encontra-se aberto na unidade.`
-          )
-        }
-        location.reload()
-      })
+      Promise.allSettled(arquivos.map((arquivo) => criarDocumentoExternoPorArraste(arquivo)))
+        .then((resultados) => {
+          overlay.style.display = 'none'
+          const falhas = arquivos.filter((_, indice) => resultados[indice]?.status === 'rejected')
+          if (falhas.length > 0) {
+            alert(
+              `Ocorreu um erro ao incluir documento externo com o(s) seguinte(s) anexo(s): ${falhas
+                .map((arquivo) => arquivo.name)
+                .join(', ')}. Verifique se o processo encontra-se aberto na unidade.`
+            )
+          }
+          location.reload()
+        })
+        .catch((error) => {
+          console.error('[SEIRMG] Falha ao finalizar criação de documentos por arraste:', error)
+        })
     })
   } catch (error) {
     console.error('[SEIRMG] Falha ao montar dropzone:', error)

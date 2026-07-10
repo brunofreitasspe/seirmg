@@ -50,7 +50,7 @@ export function montarHdnAnexos(usuarioEUnidade: UsuarioEUnidade, uploadIdentifi
 }
 
 export function respostaIndicaSucesso(respostaHtml: string): boolean {
-  return /<div id="divArvoreHtml"><\/div>/m.test(respostaHtml)
+  return /id="divArvoreHtml"/m.test(respostaHtml)
 }
 
 export function obterNomeDocumento(nomeArquivo: string): string {

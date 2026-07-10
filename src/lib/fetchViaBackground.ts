@@ -2,7 +2,7 @@ import type { Result } from './result'
 
 export async function fetchText(
   url: string,
-  options: { method?: string; body?: URLSearchParams } = {}
+  options: { method?: string; body?: URLSearchParams; bodyRaw?: string } = {}
 ): Promise<Result<string>> {
   try {
     const resposta = await chrome.runtime.sendMessage({
@@ -10,6 +10,7 @@ export async function fetchText(
       url,
       method: options.method,
       body: options.body?.toString(),
+      bodyRaw: options.bodyRaw,
     })
     return resposta as Result<string>
   } catch (error) {

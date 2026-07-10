@@ -20,6 +20,7 @@ interface MensagemFetchSei {
   url: string
   method?: string
   body?: string
+  bodyRaw?: string
 }
 
 interface MensagemTelaLoginDetectada {
@@ -102,7 +103,13 @@ chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
   if (!ehMensagemFetchSei(mensagem)) return false
   fetchTextComGate(mensagem.url, {
     method: mensagem.method,
-    body: mensagem.body !== undefined ? new URLSearchParams(mensagem.body) : undefined,
+    body:
+      mensagem.bodyRaw !== undefined
+        ? mensagem.bodyRaw
+        : mensagem.body !== undefined
+          ? new URLSearchParams(mensagem.body)
+          : undefined,
+    headers: mensagem.bodyRaw !== undefined ? { 'Content-Type': 'application/x-www-form-urlencoded' } : undefined,
   })
     .then(responder)
     .catch((error) => responder({ ok: false, error: String(error) }))
