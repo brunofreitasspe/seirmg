@@ -483,3 +483,17 @@ span.seirmg-copiar-sigla svg {
   font-size: 10px;
   color: #017fff;
 }
+
+#seirmg-dropzone-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(242, 242, 242, 0.9);
+  border: 3px dashed #424242;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  color: #424242;
+  pointer-events: none;
+}
