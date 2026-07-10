@@ -9,6 +9,8 @@ import {
   type AnotacaoDados,
 } from '../../features/procedimento-visualizar/anotacao'
 import { fetchText } from '../../lib/fetchViaBackground'
+import { createLocalConfigStore } from '../../lib/storage'
+import { tokenValido } from '../../features/planka/token'
 
 function ajustarElementosNativos(): void {
   try {
@@ -66,6 +68,12 @@ function esperarElemento(
   setTimeout(() => esperarElemento(seletorRaiz, seletor, callback, tentativasRestantes - 1), 100)
 }
 
+function obterNumeroProcesso(): string | null {
+  const link = document.querySelector('.infraArvore > a[target="ifrVisualizacao"]')
+  if (!link) return null
+  return link.textContent?.trim() || null
+}
+
 function alterarTitulo(): void {
   try {
     esperarElemento('body.infraArvore', "a[target$='Visualizacao']", () => {
@@ -73,7 +81,7 @@ function alterarTitulo(): void {
         const link = document.querySelector('.infraArvore > a[target="ifrVisualizacao"]')
         if (!link) return
         const tipo = link.getAttribute('title') ?? ''
-        const numero = link.textContent?.trim() ?? ''
+        const numero = obterNumeroProcesso() ?? ''
         window.parent.document.title = montarTituloJanela(numero, tipo)
       } catch (error) {
         console.error('[SEIRMG] Falha ao alterar título da janela:', error)
@@ -253,9 +261,113 @@ function montarPainelAnotacao(): void {
   }
 }
 
+interface RespostaConsultaPlanka {
+  tipoProcesso: string | null
+  localizacao: string | null
+  ultimoComentario: string | null
+}
+
+const ESTILO_PLANKA = `
+  .seirmg-planka-pills { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+  .seirmg-planka-pill { border-radius: 12px; padding: 3px 10px; font-size: 12px; }
+  .seirmg-planka-pill-tipo { background: #e8f2ff; color: #017fff; font-weight: 600; }
+  .seirmg-planka-pill-localizacao { background: #eee; color: #444; }
+  .seirmg-planka-comentario { border-left: 3px solid #017fff; padding: 6px 10px; background: #fafafa; font-size: 13px; color: #555; font-style: italic; }
+`
+
+function montarEstiloPlanka(): void {
+  if (document.getElementById('seirmg-estilo-planka')) return
+  const style = document.createElement('style')
+  style.id = 'seirmg-estilo-planka'
+  style.textContent = ESTILO_PLANKA
+  document.head.appendChild(style)
+}
+
+function renderizarCardPlanka(dados: RespostaConsultaPlanka): void {
+  montarEstiloPlanka()
+
+  const container = document.getElementById('container') ?? document.body
+
+  const divPainel = document.createElement('div')
+  divPainel.id = 'seirmg-planka'
+
+  const pills = document.createElement('div')
+  pills.className = 'seirmg-planka-pills'
+
+  if (dados.tipoProcesso) {
+    const pillTipo = document.createElement('span')
+    pillTipo.className = 'seirmg-planka-pill seirmg-planka-pill-tipo'
+    pillTipo.textContent = `📋 ${dados.tipoProcesso}`
+    pills.appendChild(pillTipo)
+  }
+
+  if (dados.localizacao) {
+    const pillLocalizacao = document.createElement('span')
+    pillLocalizacao.className = 'seirmg-planka-pill seirmg-planka-pill-localizacao'
+    pillLocalizacao.textContent = `📍 ${dados.localizacao}`
+    pills.appendChild(pillLocalizacao)
+  }
+
+  if (pills.childElementCount > 0) divPainel.appendChild(pills)
+
+  if (dados.ultimoComentario) {
+    const comentario = document.createElement('div')
+    comentario.className = 'seirmg-planka-comentario'
+    comentario.textContent = dados.ultimoComentario
+    divPainel.appendChild(comentario)
+  }
+
+  if (divPainel.childElementCount === 0) return
+
+  container.appendChild(divPainel)
+}
+
+async function consultarEExibirPlanka(): Promise<void> {
+  const numero = obterNumeroProcesso()
+  if (!numero) return
+
+  const localStore = createLocalConfigStore()
+  const localConfig = await localStore.get()
+  const planka = localConfig.planka
+
+  if (!tokenValido(planka?.tokenExp, new Date().toISOString())) return
+  if (!planka?.baseUrl || !planka.token) return
+
+  const resposta = await fetch(`${planka.baseUrl}/webhook/seirmg-consultar-processo`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${planka.token}`,
+    },
+    body: JSON.stringify({ processo: numero }),
+  })
+
+  if (resposta.status === 401) {
+    await localStore.set({ ...localConfig, planka: { ...planka, token: undefined, tokenExp: undefined } })
+    return
+  }
+  if (!resposta.ok) return
+
+  const dados = (await resposta.json()) as RespostaConsultaPlanka
+  renderizarCardPlanka(dados)
+}
+
+function montarPainelPlanka(): void {
+  try {
+    esperarElemento('body.infraArvore', "a[target$='Visualizacao']", () => {
+      consultarEExibirPlanka().catch((error) => {
+        console.error('[SEIRMG] Falha ao consultar dados do Planka:', error)
+      })
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao montar painel do Planka:', error)
+  }
+}
+
 function bootstrap(): void {
   ajustarElementosNativos()
   alterarTitulo()
+  montarPainelPlanka()
   montarPainelAnotacao()
 }
 
