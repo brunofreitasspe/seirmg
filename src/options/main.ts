@@ -335,6 +335,9 @@ async function carregarAbaIntegracoes(): Promise<void> {
     const inputUrlConsulta = document.getElementById(
       'integracoes-planka-url-consulta'
     ) as HTMLInputElement | null
+    const inputUrlVerificarLote = document.getElementById(
+      'integracoes-planka-url-verificar-lote'
+    ) as HTMLInputElement | null
     const inputEmail = document.getElementById('integracoes-planka-email') as HTMLInputElement | null
     const inputSenha = document.getElementById('integracoes-planka-senha') as HTMLInputElement | null
     const divConectado = document.getElementById('integracoes-planka-conectado')
@@ -351,6 +354,7 @@ async function carregarAbaIntegracoes(): Promise<void> {
       if (inputUrlCadastro) inputUrlCadastro.value = planka?.urlCadastro ?? ''
       if (inputUrlLogin) inputUrlLogin.value = planka?.urlLogin ?? ''
       if (inputUrlConsulta) inputUrlConsulta.value = planka?.urlConsulta ?? ''
+      if (inputUrlVerificarLote) inputUrlVerificarLote.value = planka?.urlVerificarLote ?? ''
       if (inputEmail) inputEmail.value = planka?.email ?? ''
 
       if (linkCadastro) {
@@ -374,6 +378,7 @@ async function carregarAbaIntegracoes(): Promise<void> {
         const urlCadastro = inputUrlCadastro?.value.trim() ?? ''
         const urlLogin = (inputUrlLogin?.value.trim() ?? '').replace(/\/+$/, '')
         const urlConsulta = (inputUrlConsulta?.value.trim() ?? '').replace(/\/+$/, '')
+        const urlVerificarLote = (inputUrlVerificarLote?.value.trim() ?? '').replace(/\/+$/, '')
         const email = inputEmail?.value.trim() ?? ''
         const senha = inputSenha?.value ?? ''
 
@@ -383,7 +388,11 @@ async function carregarAbaIntegracoes(): Promise<void> {
         }
 
         const origens = Array.from(
-          new Set([`${new URL(urlLogin).origin}/*`, `${new URL(urlConsulta).origin}/*`])
+          new Set(
+            [urlLogin, urlConsulta, urlVerificarLote]
+              .filter((url) => url.length > 0)
+              .map((url) => `${new URL(url).origin}/*`)
+          )
         )
         const concedida = await chrome.permissions.request({ origins: origens })
         if (!concedida) {
@@ -418,7 +427,7 @@ async function carregarAbaIntegracoes(): Promise<void> {
         const config = await store.get()
         await store.set({
           ...config,
-          planka: { urlCadastro, urlLogin, urlConsulta, email, token: corpo.token, tokenExp },
+          planka: { urlCadastro, urlLogin, urlConsulta, urlVerificarLote, email, token: corpo.token, tokenExp },
         })
 
         if (status) status.textContent = ''
