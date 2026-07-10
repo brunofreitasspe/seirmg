@@ -34,3 +34,64 @@ export function extrairInteressados(doc: Document): InteressadoExtraido[] {
     }
   })
 }
+
+export function obterUnidadeAtual(seiVersionAtLeast4: boolean, doc: Document): string | null {
+  if (seiVersionAtLeast4) {
+    return doc.querySelector('#lnkInfraUnidade')?.textContent?.trim() || null
+  }
+  const select = doc.querySelector<HTMLSelectElement>("select[name='selInfraUnidades']")
+  return select?.selectedOptions[0]?.textContent?.trim() || null
+}
+
+export interface UsuarioAtribuicao {
+  nome: string
+  login: string
+}
+
+export interface DadosAtribuicao {
+  sigiloso: boolean
+  usuarios: UsuarioAtribuicao[]
+  mais?: number
+}
+
+export function extrairAtribuicao(scriptHtml: string, unidadeAtual: string): DadosAtribuicao | null {
+  if (!/^Nos\[0\]\.html = 'Processo aberto/m.test(scriptHtml)) return null
+
+  const rConteudo = /^Nos\[0\]\.html = '(.*)';/m.exec(scriptHtml)
+  if (!rConteudo) return null
+  const html = rConteudo[1]
+
+  if (/(Processo aberto nas unidades:|Processo aberto somente na unidade)/m.test(html)) {
+    const regexUnidade = new RegExp(
+      String.raw`(?<=<a alt=".*" title=".*" class="ancoraSigla">)${unidadeAtual}<\/a>(.*?)[.]?<br \/>`,
+      'm'
+    )
+    const resultadoUnidade = regexUnidade.exec(html)
+    if (!resultadoUnidade) return null
+
+    const regexUsuario = /\(atribuído para <a alt=".*" title="(.*?)" class="ancoraSigla">(.*?)<\/a>\)/m
+    const resultadoUsuario = regexUsuario.exec(resultadoUnidade[1])
+    if (!resultadoUsuario) return { sigiloso: false, usuarios: [] }
+    return { sigiloso: false, usuarios: [{ nome: resultadoUsuario[1], login: resultadoUsuario[2] }] }
+  }
+
+  if (/(Processo aberto com os usuários:|Processo aberto somente com o usuário)/m.test(html)) {
+    const regex =
+      /(?<=<a alt=".*?" title="(.*?)" class="ancoraSigla">(.*?))(?=<\/a>&nbsp;\/&nbsp;<a alt=".*?" title=".*?" class="ancoraSigla">(.*?)<\/a>)/g
+    const usuarios: UsuarioAtribuicao[] = []
+    let mais = 0
+    let m: RegExpExecArray | null
+    while ((m = regex.exec(html)) !== null) {
+      if (m.index === regex.lastIndex) regex.lastIndex++
+      const [, nome, login, unidade] = m
+      if (unidade === unidadeAtual) {
+        usuarios.push({ nome, login })
+      } else {
+        mais++
+      }
+    }
+    return { sigiloso: true, usuarios, mais }
+  }
+
+  return null
+}
