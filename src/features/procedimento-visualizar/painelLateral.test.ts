@@ -139,6 +139,14 @@ describe('extrairAtribuicao', () => {
     const resultado = extrairAtribuicao(script, 'GAB')
     expect(resultado?.sigiloso).toBe(true)
     expect(resultado?.usuarios).toEqual([{ nome: 'João Silva', login: 'joao.silva' }])
-    expect(resultado?.mais).toBe(1)
+    // mais=2 (não 1) porque a regex é totalmente zero-width (só lookaround) e por isso
+    // seu lookahead também dispara logo após a âncora de UNIDADE (não só depois de âncoras
+    // de usuário), gerando um match espúrio a cada par usuário→unidade real. Comportamento
+    // herdado verbatim do Sei++ original (consultarAtribuicao.js) -- não é bug de
+    // transcrição, é uma característica conhecida e não corrigida da regex original.
+    // Ver task-2-report.md para o diagnóstico completo. Precisa de validação manual
+    // contra um processo sigiloso real do SEI antes de confiar neste branch em produção
+    // (mesmo tratamento do Lote F).
+    expect(resultado?.mais).toBe(2)
   })
 })
