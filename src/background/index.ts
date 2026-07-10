@@ -1,8 +1,6 @@
-import { ALARM_NAME } from './alarms/blocoAssinaturaCheck'
 import { processarItensBlocoAssinatura } from './blocoAssinaturaPipeline'
 import { fetchTextComGate, registrarNavegacaoReal, abrirCircuitBreaker } from './sessionGate'
-import { verificarBlocoAssinaturaViaAbaOculta } from './blocoAssinaturaAbaOculta'
-import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
+import { createLocalConfigStore } from '../lib/storage'
 import { NOTIFICATION_ID_PREFIX } from './notifications/notify'
 import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
 
@@ -11,7 +9,6 @@ const ACAO_BLOCO_ASSINATURA = 'bloco_assinatura_listar'
 interface MensagemItensBloco {
   type: 'seirmg:bloco-assinatura:itens'
   itens: BlocoAssinaturaItem[]
-  origem?: 'alarme'
 }
 
 interface MensagemSeiDetectado {
@@ -61,19 +58,6 @@ function ehMensagemTelaLoginDetectada(mensagem: unknown): mensagem is MensagemTe
   )
 }
 
-async function agendarAlarme(): Promise<void> {
-  const config = await createSyncConfigStore().get()
-  chrome.alarms.create(ALARM_NAME, { periodInMinutes: config.blocoAssinatura.intervaloMinutos })
-}
-
-async function checarBlocoAssinaturaViaAlarme(): Promise<void> {
-  const localConfig = await createLocalConfigStore().get()
-  if (!localConfig.baseUrlSei) return
-
-  const url = `${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}&seirmgOrigem=alarme`
-  await verificarBlocoAssinaturaViaAbaOculta(url)
-}
-
 async function abrirOuFocarAba(baseUrlSei: string, url: string): Promise<void> {
   const [abaExistente] = await chrome.tabs.query({ url: `${baseUrlSei}/*` })
 
@@ -92,28 +76,13 @@ async function marcarIndicadorConfiguracao(): Promise<void> {
 }
 
 chrome.runtime.onInstalled.addListener(() => {
-  agendarAlarme().catch((error) => {
-    console.error('[SEIRMG] Falha ao agendar alarme do bloco de assinatura:', error)
-  })
   marcarIndicadorConfiguracao().catch((error) => {
     console.error('[SEIRMG] Falha ao marcar indicador de configuração pendente:', error)
   })
 })
 
-chrome.alarms.onAlarm.addListener((alarme) => {
-  if (alarme.name !== ALARM_NAME) return
-  checarBlocoAssinaturaViaAlarme().catch((error) => {
-    console.error('[SEIRMG] Falha ao verificar bloco de assinatura via alarme:', error)
-  })
-})
-
 chrome.runtime.onMessage.addListener((mensagem) => {
   if (!ehMensagemItensBloco(mensagem)) return
-  // Mensagens com origem 'alarme' são processadas exclusivamente (e exatamente uma vez por
-  // ciclo) pelo listener interno de blocoAssinaturaAbaOculta.ts, que já capturou os itens da
-  // PRIMEIRA mensagem correlacionada antes de se remover. Processar aqui de novo duplicaria
-  // notificações (e o som) quando o content script reenviar via MutationObserver.
-  if (mensagem.origem === 'alarme') return
   processarItensBlocoAssinatura(mensagem.itens).catch((error) => {
     console.error(
       '[SEIRMG] Falha ao processar itens do bloco de assinatura recebidos via mensagem:',

@@ -12,7 +12,6 @@ export interface ThemeConfig {
 
 export interface BlocoAssinaturaConfig {
   ativo: boolean
-  intervaloMinutos: number
   tocarSom: boolean
 }
 
@@ -131,7 +130,6 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
   tema: { preset: 'claro' },
   blocoAssinatura: {
     ativo: true,
-    intervaloMinutos: 5,
     tocarSom: true,
   },
   controleProcessos: {

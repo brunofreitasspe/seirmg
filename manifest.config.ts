@@ -27,7 +27,7 @@ export default defineManifest({
     page: 'src/options/index.html',
     open_in_tab: true,
   },
-  permissions: ['storage', 'notifications', 'alarms', 'tabs', 'scripting'],
+  permissions: ['storage', 'notifications', 'tabs'],
   host_permissions: [
     '*://*.br/*controlador.php?acao=*',
     '*://*.org/*controlador.php?acao=*',

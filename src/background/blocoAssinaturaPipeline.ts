@@ -11,7 +11,6 @@ export interface BlocoAssinaturaPipelineDeps {
   localStore?: LocalStore
   notificar?: typeof notificarNovoBloco
   agoraIso?: string
-  sempreNotificarPendentes?: boolean
 }
 
 export async function processarItensBlocoAssinatura(
@@ -22,7 +21,6 @@ export async function processarItensBlocoAssinatura(
   const localStore = deps.localStore ?? createLocalConfigStore()
   const notificar = deps.notificar ?? notificarNovoBloco
   const agoraIso = deps.agoraIso ?? new Date().toISOString()
-  const sempreNotificarPendentes = deps.sempreNotificarPendentes ?? false
 
   const config = await syncStore.get()
   if (!config.blocoAssinatura.ativo) return
@@ -35,8 +33,7 @@ export async function processarItensBlocoAssinatura(
     agoraIso
   )
 
-  const quemNotificar = sempreNotificarPendentes ? pendentesAgora : novos
-  quemNotificar.forEach((item) => notificar(item, config.blocoAssinatura.tocarSom))
+  novos.forEach((item) => notificar(item, config.blocoAssinatura.tocarSom))
 
   await localStore.set({
     ...localConfig,

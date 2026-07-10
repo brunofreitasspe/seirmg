@@ -19,8 +19,6 @@ interface RegraPontoControleEditavel {
   cor: string
   [chave: string]: string
 }
-import { ALARM_NAME } from '../background/alarms/blocoAssinaturaCheck'
-
 const botoesAba = document.querySelectorAll('.aba-btn')
 const paineis = document.querySelectorAll('.painel')
 
@@ -42,12 +40,10 @@ async function carregarAbaAssinatura(): Promise<void> {
     const config = await store.get()
 
     const inputAtivo = document.getElementById('assinatura-ativo') as HTMLInputElement | null
-    const inputIntervalo = document.getElementById('assinatura-intervalo') as HTMLInputElement | null
     const inputSom = document.getElementById('assinatura-som') as HTMLInputElement | null
     const status = document.getElementById('assinatura-status')
 
     if (inputAtivo) inputAtivo.checked = config.blocoAssinatura.ativo
-    if (inputIntervalo) inputIntervalo.value = String(config.blocoAssinatura.intervaloMinutos)
     if (inputSom) inputSom.checked = config.blocoAssinatura.tocarSom
 
     document.getElementById('assinatura-salvar')?.addEventListener('click', async () => {
@@ -56,14 +52,10 @@ async function carregarAbaAssinatura(): Promise<void> {
           ...config,
           blocoAssinatura: {
             ativo: inputAtivo?.checked ?? true,
-            intervaloMinutos: Number(inputIntervalo?.value ?? 15),
             tocarSom: inputSom?.checked ?? true,
           },
         }
         await store.set(atualizado)
-        chrome.alarms.create(ALARM_NAME, {
-          periodInMinutes: atualizado.blocoAssinatura.intervaloMinutos,
-        })
         if (status) {
           status.textContent = 'Salvo!'
           setTimeout(() => {

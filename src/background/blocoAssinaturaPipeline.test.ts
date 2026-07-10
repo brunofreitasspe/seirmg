@@ -67,25 +67,6 @@ describe('processarItensBlocoAssinatura', () => {
     expect(notificar).not.toHaveBeenCalled()
   })
 
-  it('com sempreNotificarPendentes, notifica de novo um item já registrado como notificado', async () => {
-    const notificar = vi.fn()
-
-    await processarItensBlocoAssinatura([item], {
-      syncStore: { get: async () => DEFAULT_SYNC_CONFIG, set: async () => {} },
-      localStore: {
-        get: async () => ({
-          ...DEFAULT_LOCAL_CONFIG,
-          blocoAssinaturaNotificado: { x: { notificadoEm: '2026-07-01T00:00:00.000Z' } },
-        }),
-        set: async () => {},
-      },
-      notificar,
-      sempreNotificarPendentes: true,
-    })
-
-    expect(notificar).toHaveBeenCalledWith(item, DEFAULT_SYNC_CONFIG.blocoAssinatura.tocarSom)
-  })
-
   it('persiste blocoAssinaturaPendenteAtual mesmo quando não há item novo para notificar', async () => {
     const notificar = vi.fn()
     let localSalvo: unknown
