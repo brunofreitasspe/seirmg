@@ -12,7 +12,7 @@ Falta o lado da extensão: uma tela pra guardar a URL do n8n e logar, e a exibi�
 
 ## Escopo
 
-- Nova aba **"Planka"** em `src/options/` (segue o padrão já existente de abas + `chrome.storage.sync`/`local`).
+- Preencher a aba **"Integrações"** já existente em `src/options/index.html` (`data-aba="integracoes"`, hoje só um placeholder "Em breve: configuração da integração com o Planka.") — não é uma aba nova, o botão e o painel já existem, só o conteúdo falta.
 - Novo painel na tela de visualização de processo (`procedimento_visualizar`) mostrando Tipo de Processo, Localização e Último Comentário do card correspondente, quando existir.
 - **Fora de escopo** (herdado da spec do sub-projeto 1, não reaberto aqui): rate limiting, refresh token automático, painel administrativo além do link de cadastro, IDs de projeto/board configuráveis por instalação.
 
@@ -34,13 +34,13 @@ adicionado como `planka?: PlankaConfig` em `LocalConfig`. Sem mudança em `DEFAU
 
 ## Permissão de host (CORS)
 
-O n8n não retorna `Access-Control-Allow-Origin` por padrão, então a chamada da extensão pro webhook esbarraria em CORS. Solução: `manifest.config.ts` ganha `optional_host_permissions: ['*://*/*']`. Ao clicar em "Entrar" na aba Planka (dentro do próprio gesto de clique), a extensão chama `chrome.permissions.request({ origins: [origemDaBaseUrl] })` — o Chrome mostra o diálogo nativo pedindo aprovação só pro domínio específico digitado, antes de qualquer chamada de rede.
+O n8n não retorna `Access-Control-Allow-Origin` por padrão, então a chamada da extensão pro webhook esbarraria em CORS. Solução: `manifest.config.ts` ganha `optional_host_permissions: ['*://*/*']`. Ao clicar em "Entrar" na aba Integrações (dentro do próprio gesto de clique), a extensão chama `chrome.permissions.request({ origins: [origemDaBaseUrl] })` — o Chrome mostra o diálogo nativo pedindo aprovação só pro domínio específico digitado, antes de qualquer chamada de rede.
 
 ## Quem faz a chamada de rede
 
 Diferente do fetch ao SEI (que passa pelo `background` só por causa do session gate/circuit breaker — ver `src/background/sessionGate.ts`), aqui não há esse motivo: nem a Options nem o content script de `procedimento_visualizar` interagem com a sessão do SEI ao chamar o n8n. Login acontece direto na página de Options; a consulta acontece direto no content script, ambos com `fetch()` nativo — a permissão de host concedida cobre chamadas cross-origin tanto de páginas da extensão quanto de content scripts.
 
-## Fluxo de login (Options → aba Planka)
+## Fluxo de login (Options → aba Integrações)
 
 1. Usuário preenche URL base do n8n, e-mail, senha, clica "Entrar".
 2. Extensão pede a permissão de host pra origem da URL (`chrome.permissions.request`).
