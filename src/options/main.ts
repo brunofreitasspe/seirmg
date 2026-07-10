@@ -1,6 +1,7 @@
 import bellIconSvg from 'lucide-static/icons/bell.svg?raw'
 import { ativarAba } from './tabs'
 import {
+  createLocalConfigStore,
   createSyncConfigStore,
   type ConfiguracaoCor,
   type ConfiguracaoPontoControle,
@@ -11,6 +12,7 @@ import {
 } from '../lib/storage'
 import { montarListaEditavel } from './listaEditavel'
 import { colorToFilter } from '../features/ponto-controle/colorToFilter'
+import { decodificarPayloadJwtSemVerificar, tokenValido } from '../features/planka/token'
 
 interface RegraPontoControleEditavel {
   nome: string
@@ -330,8 +332,125 @@ async function carregarAbaEditor(): Promise<void> {
   }
 }
 
+async function carregarAbaIntegracoes(): Promise<void> {
+  try {
+    const store = createLocalConfigStore()
+
+    const inputBaseUrl = document.getElementById('integracoes-planka-base-url') as HTMLInputElement | null
+    const inputUrlCadastro = document.getElementById(
+      'integracoes-planka-url-cadastro'
+    ) as HTMLInputElement | null
+    const inputEmail = document.getElementById('integracoes-planka-email') as HTMLInputElement | null
+    const inputSenha = document.getElementById('integracoes-planka-senha') as HTMLInputElement | null
+    const divConectado = document.getElementById('integracoes-planka-conectado')
+    const spanEmailConectado = document.getElementById('integracoes-planka-email-conectado')
+    const divFormulario = document.getElementById('integracoes-planka-formulario')
+    const linkCadastro = document.getElementById(
+      'integracoes-planka-link-cadastro'
+    ) as HTMLAnchorElement | null
+    const status = document.getElementById('integracoes-status')
+
+    async function renderizarEstado(): Promise<void> {
+      const config = await store.get()
+      const planka = config.planka
+
+      if (inputBaseUrl) inputBaseUrl.value = planka?.baseUrl ?? ''
+      if (inputUrlCadastro) inputUrlCadastro.value = planka?.urlCadastro ?? ''
+      if (inputEmail) inputEmail.value = planka?.email ?? ''
+
+      if (linkCadastro) {
+        if (planka?.urlCadastro) {
+          linkCadastro.href = planka.urlCadastro
+          linkCadastro.style.display = ''
+        } else {
+          linkCadastro.style.display = 'none'
+        }
+      }
+
+      const conectado = tokenValido(planka?.tokenExp, new Date().toISOString())
+      if (divConectado) divConectado.style.display = conectado ? 'block' : 'none'
+      if (divFormulario) divFormulario.style.display = conectado ? 'none' : 'block'
+      if (spanEmailConectado) spanEmailConectado.textContent = planka?.email ?? ''
+    }
+
+    await renderizarEstado()
+
+    document.getElementById('integracoes-planka-entrar')?.addEventListener('click', async () => {
+      try {
+        const baseUrl = inputBaseUrl?.value.trim() ?? ''
+        const urlCadastro = inputUrlCadastro?.value.trim() ?? ''
+        const email = inputEmail?.value.trim() ?? ''
+        const senha = inputSenha?.value ?? ''
+
+        if (!baseUrl || !email || !senha) {
+          if (status) status.textContent = 'Preencha URL, e-mail e senha.'
+          return
+        }
+
+        const origem = `${new URL(baseUrl).origin}/*`
+        const concedida = await chrome.permissions.request({ origins: [origem] })
+        if (!concedida) {
+          if (status) status.textContent = 'Permissão negada — não é possível conectar sem acesso ao domínio.'
+          return
+        }
+
+        const resposta = await fetch(`${baseUrl}/webhook/seirmg-login`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, senha }),
+        })
+
+        if (resposta.status === 401) {
+          if (status) status.textContent = 'Credenciais inválidas.'
+          return
+        }
+        if (!resposta.ok) {
+          if (status) status.textContent = 'Erro ao conectar ao n8n.'
+          return
+        }
+
+        const corpo = (await resposta.json()) as { token?: string }
+        const payload = corpo.token ? decodificarPayloadJwtSemVerificar(corpo.token) : null
+        const tokenExp = typeof payload?.exp === 'number' ? payload.exp : undefined
+
+        if (!corpo.token || tokenExp === undefined) {
+          if (status) status.textContent = 'Resposta inesperada do servidor de login.'
+          return
+        }
+
+        const config = await store.get()
+        await store.set({
+          ...config,
+          planka: { baseUrl, email, urlCadastro, token: corpo.token, tokenExp },
+        })
+
+        if (status) status.textContent = ''
+        if (inputSenha) inputSenha.value = ''
+        await renderizarEstado()
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao conectar com o Planka:', error)
+        if (status) status.textContent = 'Erro ao conectar ao n8n.'
+      }
+    })
+
+    document.getElementById('integracoes-planka-sair')?.addEventListener('click', async () => {
+      try {
+        const config = await store.get()
+        await store.set({ ...config, planka: undefined })
+        if (status) status.textContent = ''
+        await renderizarEstado()
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao desconectar do Planka:', error)
+      }
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao carregar aba Integrações:', error)
+  }
+}
+
 carregarAbaEditor()
 carregarAbaProcessos()
 carregarAbaAparencia()
 carregarAbaGeral()
 carregarAbaAssinatura()
+carregarAbaIntegracoes()

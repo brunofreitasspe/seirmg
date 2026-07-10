@@ -179,7 +179,41 @@
       <span id="assinatura-status"></span>
     </section>
     <section id="painel-integracoes" class="painel">
-      <p>Em breve: configuração da integração com o Planka.</p>
+      <h2>Integrações</h2>
+      <h3>Planka</h3>
+      <div id="integracoes-planka-conectado" style="display: none">
+        <p>Conectado como <strong id="integracoes-planka-email-conectado"></strong>.</p>
+        <button id="integracoes-planka-sair">Sair</button>
+      </div>
+      <div id="integracoes-planka-formulario">
+        <label>
+          URL base do n8n:
+          <input type="url" id="integracoes-planka-base-url" placeholder="https://n8n.exemplo.com" />
+        </label>
+        <br />
+        <label>
+          URL de cadastro:
+          <input type="url" id="integracoes-planka-url-cadastro" placeholder="https://n8n.exemplo.com/form/..." />
+        </label>
+        <br />
+        <label>
+          E-mail:
+          <input type="email" id="integracoes-planka-email" />
+        </label>
+        <br />
+        <label>
+          Senha:
+          <input type="password" id="integracoes-planka-senha" />
+        </label>
+        <br />
+        <button id="integracoes-planka-entrar">Entrar</button>
+      </div>
+      <p>
+        <a id="integracoes-planka-link-cadastro" href="#" target="_blank" style="display: none"
+          >Cadastrar novo usuário</a
+        >
+      </p>
+      <span id="integracoes-status"></span>
     </section>
     <section id="painel-sobre" class="painel">
       <p>SEIRMG unifica as extensões Sei++ e Sei Pro para o Sistema Eletrônico de Informações (SEI).</p>

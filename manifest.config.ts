@@ -32,6 +32,7 @@ export default defineManifest({
     '*://*.br/*controlador.php?acao=*',
     '*://*.org/*controlador.php?acao=*',
   ],
+  optional_host_permissions: ['*://*/*'],
   content_scripts: [
     {
       matches: [
