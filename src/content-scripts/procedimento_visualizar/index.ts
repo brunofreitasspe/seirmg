@@ -69,6 +69,10 @@ function esperarElemento(
 }
 
 function obterNumeroProcesso(): string | null {
+  const noSelecionado = document.querySelector('.infraArvoreNoSelecionado')
+  const numeroNoSelecionado = noSelecionado?.textContent?.trim()
+  if (numeroNoSelecionado) return numeroNoSelecionado
+
   const link = document.querySelector('.infraArvore > a[target="ifrVisualizacao"]')
   if (!link) return null
   return link.textContent?.trim() || null
