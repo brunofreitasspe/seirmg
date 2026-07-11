@@ -44,6 +44,13 @@ import { montarCorpoVerificacaoLote, extrairEncontrados } from '../../features/p
 import { tokenValido } from '../../features/planka/token'
 import { montarEstiloPlanka, montarConteudoCardPlanka, type RespostaConsultaPlanka } from '../shared/plankaCard'
 import { limparTokenPlanka } from '../shared/plankaToken'
+import {
+  extrairFavoritoDaLinha,
+  calcularOcultacaoPorFavorito,
+} from '../../features/controle-processos/favoritos'
+import type { FavoritoProcesso } from '../../lib/storage'
+import starIconSvg from 'lucide-static/icons/star.svg?raw'
+import starOffIconSvg from 'lucide-static/icons/star-off.svg?raw'
 
 const IDS_TABELAS = ['#tblProcessosDetalhado', '#tblProcessosGerados', '#tblProcessosRecebidos']
 
@@ -91,6 +98,21 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
   .seirmg-planka-popover-mensagem {
     font-size: 13px;
     color: #666;
+  }
+  .seirmg-favorito-estrela {
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-left: 4px;
+    color: #f5a623;
+  }
+  .seirmg-favorito-estrela svg {
+    width: 14px;
+    height: 14px;
+  }
+  .seirmg-favorito-estrela.seirmg-favorito-inativo {
+    color: #ccc;
   }
 `
 
@@ -428,6 +450,114 @@ function corrigirTabelasNativas(): void {
 
 const estadoFiltrosPorTabela = new Map<string, EstadoFiltros>()
 const reaplicarFiltrosAposNovasLinhas: Array<() => void> = []
+
+let favoritosAtivo = false
+let itensFavoritados: FavoritoProcesso[] = []
+
+function criarEstrela(nup: string, link: string | null, favoritado: boolean): HTMLElement {
+  const estrela = document.createElement('span')
+  estrela.className = favoritado ? 'seirmg-favorito-estrela' : 'seirmg-favorito-estrela seirmg-favorito-inativo'
+  estrela.innerHTML = favoritado ? starIconSvg : starOffIconSvg
+  estrela.title = favoritado ? 'Remover dos favoritos' : 'Adicionar aos favoritos'
+  estrela.addEventListener('click', (evento) => {
+    evento.preventDefault()
+    evento.stopPropagation()
+    alternarFavorito(nup, link).catch((error) => {
+      console.error('[SEIRMG] Falha ao favoritar processo:', error)
+    })
+  })
+  return estrela
+}
+
+function aplicarEstrelasEmLinhas(linhas: Element[]): void {
+  const idsFavoritados = new Set(itensFavoritados.map((item) => item.numero))
+  const agoraIso = new Date().toISOString()
+
+  linhas.forEach((linha) => {
+    if (linha.querySelector('.seirmg-favorito-estrela')) return
+
+    const favorito = extrairFavoritoDaLinha(linha, agoraIso)
+    if (!favorito) return
+
+    const processo = linha.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')
+    if (!processo) return
+
+    const favoritado = idsFavoritados.has(favorito.numero)
+    processo.insertAdjacentElement('afterend', criarEstrela(favorito.numero, favorito.link, favoritado))
+  })
+}
+
+function atualizarTodasAsEstrelas(): void {
+  const idsFavoritados = new Set(itensFavoritados.map((item) => item.numero))
+  document.querySelectorAll<HTMLElement>('.seirmg-favorito-estrela').forEach((estrela) => {
+    const processo = estrela.previousElementSibling as HTMLElement | null
+    const nup = processo?.textContent?.trim()
+    if (!nup) return
+
+    const favoritado = idsFavoritados.has(nup)
+    estrela.innerHTML = favoritado ? starIconSvg : starOffIconSvg
+    estrela.className = favoritado ? 'seirmg-favorito-estrela' : 'seirmg-favorito-estrela seirmg-favorito-inativo'
+    estrela.title = favoritado ? 'Remover dos favoritos' : 'Adicionar aos favoritos'
+  })
+}
+
+function aplicarFiltroFavoritoNaTabela(idTabela: string): void {
+  let estado = estadoFiltrosPorTabela.get(idTabela) ?? {}
+
+  if (!favoritosAtivo || itensFavoritados.length === 0) {
+    estado = removerFiltro(estado, 'PorFavoritoAberto')
+    estadoFiltrosPorTabela.set(idTabela, estado)
+    return
+  }
+
+  const idsFavoritados = new Set(itensFavoritados.map((item) => item.numero))
+  const linhas = linhasDaTabela(idTabela).map((linha, index) => {
+    const processo = linha.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')
+    return { id: linha.id || String(index), nup: processo?.textContent?.trim() ?? null }
+  })
+
+  estado = registrarFiltro(estado, 'PorFavoritoAberto', calcularOcultacaoPorFavorito(linhas, idsFavoritados))
+  estadoFiltrosPorTabela.set(idTabela, estado)
+}
+
+function aplicarFiltroFavoritoEmTodasAsTabelas(): void {
+  IDS_TABELAS.forEach((idTabela) => {
+    aplicarFiltroFavoritoNaTabela(idTabela)
+    reaplicarOrdemDaTabela(idTabela)
+  })
+}
+
+function renderizarPainelFavoritos(): void {
+  // Implementado na Task 5 (painel visual). Por ora, mantém a estrela e o
+  // filtro de ocultação funcionais sem o painel.
+}
+
+async function alternarFavorito(nup: string, link: string | null): Promise<void> {
+  try {
+    const store = createSyncConfigStore()
+    const atual = await store.get()
+    const itens = atual.controleProcessos.favoritos.itens
+    const jaFavoritado = itens.some((item) => item.numero === nup)
+    const novosItens = jaFavoritado
+      ? itens.filter((item) => item.numero !== nup)
+      : [...itens, { numero: nup, link, adicionadoEm: new Date().toISOString() }]
+
+    await store.set({
+      ...atual,
+      controleProcessos: {
+        ...atual.controleProcessos,
+        favoritos: { ...atual.controleProcessos.favoritos, itens: novosItens },
+      },
+    })
+
+    itensFavoritados = novosItens
+    aplicarFiltroFavoritoEmTodasAsTabelas()
+    atualizarTodasAsEstrelas()
+    renderizarPainelFavoritos()
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao alternar favorito:', error)
+  }
+}
 
 interface EstadoOrdenacao {
   indiceColuna: number
@@ -999,9 +1129,12 @@ function reaplicarTratamentosNasLinhasNovas(idTabela: string, config: SyncConfig
   aplicarLinksPlankaEmLinhas(linhas).catch((error) => {
     console.error('[SEIRMG] Falha ao aplicar links do Planka nas linhas novas:', error)
   })
+  aplicarEstrelasEmLinhas(linhas)
+  aplicarFiltroFavoritoNaTabela(idTabela)
   reaplicarFiltrosAposNovasLinhas.forEach((reaplicar) => reaplicar())
   reaplicarOrdemDaTabela(idTabela)
   linhas.forEach((linha) => desabilitarSelecaoNaLinha(linha))
+  renderizarPainelFavoritos()
 }
 
 async function buscarProximasPaginas(
@@ -1169,7 +1302,14 @@ async function bootstrap(): Promise<void> {
     aplicarEspecificacao(config.controleProcessos.especificacao)
     montarAgrupamento(config)
 
+    favoritosAtivo = config.controleProcessos.favoritos.ativo
+    itensFavoritados = config.controleProcessos.favoritos.itens
+
     const todasAsLinhas = IDS_TABELAS.flatMap((idTabela) => linhasDaTabela(idTabela))
+    aplicarEstrelasEmLinhas(todasAsLinhas)
+    aplicarFiltroFavoritoEmTodasAsTabelas()
+    renderizarPainelFavoritos()
+
     aplicarLinksPlankaEmLinhas(todasAsLinhas).catch((error) => {
       console.error('[SEIRMG] Falha ao aplicar links do Planka:', error)
     })
