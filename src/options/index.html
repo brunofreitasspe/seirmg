@@ -174,6 +174,27 @@
         <input type="text" id="editor-doc-externo-tipo-padrao-arrastar" placeholder="Anexo" />
       </label>
       <br />
+      <h3>Inteligência Artificial</h3>
+      <label>
+        <input type="checkbox" id="ia-ativo" />
+        Ativar ferramentas de IA no editor de documentos
+      </label>
+      <br />
+      <h4>ChatGPT (OpenAI)</h4>
+      <label>Chave de API: <input type="password" id="ia-openai-key" /></label>
+      <br />
+      <label>Modelo: <input type="text" id="ia-openai-modelo" placeholder="gpt-4o-mini" /></label>
+      <br />
+      <h4>Gemini (Google)</h4>
+      <label>Chave de API: <input type="password" id="ia-gemini-key" /></label>
+      <br />
+      <label>Modelo: <input type="text" id="ia-gemini-modelo" placeholder="gemini-2.0-flash" /></label>
+      <br />
+      <h4>Claude (Anthropic)</h4>
+      <label>Chave de API: <input type="password" id="ia-claude-key" /></label>
+      <br />
+      <label>Modelo: <input type="text" id="ia-claude-modelo" placeholder="claude-3-5-haiku-20241022" /></label>
+      <br />
       <button id="editor-salvar">Salvar</button>
       <span id="editor-status"></span>
     </section>

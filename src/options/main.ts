@@ -325,6 +325,13 @@ async function carregarAbaEditor(): Promise<void> {
     const inputTipoPadraoArrastar = document.getElementById(
       'editor-doc-externo-tipo-padrao-arrastar'
     ) as HTMLInputElement | null
+    const inputIaAtivo = document.getElementById('ia-ativo') as HTMLInputElement | null
+    const inputIaOpenaiKey = document.getElementById('ia-openai-key') as HTMLInputElement | null
+    const inputIaOpenaiModelo = document.getElementById('ia-openai-modelo') as HTMLInputElement | null
+    const inputIaGeminiKey = document.getElementById('ia-gemini-key') as HTMLInputElement | null
+    const inputIaGeminiModelo = document.getElementById('ia-gemini-modelo') as HTMLInputElement | null
+    const inputIaClaudeKey = document.getElementById('ia-claude-key') as HTMLInputElement | null
+    const inputIaClaudeModelo = document.getElementById('ia-claude-modelo') as HTMLInputElement | null
     const status = document.getElementById('editor-status')
 
     if (inputAtivo) inputAtivo.checked = config.documentoExterno.ativo
@@ -335,6 +342,13 @@ async function carregarAbaEditor(): Promise<void> {
     if (inputTipoPadraoArrastar) {
       inputTipoPadraoArrastar.value = config.documentoExterno.tipoDocumentoPadraoArrastar
     }
+    if (inputIaAtivo) inputIaAtivo.checked = config.ferramentasIA.ativo
+    if (inputIaOpenaiKey) inputIaOpenaiKey.value = config.ferramentasIA.openai.apiKey
+    if (inputIaOpenaiModelo) inputIaOpenaiModelo.value = config.ferramentasIA.openai.modelo
+    if (inputIaGeminiKey) inputIaGeminiKey.value = config.ferramentasIA.gemini.apiKey
+    if (inputIaGeminiModelo) inputIaGeminiModelo.value = config.ferramentasIA.gemini.modelo
+    if (inputIaClaudeKey) inputIaClaudeKey.value = config.ferramentasIA.claude.apiKey
+    if (inputIaClaudeModelo) inputIaClaudeModelo.value = config.ferramentasIA.claude.modelo
 
     document.getElementById('editor-salvar')?.addEventListener('click', async () => {
       try {
@@ -347,6 +361,22 @@ async function carregarAbaEditor(): Promise<void> {
             nivelAcesso: (selectNivelAcesso?.value ?? 'P') as NivelAcessoDocumento,
             hipoteseLegal: inputHipoteseLegal?.value ?? '',
             tipoDocumentoPadraoArrastar: inputTipoPadraoArrastar?.value.trim() || 'Anexo',
+          },
+          ferramentasIA: {
+            ativo: inputIaAtivo?.checked ?? false,
+            provedorAtivo: config.ferramentasIA.provedorAtivo,
+            openai: {
+              apiKey: inputIaOpenaiKey?.value ?? '',
+              modelo: inputIaOpenaiModelo?.value.trim() || 'gpt-4o-mini',
+            },
+            gemini: {
+              apiKey: inputIaGeminiKey?.value ?? '',
+              modelo: inputIaGeminiModelo?.value.trim() || 'gemini-2.0-flash',
+            },
+            claude: {
+              apiKey: inputIaClaudeKey?.value ?? '',
+              modelo: inputIaClaudeModelo?.value.trim() || 'claude-3-5-haiku-20241022',
+            },
           },
         }
         await store.set(atualizado)
