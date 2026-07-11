@@ -111,5 +111,14 @@ export default defineManifest({
       js: ['src/content-scripts/anotacao_registrar/index.ts'],
       run_at: 'document_idle',
     },
+    {
+      matches: [
+        '*://*.br/*controlador.php?acao=*',
+        '*://*.org/*controlador.php?acao=*',
+      ],
+      js: ['src/content-scripts/documento_editar/index.ts'],
+      all_frames: true,
+      run_at: 'document_idle',
+    },
   ],
 })

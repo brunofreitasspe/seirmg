@@ -12,6 +12,7 @@
     "lint": "eslint ."
   },
   "dependencies": {
+    "@lobehub/icons-static-svg": "^1.91.0",
     "jquery": "^4.0.0",
     "lucide-static": "^1.23.0"
   },
