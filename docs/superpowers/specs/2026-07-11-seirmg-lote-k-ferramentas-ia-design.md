@@ -16,6 +16,13 @@ Claude (Anthropic, também tem API oficial) e adiciona o JusIA (Jusbrasil), que 
 API pública documentada pra terceiros** (confirmado via pesquisa — `ia.jusbrasil.com.br`,
 assinatura mensal paga, produto de consumidor).
 
+**NotebookLM (Google) foi avaliado e descartado desta spec**: não tem chave de API simples
+como as outras três — só a NotebookLM Enterprise API (Google Cloud, autenticação OAuth 2.0
+via projeto GCP, não uma chave que se cola nas Opções) ou bibliotecas não-oficiais que
+automatizam a conta de consumidor (mesmo problema de ToS já descartado). Usuário optou por
+deixar de fora por enquanto — pode virar item separado no futuro se a API Enterprise fizer
+sentido pro órgão.
+
 ## Decisão de princípio: nunca automatizar sessão de consumidor
 
 **Não será implementada nenhuma forma de usar "a assinatura sem API"** (login automatizado,
@@ -151,7 +158,13 @@ sistema de diálogo nativo do CKEditor 4, que é mais pesado de integrar) com:
 
 1. **Seletor de provedor** — abas ou botões pra ChatGPT/Gemini/Claude/JusIA. Só mostra
    provedores com chave configurada (API) + sempre mostra JusIA (não precisa de chave).
-   Lembra o último provedor usado (`provedorAtivo`).
+   Lembra o último provedor usado (`provedorAtivo`). Ícones oficiais aprovados via mockup
+   visual: OpenAI (`openai.svg`), Gemini (`gemini-color.svg`) e Claude (`claude-color.svg`)
+   vêm do pacote **`@lobehub/icons-static-svg`** (MIT, licenciado pra esse uso — mesmo
+   padrão de import `?raw` já usado com `lucide-static`), embutidos no bundle. **JusIA não
+   tem pacote de ícones disponível** (produto brasileiro nichado, sem licença clara pra
+   bundlar o logo) — usa `<img src="https://ia.jusbrasil.com.br/favicon.ico">` carregado ao
+   vivo do próprio site deles, nunca copiado pro nosso código.
 2. **Checkbox obrigatório**: "Confirmo que este documento não é sigiloso/restrito" — os
    controles de envio (botão "Perguntar"/"Gerar"/"Ir pro JusIA") ficam desabilitados até
    marcar.
@@ -258,8 +271,10 @@ mesma política já aplicada ao resto do projeto.
 ## Fora de escopo
 
 - Qualquer automação/scraping de `chat.openai.com`/`gemini.google.com`/`claude.ai`/
-  `ia.jusbrasil.com.br` (decisão de princípio, ver seção acima) — não reabrir sem conversa
-  explícita nova.
+  `ia.jusbrasil.com.br`/`notebooklm.google.com` (decisão de princípio, ver seção acima) —
+  não reabrir sem conversa explícita nova.
+- **NotebookLM** — avaliado e descartado (ver Contexto): sem chave de API simples, só
+  Enterprise/OAuth via projeto GCP. Pode virar item separado no futuro.
 - Histórico de conversas/múltiplas rodadas (cada uso do painel é uma chamada isolada,
   sem contexto de conversa anterior).
 - Prompts prontos customizáveis pelo usuário (lista fixa nesta v1 — resumir/revisar/
