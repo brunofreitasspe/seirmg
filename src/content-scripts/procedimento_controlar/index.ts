@@ -124,6 +124,8 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     margin-top: 12px;
     width: 100%;
     box-sizing: border-box;
+    flex: 0 0 100%;
+    max-width: 100%;
   }
   .seirmg-favoritos-painel-titulo {
     font-weight: bold;
@@ -709,12 +711,23 @@ function ultimaTabelaPresente(): Element | null {
   return null
 }
 
-function referenciaParaPainel(): Element | null {
+interface ReferenciaPainel {
+  elemento: Element
+  comoFilho: boolean
+}
+
+function referenciaParaPainel(): ReferenciaPainel | null {
   // Em layouts do SEI que organizam Detalhado/Gerados/Recebidos em colunas Bootstrap
-  // (col-md-6) lado a lado dentro de #divTabelaProcesso, inserir logo após a tabela
-  // prende o painel dentro da coluna de 50%. Inserir após o container da grade inteira
-  // faz o painel ocupar a largura total abaixo das tabelas.
-  return document.getElementById('divTabelaProcesso') ?? ultimaTabelaPresente()
+  // (col-md-6) lado a lado dentro de #divTabelaProcesso -- esse mesmo container é quem
+  // tem o scroll (altura fixa + overflow:auto), não a página. Inserir o painel como
+  // filho dele (não como irmão depois) mantém o painel na mesma área rolável; a classe
+  // `.row` do Bootstrap já quebra linha automaticamente pra um filho com flex-basis:100%,
+  // então ele ocupa a largura toda abaixo das colunas das tabelas.
+  const linhaTabelas = document.getElementById('divTabelaProcesso')
+  if (linhaTabelas) return { elemento: linhaTabelas, comoFilho: true }
+
+  const tabela = ultimaTabelaPresente()
+  return tabela ? { elemento: tabela, comoFilho: false } : null
 }
 
 function montarCelulaProcesso(item: FavoritoProcesso, aberto: boolean, especificacao: string | undefined): HTMLTableCellElement {
@@ -910,7 +923,11 @@ function renderizarPainelFavoritos(): void {
     tabela.appendChild(tbody)
     painel.appendChild(tabela)
 
-    referencia.insertAdjacentElement('afterend', painel)
+    if (referencia.comoFilho) {
+      referencia.elemento.appendChild(painel)
+    } else {
+      referencia.elemento.insertAdjacentElement('afterend', painel)
+    }
   } catch (error) {
     console.error('[SEIRMG] Falha ao renderizar painel de favoritos:', error)
   }
