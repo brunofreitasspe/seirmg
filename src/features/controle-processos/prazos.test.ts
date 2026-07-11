@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { calcularDiasDoMarcador, classificarPrazo, extrairTextoMarcador, isValidDate } from './prazos'
+import {
+  calcularDiasDoMarcador,
+  classificarPrazo,
+  extrairDataDoMarcador,
+  extrairTextoMarcador,
+  formatarDataBr,
+  isValidDate,
+} from './prazos'
 
 describe('extrairTextoMarcador', () => {
   it('extrai o texto entre as duas primeiras aspas simples', () => {
@@ -87,5 +94,33 @@ describe('classificarPrazo', () => {
 
   it('prazo: não classifica quando dentro do normal', () => {
     expect(classificarPrazo(10, 'prazo', configPrazo)).toBeNull()
+  })
+})
+
+describe('extrairDataDoMarcador', () => {
+  it('retorna a Date correspondente ao marcador de qtddias', () => {
+    expect(extrairDataDoMarcador(['01/01/2026 - aberto'], 'qtddias')).toEqual(new Date(2026, 0, 1))
+  })
+
+  it('retorna a Date correspondente ao marcador de prazo com prefixo "ate "', () => {
+    expect(extrairDataDoMarcador(['ate 20/01/2026'], 'prazo')).toEqual(new Date(2026, 0, 20))
+  })
+
+  it('ignora marcador de prazo sem o prefixo "ate "', () => {
+    expect(extrairDataDoMarcador(['aberto em 20/01/2026'], 'prazo')).toBeNull()
+  })
+
+  it('retorna null quando nenhum marcador tem data válida', () => {
+    expect(extrairDataDoMarcador(['sem data aqui'], 'qtddias')).toBeNull()
+  })
+})
+
+describe('formatarDataBr', () => {
+  it('formata com zero à esquerda em dia e mês', () => {
+    expect(formatarDataBr(new Date(2026, 0, 5))).toBe('05/01/2026')
+  })
+
+  it('formata corretamente dia e mês de dois dígitos', () => {
+    expect(formatarDataBr(new Date(2026, 10, 25))).toBe('25/11/2026')
   })
 })

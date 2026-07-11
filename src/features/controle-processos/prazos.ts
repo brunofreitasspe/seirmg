@@ -20,9 +20,12 @@ export function isValidDate(dataString: string): boolean {
   return data.getFullYear() === ano && data.getMonth() === mes && data.getDate() === dia
 }
 
-function calcularDiferencaDias(dataStr: string, tipo: TipoCalculoPrazo, agora: Date): number {
+function parseDataBr(dataStr: string): Date {
   const [dia, mes, ano] = dataStr.split('/').map(Number)
-  const data = new Date(ano, mes - 1, dia)
+  return new Date(ano, mes - 1, dia)
+}
+
+function calcularDiferencaDias(data: Date, tipo: TipoCalculoPrazo, agora: Date): number {
   const msPorDia = 1000 * 60 * 60 * 24
 
   if (tipo === 'qtddias') {
@@ -31,11 +34,7 @@ function calcularDiferencaDias(dataStr: string, tipo: TipoCalculoPrazo, agora: D
   return Math.floor((data.getTime() - agora.getTime()) / msPorDia) + 1
 }
 
-export function calcularDiasDoMarcador(
-  textosMarcadores: string[],
-  tipo: TipoCalculoPrazo,
-  agora: Date
-): number | null {
+export function extrairDataDoMarcador(textosMarcadores: string[], tipo: TipoCalculoPrazo): Date | null {
   for (const textoOriginal of textosMarcadores) {
     const texto = textoOriginal.toLowerCase().replace('é', 'e')
     let dataStr: string
@@ -48,10 +47,27 @@ export function calcularDiasDoMarcador(
     }
 
     if (isValidDate(dataStr)) {
-      return calcularDiferencaDias(dataStr, tipo, agora)
+      return parseDataBr(dataStr)
     }
   }
   return null
+}
+
+export function calcularDiasDoMarcador(
+  textosMarcadores: string[],
+  tipo: TipoCalculoPrazo,
+  agora: Date
+): number | null {
+  const data = extrairDataDoMarcador(textosMarcadores, tipo)
+  if (!data) return null
+  return calcularDiferencaDias(data, tipo, agora)
+}
+
+export function formatarDataBr(data: Date): string {
+  const dia = String(data.getDate()).padStart(2, '0')
+  const mes = String(data.getMonth() + 1).padStart(2, '0')
+  const ano = data.getFullYear()
+  return `${dia}/${mes}/${ano}`
 }
 
 export interface ConfiguracaoLimites {
