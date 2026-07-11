@@ -162,7 +162,12 @@ chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
 
 chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
   if (!ehMensagemFetchIA(mensagem)) return false
-  fetchText(mensagem.url, { method: mensagem.method, headers: mensagem.headers, body: mensagem.body })
+  fetchText(mensagem.url, {
+    method: mensagem.method,
+    headers: mensagem.headers,
+    body: mensagem.body,
+    timeoutMs: 60000,
+  })
     .then(responder)
     .catch((error) => responder({ ok: false, error: String(error) }))
   return true

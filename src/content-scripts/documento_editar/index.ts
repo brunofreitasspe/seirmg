@@ -311,9 +311,11 @@ function montarHtmlResposta(): string {
 
 function montarHtmlCorpo(textoSelecionado: string): string {
   const desabilitado = !estadoAtual.confirmado || enviandoAtual
+  const semSelecaoLivre =
+    estadoAtual.modo === 'livre' ? 'Nenhum texto selecionado — a pergunta vai considerar o documento inteiro.' : 'Nenhum texto selecionado.'
   const textoInfo = textoSelecionado
     ? `Texto selecionado: <em>"${escaparHtml(textoSelecionado.slice(0, 80))}${textoSelecionado.length > 80 ? '...' : ''}"</em>`
-    : 'Nenhum texto selecionado.'
+    : semSelecaoLivre
 
   if (estadoAtual.modo === 'prontos') {
     const semSelecao = textoSelecionado === ''
@@ -406,6 +408,15 @@ function montarHtmlPainel(
 interface EditorCKEditor {
   getSelection: () => { getSelectedText: () => string } | null
   insertHtml: (html: string) => void
+  editable?: () => { getText: () => string } | undefined
+}
+
+function obterTextoDocumentoInteiro(editor: EditorCKEditor): string {
+  try {
+    return editor.editable?.()?.getText()?.trim() ?? ''
+  } catch {
+    return ''
+  }
 }
 
 function obterIdDocumentoAtual(): string | null {
@@ -513,7 +524,21 @@ function tratarCliquePainel(evento: MouseEvent, config: FerramentasIAConfig, edi
     return
   }
 
-  if (acao === 'enviar-livre' || acao === 'enviar-redigir') {
+  if (acao === 'enviar-livre') {
+    if (estadoAtual.provedor === 'jusia') return
+    const textarea = document.getElementById('seirmg-ia-instrucao') as HTMLTextAreaElement | null
+    const pergunta = textarea?.value.trim() ?? ''
+    if (!pergunta || !estadoAtual.confirmado || enviandoAtual) return
+    const textoSelecionado = obterTextoSelecionado(editor)
+    const contexto = textoSelecionado || obterTextoDocumentoInteiro(editor)
+    const prompt = montarPromptComContexto(pergunta, contexto || null)
+    enviar(prompt, estadoAtual.provedor, config, editor).catch((error) => {
+      console.error('[SEIRMG] Falha ao enviar prompt pra IA:', error)
+    })
+    return
+  }
+
+  if (acao === 'enviar-redigir') {
     if (estadoAtual.provedor === 'jusia') return
     const textarea = document.getElementById('seirmg-ia-instrucao') as HTMLTextAreaElement | null
     const instrucao = textarea?.value.trim() ?? ''
