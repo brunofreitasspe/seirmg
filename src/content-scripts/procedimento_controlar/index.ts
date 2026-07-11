@@ -122,6 +122,8 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
   }
   .seirmg-favoritos-painel {
     margin-top: 12px;
+    width: 100%;
+    box-sizing: border-box;
   }
   .seirmg-favoritos-painel-titulo {
     font-weight: bold;
@@ -534,15 +536,21 @@ interface PrazoFavorito {
   classificacao: 'alerta' | 'critico' | null
 }
 
-function obterMarcadoresDaLinha(linha: Element): string[] {
+interface MarcadorFavorito {
+  nome: string
+  estilo: string | null
+}
+
+function obterMarcadoresDaLinha(linha: Element): MarcadorFavorito[] {
   const marcadores = Array.from(
     linha.querySelectorAll<HTMLAnchorElement>("td > a[href*='acao=andamento_marcador_gerenciar']")
   )
   return marcadores
-    .map((marcador) => marcador.getAttribute('onmouseover'))
-    .filter((texto): texto is string => texto !== null)
-    .map(extrairNomeMarcador)
-    .filter((nome) => nome !== '')
+    .map((marcador) => {
+      const onmouseover = marcador.getAttribute('onmouseover')
+      return { nome: onmouseover ? extrairNomeMarcador(onmouseover) : '', estilo: marcador.getAttribute('style') }
+    })
+    .filter((item) => item.nome !== '')
 }
 
 function calcularPrazoFavorito(linha: Element, config: ControleProcessosConfig['prazos']): PrazoFavorito | null {
@@ -734,15 +742,16 @@ function criarIcone(svg: string): HTMLElement {
 
 function montarCelulaMarcadores(linhaNativa: Element): HTMLTableCellElement {
   const td = document.createElement('td')
-  const nomes = obterMarcadoresDaLinha(linhaNativa)
-  if (nomes.length === 0) {
+  const marcadores = obterMarcadoresDaLinha(linhaNativa)
+  if (marcadores.length === 0) {
     td.className = 'seirmg-favoritos-vazio'
     td.textContent = '—'
     return td
   }
-  nomes.forEach((nome) => {
+  marcadores.forEach(({ nome, estilo }) => {
     const pill = document.createElement('span')
     pill.className = 'seirmg-favoritos-marcador'
+    if (estilo) pill.setAttribute('style', estilo)
     pill.appendChild(criarIcone(flagIconSvg))
     pill.appendChild(document.createTextNode(nome))
     td.appendChild(pill)
@@ -851,6 +860,7 @@ function renderizarPainelFavoritos(): void {
     const tabela = document.createElement('table')
     tabela.className = 'infraTable'
     tabela.style.tableLayout = 'fixed'
+    tabela.style.width = '100%'
 
     const colgroup = document.createElement('colgroup')
     ;[30, 24, 20, 18, 8].forEach((largura) => {
