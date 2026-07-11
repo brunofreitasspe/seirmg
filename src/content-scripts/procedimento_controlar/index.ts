@@ -495,6 +495,8 @@ function criarEstrela(nup: string, link: string | null, favoritado: boolean): HT
 }
 
 function aplicarEstrelasEmLinhas(linhas: Element[]): void {
+  if (!favoritosAtivo) return
+
   const idsFavoritados = new Set(itensFavoritados.map((item) => item.numero))
   const agoraIso = new Date().toISOString()
 
