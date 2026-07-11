@@ -53,12 +53,24 @@ export interface AgrupamentoConfig {
   criterio: CriterioAgrupamento
 }
 
+export interface FavoritoProcesso {
+  numero: string
+  link: string | null
+  adicionadoEm: string
+}
+
+export interface FavoritosConfig {
+  ativo: boolean
+  itens: FavoritoProcesso[]
+}
+
 export interface ControleProcessosConfig {
   prazos: PrazosConfig
   coresProcesso: CoresProcessoConfig
   especificacao: EspecificacaoConfig
   rolagemInfinita: RolagemInfinitaConfig
   agrupamento: AgrupamentoConfig
+  favoritos: FavoritosConfig
 }
 
 export interface ConfiguracaoPontoControle {
@@ -157,6 +169,10 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     },
     agrupamento: {
       criterio: 'nenhum',
+    },
+    favoritos: {
+      ativo: false,
+      itens: [],
     },
   },
   pontoControle: {

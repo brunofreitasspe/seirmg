@@ -269,6 +269,7 @@ async function carregarAbaProcessos(): Promise<void> {
               ativo: inputRolagemInfinitaAtivo?.checked ?? false,
             },
             agrupamento: config.controleProcessos.agrupamento,
+            favoritos: config.controleProcessos.favoritos,
           },
           pontoControle: {
             ativo: inputPontoControleAtivo?.checked ?? true,

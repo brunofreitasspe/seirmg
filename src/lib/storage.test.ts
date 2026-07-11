@@ -70,6 +70,7 @@ describe('createSyncConfigStore', () => {
       especificacao: { ativo: true, modo: 'mostrar' },
       rolagemInfinita: { ativo: false },
       agrupamento: { criterio: 'nenhum' },
+      favoritos: { ativo: false, itens: [] },
     })
   })
 
@@ -112,6 +113,25 @@ describe('createSyncConfigStore', () => {
       controleProcessos: {
         ...DEFAULT_SYNC_CONFIG.controleProcessos,
         agrupamento: { criterio: 'marcador' as const },
+      },
+    }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
+
+  it('persiste alteração de controleProcessos.favoritos', async () => {
+    const area = criarAreaFalsa()
+    const store = createSyncConfigStore(area)
+    const atualizado = {
+      ...DEFAULT_SYNC_CONFIG,
+      controleProcessos: {
+        ...DEFAULT_SYNC_CONFIG.controleProcessos,
+        favoritos: {
+          ativo: true,
+          itens: [
+            { numero: 'HMMG.2025.00001-1', link: 'controlador.php?acao=x', adicionadoEm: '2026-07-10T10:00:00.000Z' },
+          ],
+        },
       },
     }
     await store.set(atualizado)
