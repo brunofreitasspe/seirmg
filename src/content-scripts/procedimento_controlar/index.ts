@@ -158,7 +158,8 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     vertical-align: -2px;
     margin-right: 3px;
   }
-  .seirmg-favoritos-icone svg {
+  .seirmg-favoritos-icone svg,
+  .seirmg-favoritos-icone img {
     width: 12px;
     height: 12px;
   }
@@ -539,6 +540,7 @@ interface PrazoFavorito {
 interface MarcadorFavorito {
   nome: string
   estilo: string | null
+  iconeHtml: string
 }
 
 function obterMarcadoresDaLinha(linha: Element): MarcadorFavorito[] {
@@ -548,7 +550,11 @@ function obterMarcadoresDaLinha(linha: Element): MarcadorFavorito[] {
   return marcadores
     .map((marcador) => {
       const onmouseover = marcador.getAttribute('onmouseover')
-      return { nome: onmouseover ? extrairNomeMarcador(onmouseover) : '', estilo: marcador.getAttribute('style') }
+      return {
+        nome: onmouseover ? extrairNomeMarcador(onmouseover) : '',
+        estilo: marcador.getAttribute('style'),
+        iconeHtml: marcador.innerHTML,
+      }
     })
     .filter((item) => item.nome !== '')
 }
@@ -748,11 +754,18 @@ function montarCelulaMarcadores(linhaNativa: Element): HTMLTableCellElement {
     td.textContent = '—'
     return td
   }
-  marcadores.forEach(({ nome, estilo }) => {
+  marcadores.forEach(({ nome, estilo, iconeHtml }) => {
     const pill = document.createElement('span')
     pill.className = 'seirmg-favoritos-marcador'
     if (estilo) pill.setAttribute('style', estilo)
-    pill.appendChild(criarIcone(flagIconSvg))
+    if (iconeHtml.trim()) {
+      const icone = document.createElement('span')
+      icone.className = 'seirmg-favoritos-icone'
+      icone.innerHTML = iconeHtml
+      pill.appendChild(icone)
+    } else {
+      pill.appendChild(criarIcone(flagIconSvg))
+    }
     pill.appendChild(document.createTextNode(nome))
     td.appendChild(pill)
   })
