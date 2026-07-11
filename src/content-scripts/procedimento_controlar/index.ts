@@ -47,6 +47,7 @@ import { limparTokenPlanka } from '../shared/plankaToken'
 import {
   extrairFavoritoDaLinha,
   calcularOcultacaoPorFavorito,
+  ordenarFavoritosPorData,
 } from '../../features/controle-processos/favoritos'
 import type { FavoritoProcesso } from '../../lib/storage'
 import starIconSvg from 'lucide-static/icons/star.svg?raw'
@@ -113,6 +114,29 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
   }
   .seirmg-favorito-estrela.seirmg-favorito-inativo {
     color: #ccc;
+  }
+  .seirmg-favoritos-painel {
+    margin-top: 12px;
+  }
+  .seirmg-favoritos-painel-titulo {
+    font-weight: bold;
+    padding: 6px 10px;
+    background: #fff4e0;
+    border: 1px solid #f0d9a0;
+    border-bottom: none;
+  }
+  .seirmg-favoritos-badge {
+    display: inline-block;
+    border-radius: 10px;
+    padding: 1px 8px;
+    font-size: 10px;
+    margin-left: 6px;
+    background: #e8f2ff;
+    color: #017fff;
+  }
+  .seirmg-favoritos-badge-fechado {
+    background: #eee;
+    color: #777;
   }
 `
 
@@ -527,9 +551,106 @@ function aplicarFiltroFavoritoEmTodasAsTabelas(): void {
   })
 }
 
+function nupsAbertosNaPagina(): Set<string> {
+  const nups = new Set<string>()
+  IDS_TABELAS.forEach((idTabela) => {
+    linhasDaTabela(idTabela).forEach((linha) => {
+      const processo = linha.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')
+      const nup = processo?.textContent?.trim()
+      if (nup) nups.add(nup)
+    })
+  })
+  return nups
+}
+
+function ultimaTabelaPresente(): Element | null {
+  for (let i = IDS_TABELAS.length - 1; i >= 0; i--) {
+    const tabela = document.querySelector(IDS_TABELAS[i])
+    if (tabela) return tabela
+  }
+  return null
+}
+
+function montarLinhaPainelFavoritos(item: FavoritoProcesso, aberto: boolean): HTMLTableRowElement {
+  const tr = document.createElement('tr')
+
+  const tdProcesso = document.createElement('td')
+  if (item.link) {
+    const link = document.createElement('a')
+    link.href = item.link
+    link.textContent = item.numero
+    tdProcesso.appendChild(link)
+  } else {
+    tdProcesso.appendChild(document.createTextNode(item.numero))
+  }
+
+  const badge = document.createElement('span')
+  badge.className = aberto ? 'seirmg-favoritos-badge' : 'seirmg-favoritos-badge seirmg-favoritos-badge-fechado'
+  badge.textContent = aberto ? 'aberto na sua caixa' : 'fechado'
+  tdProcesso.appendChild(badge)
+  tr.appendChild(tdProcesso)
+
+  const tdRemover = document.createElement('td')
+  const botaoRemover = document.createElement('span')
+  botaoRemover.className = 'seirmg-favorito-estrela'
+  botaoRemover.dataset.nup = item.numero
+  botaoRemover.innerHTML = starIconSvg
+  botaoRemover.title = 'Remover dos favoritos'
+  botaoRemover.addEventListener('click', () => {
+    alternarFavorito(item.numero, item.link).catch((error) => {
+      console.error('[SEIRMG] Falha ao remover favorito:', error)
+    })
+  })
+  tdRemover.appendChild(botaoRemover)
+  tr.appendChild(tdRemover)
+
+  return tr
+}
+
 function renderizarPainelFavoritos(): void {
-  // Implementado na Task 5 (painel visual). Por ora, mantém a estrela e o
-  // filtro de ocultação funcionais sem o painel.
+  try {
+    document.getElementById('seirmg-favoritos-painel')?.remove()
+
+    if (!favoritosAtivo || itensFavoritados.length === 0) return
+
+    const referencia = ultimaTabelaPresente()
+    if (!referencia) return
+
+    const painel = document.createElement('div')
+    painel.id = 'seirmg-favoritos-painel'
+    painel.className = 'seirmg-favoritos-painel'
+
+    const titulo = document.createElement('div')
+    titulo.className = 'seirmg-favoritos-painel-titulo'
+    titulo.textContent = `★ Favoritos (${itensFavoritados.length} registro${itensFavoritados.length === 1 ? '' : 's'})`
+    painel.appendChild(titulo)
+
+    const tabela = document.createElement('table')
+    tabela.className = 'infraTable'
+
+    const thead = document.createElement('thead')
+    const trHead = document.createElement('tr')
+    ;['Processo', ''].forEach((rotulo) => {
+      const th = document.createElement('th')
+      th.className = 'infraTh'
+      th.textContent = rotulo
+      trHead.appendChild(th)
+    })
+    thead.appendChild(trHead)
+    tabela.appendChild(thead)
+
+    const tbody = document.createElement('tbody')
+    const nupsAbertos = nupsAbertosNaPagina()
+    ordenarFavoritosPorData(itensFavoritados).forEach((item) => {
+      tbody.appendChild(montarLinhaPainelFavoritos(item, nupsAbertos.has(item.numero)))
+    })
+    tabela.appendChild(tbody)
+    painel.appendChild(tabela)
+
+    referencia.insertAdjacentElement('afterend', painel)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao renderizar painel de favoritos:', error)
+  }
 }
 
 async function alternarFavorito(nup: string, link: string | null): Promise<void> {
