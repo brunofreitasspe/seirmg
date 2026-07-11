@@ -234,8 +234,10 @@ const MODOS = [
 ] as const
 type ModoPainel = (typeof MODOS)[number]['id']
 
+type ProvedorPainel = ProvedorIA | 'jusia'
+
 interface EstadoPainel {
-  provedor: ProvedorIA
+  provedor: ProvedorPainel
   modo: ModoPainel
   confirmado: boolean
 }
@@ -257,7 +259,7 @@ function montarHtmlProvedores(config: FerramentasIAConfig): string {
     (provedor) => config[provedor].apiKey.trim() !== ''
   )
 
-  return provedoresComChave
+  const abasApi = provedoresComChave
     .map((provedor) => {
       const ativo = provedor === estadoAtual.provedor ? ' ativo' : ''
       return `
@@ -268,6 +270,16 @@ function montarHtmlProvedores(config: FerramentasIAConfig): string {
       `
     })
     .join('')
+
+  const ativoJusia = estadoAtual.provedor === 'jusia' ? ' ativo' : ''
+  const abaJusia = `
+    <div class="seirmg-ia-provedor${ativoJusia}" data-acao="provedor" data-provedor="jusia">
+      <img src="https://ia.jusbrasil.com.br/favicon.ico" alt="" onerror="this.style.visibility='hidden'">
+      JusIA
+    </div>
+  `
+
+  return abasApi + abaJusia
 }
 
 function montarHtmlModos(): string {
@@ -284,7 +296,7 @@ function escaparHtml(texto: string): string {
 }
 
 function montarHtmlResposta(): string {
-  if (respostaAtual === null) return ''
+  if (respostaAtual === null || estadoAtual.provedor === 'jusia') return ''
   return `
     <div class="seirmg-ia-resposta">
       <div class="seirmg-ia-resposta-rotulo">RESPOSTA — ${ROTULOS_PROVEDOR[estadoAtual.provedor]}</div>
@@ -345,7 +357,24 @@ function montarHtmlCorpo(textoSelecionado: string): string {
   `
 }
 
-function montarHtmlPainel(config: FerramentasIAConfig, textoSelecionado: string): string {
+function montarHtmlCorpoJusia(textoSelecionado: string): string {
+  const textoInfo = textoSelecionado
+    ? `Texto selecionado: <em>"${escaparHtml(textoSelecionado.slice(0, 80))}${textoSelecionado.length > 80 ? '...' : ''}"</em> (copiado pra área de transferência ao clicar)`
+    : 'Nenhum texto selecionado — o JusIA abre sem nada copiado.'
+
+  return `
+    <div class="seirmg-ia-selecao-info">${textoInfo}</div>
+    <button class="seirmg-ia-botao-enviar" data-acao="ir-jusia" ${!estadoAtual.confirmado ? 'disabled' : ''}>
+      ${estadoAtual.confirmado ? 'Ir pro JusIA' : 'Ir pro JusIA (marque a confirmação acima)'}
+    </button>
+  `
+}
+
+function montarHtmlPainel(
+  config: FerramentasIAConfig,
+  textoSelecionado: string,
+  documentoRestrito: boolean
+): string {
   const confirmacaoClasse = estadoAtual.confirmado ? ' confirmado' : ''
   const confirmacaoTexto = estadoAtual.confirmado
     ? '✓ Confirmado: documento não sigiloso/restrito.'
@@ -354,15 +383,23 @@ function montarHtmlPainel(config: FerramentasIAConfig, textoSelecionado: string)
     ? ''
     : '<input type="checkbox" id="seirmg-ia-checkbox-confirmar" data-acao="confirmar">'
 
+  const blocoConfirmacao = documentoRestrito
+    ? '<div class="seirmg-ia-bloqueio">⚠ Este documento parece ter acesso restrito/sigiloso (detectado automaticamente) — ferramentas de IA bloqueadas.</div>'
+    : `<div class="seirmg-ia-confirmacao${confirmacaoClasse}">${checkbox}<span>${confirmacaoTexto}</span></div>`
+
+  const modosOuVazio = estadoAtual.provedor === 'jusia' ? '' : `<div class="seirmg-ia-modos">${montarHtmlModos()}</div>`
+  const corpo =
+    estadoAtual.provedor === 'jusia' ? montarHtmlCorpoJusia(textoSelecionado) : montarHtmlCorpo(textoSelecionado)
+
   return `
     <div class="seirmg-ia-cabecalho">
       <span>Ferramentas de IA</span>
       <span data-acao="fechar">✕</span>
     </div>
     <div class="seirmg-ia-provedores">${montarHtmlProvedores(config)}</div>
-    <div class="seirmg-ia-confirmacao${confirmacaoClasse}">${checkbox}<span>${confirmacaoTexto}</span></div>
-    <div class="seirmg-ia-modos">${montarHtmlModos()}</div>
-    <div class="seirmg-ia-corpo">${montarHtmlCorpo(textoSelecionado)}</div>
+    ${blocoConfirmacao}
+    ${documentoRestrito ? '' : modosOuVazio}
+    <div class="seirmg-ia-corpo">${documentoRestrito ? '' : corpo}</div>
   `
 }
 
@@ -371,20 +408,35 @@ interface EditorCKEditor {
   insertHtml: (html: string) => void
 }
 
+function obterIdDocumentoAtual(): string | null {
+  return new URLSearchParams(window.location.search).get('id_documento')
+}
+
+function detectarDocumentoRestrito(): boolean {
+  const idDocumento = obterIdDocumentoAtual()
+  if (!idDocumento) return false
+  return document.getElementById(`anchorNA${idDocumento}`) !== null
+}
+
 function atualizarPainel(config: FerramentasIAConfig, editor: EditorCKEditor): void {
   const painel = document.getElementById('seirmg-painel-ia')
   if (!painel) return
-  painel.innerHTML = montarHtmlPainel(config, obterTextoSelecionado(editor))
+  painel.innerHTML = montarHtmlPainel(config, obterTextoSelecionado(editor), detectarDocumentoRestrito())
 }
 
-async function enviar(prompt: string, config: FerramentasIAConfig, editor: EditorCKEditor): Promise<void> {
+async function enviar(
+  prompt: string,
+  provedor: ProvedorIA,
+  config: FerramentasIAConfig,
+  editor: EditorCKEditor
+): Promise<void> {
   enviandoAtual = true
   respostaAtual = null
   atualizarPainel(config, editor)
 
   try {
-    const provedorConfig = config[estadoAtual.provedor]
-    const requisicao = montarRequisicao(estadoAtual.provedor, provedorConfig.modelo, prompt, provedorConfig.apiKey)
+    const provedorConfig = config[provedor]
+    const requisicao = montarRequisicao(provedor, provedorConfig.modelo, prompt, provedorConfig.apiKey)
     const resultado = await fetchIA(requisicao.url, {
       method: requisicao.method,
       headers: requisicao.headers,
@@ -392,9 +444,9 @@ async function enviar(prompt: string, config: FerramentasIAConfig, editor: Edito
     })
 
     if (!resultado.ok) {
-      respostaAtual = `Erro ao consultar ${ROTULOS_PROVEDOR[estadoAtual.provedor]}: ${resultado.error}`
+      respostaAtual = `Erro ao consultar ${ROTULOS_PROVEDOR[provedor]}: ${resultado.error}`
     } else {
-      respostaAtual = extrairResposta(estadoAtual.provedor, resultado.data) ?? 'Não foi possível interpretar a resposta.'
+      respostaAtual = extrairResposta(provedor, resultado.data) ?? 'Não foi possível interpretar a resposta.'
     }
   } catch (error) {
     respostaAtual = `Erro inesperado: ${error instanceof Error ? error.message : String(error)}`
@@ -416,8 +468,9 @@ function tratarCliquePainel(evento: MouseEvent, config: FerramentasIAConfig, edi
   }
 
   if (acao === 'provedor') {
-    const provedor = elemento.dataset.provedor as ProvedorIA
+    const provedor = elemento.dataset.provedor as ProvedorPainel
     estadoAtual = { ...estadoAtual, provedor }
+    respostaAtual = null
     atualizarPainel(config, editor)
     return
   }
@@ -448,24 +501,38 @@ function tratarCliquePainel(evento: MouseEvent, config: FerramentasIAConfig, edi
     return
   }
 
+  if (acao === 'ir-jusia') {
+    if (!estadoAtual.confirmado) return
+    const textoSelecionado = obterTextoSelecionado(editor)
+    if (textoSelecionado) {
+      navigator.clipboard.writeText(textoSelecionado).catch((error) => {
+        console.error('[SEIRMG] Falha ao copiar texto pra área de transferência:', error)
+      })
+    }
+    window.open('https://ia.jusbrasil.com.br', '_blank')
+    return
+  }
+
   if (acao === 'enviar-livre' || acao === 'enviar-redigir') {
+    if (estadoAtual.provedor === 'jusia') return
     const textarea = document.getElementById('seirmg-ia-instrucao') as HTMLTextAreaElement | null
     const instrucao = textarea?.value.trim() ?? ''
     if (!instrucao || !estadoAtual.confirmado || enviandoAtual) return
     const textoSelecionado = obterTextoSelecionado(editor)
     const prompt = montarPromptComContexto(instrucao, textoSelecionado || null)
-    enviar(prompt, config, editor).catch((error) => {
+    enviar(prompt, estadoAtual.provedor, config, editor).catch((error) => {
       console.error('[SEIRMG] Falha ao enviar prompt pra IA:', error)
     })
     return
   }
 
   if (acao === 'enviar-pronto') {
+    if (estadoAtual.provedor === 'jusia') return
     const tipo = elemento.dataset.tipo as TipoPromptPronto
     const textoSelecionado = obterTextoSelecionado(editor)
     if (!textoSelecionado || !estadoAtual.confirmado || enviandoAtual) return
     const prompt = montarPromptPronto(tipo, textoSelecionado)
-    enviar(prompt, config, editor).catch((error) => {
+    enviar(prompt, estadoAtual.provedor, config, editor).catch((error) => {
       console.error('[SEIRMG] Falha ao enviar prompt pronto pra IA:', error)
     })
   }
