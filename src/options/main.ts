@@ -189,6 +189,7 @@ async function carregarAbaProcessos(): Promise<void> {
     const inputRolagemInfinitaAtivo = document.getElementById(
       'processos-rolagem-infinita-ativo'
     ) as HTMLInputElement | null
+    const inputFavoritosAtivo = document.getElementById('processos-favoritos-ativo') as HTMLInputElement | null
     const status = document.getElementById('processos-status')
 
     if (inputPrazosAtivo) inputPrazosAtivo.checked = config.controleProcessos.prazos.ativo
@@ -206,6 +207,9 @@ async function carregarAbaProcessos(): Promise<void> {
     if (inputPontoControleAtivo) inputPontoControleAtivo.checked = config.pontoControle.ativo
     if (inputRolagemInfinitaAtivo) {
       inputRolagemInfinitaAtivo.checked = config.controleProcessos.rolagemInfinita.ativo
+    }
+    if (inputFavoritosAtivo) {
+      inputFavoritosAtivo.checked = config.controleProcessos.favoritos.ativo
     }
 
     const containerCores = document.getElementById('processos-cores-lista')
@@ -269,7 +273,10 @@ async function carregarAbaProcessos(): Promise<void> {
               ativo: inputRolagemInfinitaAtivo?.checked ?? false,
             },
             agrupamento: config.controleProcessos.agrupamento,
-            favoritos: config.controleProcessos.favoritos,
+            favoritos: {
+              ativo: inputFavoritosAtivo?.checked ?? false,
+              itens: config.controleProcessos.favoritos.itens,
+            },
           },
           pontoControle: {
             ativo: inputPontoControleAtivo?.checked ?? true,
