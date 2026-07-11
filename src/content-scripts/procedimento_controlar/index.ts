@@ -456,6 +456,7 @@ let itensFavoritados: FavoritoProcesso[] = []
 
 function criarEstrela(nup: string, link: string | null, favoritado: boolean): HTMLElement {
   const estrela = document.createElement('span')
+  estrela.dataset.nup = nup
   estrela.className = favoritado ? 'seirmg-favorito-estrela' : 'seirmg-favorito-estrela seirmg-favorito-inativo'
   estrela.innerHTML = favoritado ? starIconSvg : starOffIconSvg
   estrela.title = favoritado ? 'Remover dos favoritos' : 'Adicionar aos favoritos'
@@ -490,8 +491,7 @@ function aplicarEstrelasEmLinhas(linhas: Element[]): void {
 function atualizarTodasAsEstrelas(): void {
   const idsFavoritados = new Set(itensFavoritados.map((item) => item.numero))
   document.querySelectorAll<HTMLElement>('.seirmg-favorito-estrela').forEach((estrela) => {
-    const processo = estrela.previousElementSibling as HTMLElement | null
-    const nup = processo?.textContent?.trim()
+    const nup = estrela.dataset.nup
     if (!nup) return
 
     const favoritado = idsFavoritados.has(nup)
