@@ -57,6 +57,7 @@ export interface FavoritoProcesso {
   numero: string
   link: string | null
   adicionadoEm: string
+  especificacao?: string
 }
 
 export interface FavoritosConfig {

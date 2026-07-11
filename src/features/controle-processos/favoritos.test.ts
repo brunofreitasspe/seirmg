@@ -40,6 +40,18 @@ describe('extrairFavoritoDaLinha', () => {
     const linha = criarLinhaComProcesso('<td><a class="processoVisualizado" href="x">   </a></td>')
     expect(extrairFavoritoDaLinha(linha, '2026-07-10T10:00:00.000Z')).toBeNull()
   })
+
+  it('inclui especificação quando o onmouseover contém dados de especificação', () => {
+    const linha = criarLinhaComProcesso(
+      `<td><a class="processoVisualizado" href="x" onmouseover="return infraTooltipMostrar('Aquisição de bens','Detalhe')">HMMG.2025.00004-4</a></td>`
+    )
+    expect(extrairFavoritoDaLinha(linha, '2026-07-10T10:00:00.000Z')?.especificacao).toBe('Aquisição de bens')
+  })
+
+  it('deixa especificação indefinida quando a linha não tem onmouseover', () => {
+    const linha = criarLinhaComProcesso('<td><a class="processoVisualizado" href="x">HMMG.2025.00005-5</a></td>')
+    expect(extrairFavoritoDaLinha(linha, '2026-07-10T10:00:00.000Z')?.especificacao).toBeUndefined()
+  })
 })
 
 describe('calcularOcultacaoPorFavorito', () => {

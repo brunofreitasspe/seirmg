@@ -1,14 +1,19 @@
 import type { FavoritoProcesso } from '../../lib/storage'
+import { extrairEspecificacaoParaExibicao } from './especificacao'
 
 export function extrairFavoritoDaLinha(linha: Element, agoraIso: string): FavoritoProcesso | null {
   const processo = linha.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')
   const numero = processo?.textContent?.trim()
   if (!processo || !numero) return null
 
+  const onmouseover = processo.getAttribute('onmouseover')
+  const especificacao = onmouseover ? extrairEspecificacaoParaExibicao(onmouseover) : ''
+
   return {
     numero,
     link: processo.getAttribute('href'),
     adicionadoEm: agoraIso,
+    especificacao: especificacao || undefined,
   }
 }
 
