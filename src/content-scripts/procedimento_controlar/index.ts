@@ -478,16 +478,16 @@ const reaplicarFiltrosAposNovasLinhas: Array<() => void> = []
 let favoritosAtivo = false
 let itensFavoritados: FavoritoProcesso[] = []
 
-function criarEstrela(nup: string, link: string | null, favoritado: boolean): HTMLElement {
+function criarEstrela(favorito: FavoritoProcesso, favoritado: boolean): HTMLElement {
   const estrela = document.createElement('span')
-  estrela.dataset.nup = nup
+  estrela.dataset.nup = favorito.numero
   estrela.className = favoritado ? 'seirmg-favorito-estrela' : 'seirmg-favorito-estrela seirmg-favorito-inativo'
   estrela.innerHTML = favoritado ? starIconSvg : starOffIconSvg
   estrela.title = favoritado ? 'Remover dos favoritos' : 'Adicionar aos favoritos'
   estrela.addEventListener('click', (evento) => {
     evento.preventDefault()
     evento.stopPropagation()
-    alternarFavorito(nup, link).catch((error) => {
+    alternarFavorito(favorito).catch((error) => {
       console.error('[SEIRMG] Falha ao favoritar processo:', error)
     })
   })
@@ -510,7 +510,7 @@ function aplicarEstrelasEmLinhas(linhas: Element[]): void {
     if (!processo) return
 
     const favoritado = idsFavoritados.has(favorito.numero)
-    processo.insertAdjacentElement('afterend', criarEstrela(favorito.numero, favorito.link, favoritado))
+    processo.insertAdjacentElement('afterend', criarEstrela(favorito, favoritado))
   })
 }
 
@@ -599,7 +599,7 @@ function montarLinhaPainelFavoritos(item: FavoritoProcesso, aberto: boolean): HT
   botaoRemover.innerHTML = starIconSvg
   botaoRemover.title = 'Remover dos favoritos'
   botaoRemover.addEventListener('click', () => {
-    alternarFavorito(item.numero, item.link).catch((error) => {
+    alternarFavorito(item).catch((error) => {
       console.error('[SEIRMG] Falha ao remover favorito:', error)
     })
   })
@@ -655,15 +655,15 @@ function renderizarPainelFavoritos(): void {
   }
 }
 
-async function alternarFavorito(nup: string, link: string | null): Promise<void> {
+async function alternarFavorito(favorito: FavoritoProcesso): Promise<void> {
   try {
     const store = createSyncConfigStore()
     const atual = await store.get()
     const itens = atual.controleProcessos.favoritos.itens
-    const jaFavoritado = itens.some((item) => item.numero === nup)
+    const jaFavoritado = itens.some((item) => item.numero === favorito.numero)
     const novosItens = jaFavoritado
-      ? itens.filter((item) => item.numero !== nup)
-      : [...itens, { numero: nup, link, adicionadoEm: new Date().toISOString() }]
+      ? itens.filter((item) => item.numero !== favorito.numero)
+      : [...itens, { ...favorito, adicionadoEm: new Date().toISOString() }]
 
     await store.set({
       ...atual,
