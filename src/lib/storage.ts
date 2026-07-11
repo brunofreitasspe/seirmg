@@ -13,6 +13,7 @@ export interface ThemeConfig {
 export interface BlocoAssinaturaConfig {
   ativo: boolean
   tocarSom: boolean
+  lembreteIntervaloMinutos: number
 }
 
 export interface ConfiguracaoCor {
@@ -146,6 +147,7 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
   blocoAssinatura: {
     ativo: true,
     tocarSom: true,
+    lembreteIntervaloMinutos: 0,
   },
   controleProcessos: {
     prazos: {

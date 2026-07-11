@@ -1,7 +1,8 @@
 import { processarItensBlocoAssinatura } from './blocoAssinaturaPipeline'
 import { fetchTextComGate, registrarNavegacaoReal, abrirCircuitBreaker } from './sessionGate'
-import { createLocalConfigStore } from '../lib/storage'
-import { NOTIFICATION_ID_PREFIX } from './notifications/notify'
+import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
+import { NOTIFICATION_ID_PREFIX, NOTIFICATION_ID_LEMBRETE_BLOCO_ASSINATURA, notificarLembreteBlocoAssinatura } from './notifications/notify'
+import { ALARME_LEMBRETE_BLOCO_ASSINATURA, agendarLembreteBlocoAssinatura } from './lembreteBlocoAssinatura'
 import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
 
 const ACAO_BLOCO_ASSINATURA = 'bloco_assinatura_listar'
@@ -76,10 +77,36 @@ async function marcarIndicadorConfiguracao(): Promise<void> {
   await localStore.set({ ...localConfig, mostrarIndicadorConfiguracao: true })
 }
 
+async function reagendarLembreteBlocoAssinatura(): Promise<void> {
+  const config = await createSyncConfigStore().get()
+  agendarLembreteBlocoAssinatura(config.blocoAssinatura.lembreteIntervaloMinutos)
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   marcarIndicadorConfiguracao().catch((error) => {
     console.error('[SEIRMG] Falha ao marcar indicador de configuração pendente:', error)
   })
+  reagendarLembreteBlocoAssinatura().catch((error) => {
+    console.error('[SEIRMG] Falha ao agendar lembrete de bloco de assinatura:', error)
+  })
+})
+
+chrome.runtime.onStartup.addListener(() => {
+  reagendarLembreteBlocoAssinatura().catch((error) => {
+    console.error('[SEIRMG] Falha ao reagendar lembrete de bloco de assinatura:', error)
+  })
+})
+
+chrome.storage.onChanged.addListener((mudancas, area) => {
+  if (area !== 'sync' || !('config' in mudancas)) return
+  reagendarLembreteBlocoAssinatura().catch((error) => {
+    console.error('[SEIRMG] Falha ao reagendar lembrete de bloco de assinatura após mudança de config:', error)
+  })
+})
+
+chrome.alarms.onAlarm.addListener((alarme) => {
+  if (alarme.name !== ALARME_LEMBRETE_BLOCO_ASSINATURA) return
+  notificarLembreteBlocoAssinatura()
 })
 
 chrome.runtime.onMessage.addListener((mensagem) => {
@@ -128,7 +155,10 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
     const localConfig = await createLocalConfigStore().get()
     if (!localConfig.baseUrlSei) return
 
-    if (notificationId.startsWith(NOTIFICATION_ID_PREFIX)) {
+    if (
+      notificationId.startsWith(NOTIFICATION_ID_PREFIX) ||
+      notificationId === NOTIFICATION_ID_LEMBRETE_BLOCO_ASSINATURA
+    ) {
       await abrirOuFocarAba(
         localConfig.baseUrlSei,
         `${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}`

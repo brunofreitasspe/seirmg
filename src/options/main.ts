@@ -60,10 +60,16 @@ async function carregarAbaAssinatura(): Promise<void> {
 
     const inputAtivo = document.getElementById('assinatura-ativo') as HTMLInputElement | null
     const inputSom = document.getElementById('assinatura-som') as HTMLInputElement | null
+    const inputLembreteIntervalo = document.getElementById(
+      'assinatura-lembrete-intervalo'
+    ) as HTMLInputElement | null
     const status = document.getElementById('assinatura-status')
 
     if (inputAtivo) inputAtivo.checked = config.blocoAssinatura.ativo
     if (inputSom) inputSom.checked = config.blocoAssinatura.tocarSom
+    if (inputLembreteIntervalo) {
+      inputLembreteIntervalo.value = String(config.blocoAssinatura.lembreteIntervaloMinutos)
+    }
 
     document.getElementById('assinatura-salvar')?.addEventListener('click', async () => {
       try {
@@ -72,6 +78,7 @@ async function carregarAbaAssinatura(): Promise<void> {
           blocoAssinatura: {
             ativo: inputAtivo?.checked ?? true,
             tocarSom: inputSom?.checked ?? true,
+            lembreteIntervaloMinutos: Math.max(0, Math.round(Number(inputLembreteIntervalo?.value) || 0)),
           },
         }
         await store.set(atualizado)

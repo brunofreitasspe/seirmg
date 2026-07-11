@@ -17,6 +17,18 @@ export function notificarNovoBloco(item: BlocoAssinaturaItem, tocarSom: boolean)
   })
 }
 
+export const NOTIFICATION_ID_LEMBRETE_BLOCO_ASSINATURA = 'seirmg-lembrete-bloco-assinatura'
+
+export function notificarLembreteBlocoAssinatura(): void {
+  chrome.notifications.create(NOTIFICATION_ID_LEMBRETE_BLOCO_ASSINATURA, {
+    type: 'basic',
+    iconUrl: chrome.runtime.getURL('src/assets/icons/icon-128.png'),
+    title: 'SEIRMG — Lembrete',
+    message: 'Não esqueça de conferir o Bloco de Assinatura.',
+    priority: 1,
+  })
+}
+
 export const NOTIFICATION_ID_SESSAO_INVALIDA = 'seirmg-sessao-invalida'
 
 export function notificarSessaoInvalida(): void {
