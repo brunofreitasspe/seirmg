@@ -1,7 +1,9 @@
 import {
   calcularDiasDoMarcador,
   classificarPrazo,
+  extrairDataDoMarcador,
   extrairTextoMarcador,
+  formatarDataBr,
   type TipoCalculoPrazo,
 } from '../../features/controle-processos/prazos'
 import { escolherCorProcesso, extrairEspecificacaoParaCor } from '../../features/controle-processos/corProcesso'
@@ -38,7 +40,7 @@ import {
   extrairNroItens,
 } from '../../features/controle-processos/rolagemInfinita'
 import { fetchText } from '../../lib/fetchViaBackground'
-import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
+import { createLocalConfigStore, createSyncConfigStore, DEFAULT_SYNC_CONFIG } from '../../lib/storage'
 import type { ControleProcessosConfig, SyncConfig } from '../../lib/storage'
 import { montarCorpoVerificacaoLote, extrairEncontrados } from '../../features/planka/lote'
 import { tokenValido } from '../../features/planka/token'
@@ -137,6 +139,40 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
   .seirmg-favoritos-badge-fechado {
     background: #eee;
     color: #777;
+  }
+  .seirmg-favoritos-detalhes {
+    margin-top: 3px;
+  }
+  .seirmg-favoritos-especificacao {
+    color: #666;
+    font-size: 11px;
+    margin-left: 4px;
+  }
+  .seirmg-favoritos-marcador {
+    display: inline-block;
+    background: #eef2f7;
+    color: #445;
+    border-radius: 3px;
+    padding: 1px 6px;
+    font-size: 11px;
+    margin: 0 4px 2px 0;
+  }
+  .seirmg-favoritos-prazo {
+    font-weight: bold;
+  }
+  .seirmg-favoritos-prazo-alerta {
+    color: #b8860b;
+  }
+  .seirmg-favoritos-prazo-critico {
+    color: #c0392b;
+  }
+  .seirmg-favoritos-prazo-data {
+    font-size: 11px;
+    color: #666;
+  }
+  .seirmg-favoritos-vazio {
+    color: #aaa;
+    font-style: italic;
   }
 `
 
@@ -477,6 +513,79 @@ const reaplicarFiltrosAposNovasLinhas: Array<() => void> = []
 
 let favoritosAtivo = false
 let itensFavoritados: FavoritoProcesso[] = []
+let configPrazosAtual: ControleProcessosConfig['prazos'] = DEFAULT_SYNC_CONFIG.controleProcessos.prazos
+
+interface PrazoFavorito {
+  diasTexto: string
+  dataTexto: string
+  classificacao: 'alerta' | 'critico' | null
+}
+
+function obterMarcadoresDaLinha(linha: Element): string[] {
+  const marcadores = Array.from(
+    linha.querySelectorAll<HTMLAnchorElement>("td > a[href*='acao=andamento_marcador_gerenciar']")
+  )
+  return marcadores
+    .map((marcador) => marcador.getAttribute('onmouseover'))
+    .filter((texto): texto is string => texto !== null)
+    .map(extrairNomeMarcador)
+    .filter((nome) => nome !== '')
+}
+
+function calcularPrazoFavorito(linha: Element, config: ControleProcessosConfig['prazos']): PrazoFavorito | null {
+  if (!config.ativo) return null
+
+  const marcadores = Array.from(
+    linha.querySelectorAll<HTMLAnchorElement>("td > a[href*='acao=andamento_marcador_gerenciar']")
+  )
+  const textos = marcadores
+    .map((marcador) => marcador.getAttribute('onmouseover'))
+    .filter((texto): texto is string => texto !== null)
+    .map(extrairTextoMarcador)
+
+  const tentativas: Array<{
+    tipo: TipoCalculoPrazo
+    exibir: boolean
+    limites: { alerta: number; critico: number }
+    rotulo: string
+  }> = [
+    {
+      tipo: 'prazo',
+      exibir: config.exibirPrazo,
+      limites: { alerta: config.alertaPrazo, critico: config.criticoPrazo },
+      rotulo: 'vence',
+    },
+    {
+      tipo: 'qtddias',
+      exibir: config.exibirDias,
+      limites: { alerta: config.alertaDias, critico: config.criticoDias },
+      rotulo: 'desde',
+    },
+  ]
+
+  const agora = new Date()
+  for (const tentativa of tentativas) {
+    if (!tentativa.exibir) continue
+
+    const data = extrairDataDoMarcador(textos, tentativa.tipo)
+    const dias = calcularDiasDoMarcador(textos, tentativa.tipo, agora)
+    if (!data || dias === null) continue
+
+    return {
+      diasTexto: `${dias} dia${Math.abs(dias) === 1 ? '' : 's'}`,
+      dataTexto: `${tentativa.rotulo} ${formatarDataBr(data)}`,
+      classificacao: classificarPrazo(dias, tentativa.tipo, tentativa.limites),
+    }
+  }
+  return null
+}
+
+function obterEspecificacaoDaLinha(linha: Element): string | undefined {
+  const processo = linha.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')
+  const onmouseover = processo?.getAttribute('onmouseover')
+  if (!onmouseover) return undefined
+  return extrairEspecificacaoParaExibicao(onmouseover) || undefined
+}
 
 function criarEstrela(favorito: FavoritoProcesso, favoritado: boolean): HTMLElement {
   const estrela = document.createElement('span')
@@ -553,16 +662,16 @@ function aplicarFiltroFavoritoEmTodasAsTabelas(): void {
   })
 }
 
-function nupsAbertosNaPagina(): Set<string> {
-  const nups = new Set<string>()
+function mapaLinhasAbertasNaPagina(): Map<string, Element> {
+  const linhas = new Map<string, Element>()
   IDS_TABELAS.forEach((idTabela) => {
     linhasDaTabela(idTabela).forEach((linha) => {
       const processo = linha.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')
       const nup = processo?.textContent?.trim()
-      if (nup) nups.add(nup)
+      if (nup) linhas.set(nup, linha)
     })
   })
-  return nups
+  return linhas
 }
 
 function ultimaTabelaPresente(): Element | null {
@@ -573,26 +682,93 @@ function ultimaTabelaPresente(): Element | null {
   return null
 }
 
-function montarLinhaPainelFavoritos(item: FavoritoProcesso, aberto: boolean): HTMLTableRowElement {
-  const tr = document.createElement('tr')
-
-  const tdProcesso = document.createElement('td')
+function montarCelulaProcesso(item: FavoritoProcesso, aberto: boolean, especificacao: string | undefined): HTMLTableCellElement {
+  const td = document.createElement('td')
   if (item.link) {
     const link = document.createElement('a')
     link.href = item.link
     link.textContent = item.numero
-    tdProcesso.appendChild(link)
+    td.appendChild(link)
   } else {
-    tdProcesso.appendChild(document.createTextNode(item.numero))
+    td.appendChild(document.createTextNode(item.numero))
   }
+
+  const detalhes = document.createElement('div')
+  detalhes.className = 'seirmg-favoritos-detalhes'
 
   const badge = document.createElement('span')
   badge.className = aberto ? 'seirmg-favoritos-badge' : 'seirmg-favoritos-badge seirmg-favoritos-badge-fechado'
   badge.textContent = aberto ? 'aberto na sua caixa' : 'fechado'
-  tdProcesso.appendChild(badge)
-  tr.appendChild(tdProcesso)
+  detalhes.appendChild(badge)
 
-  const tdRemover = document.createElement('td')
+  if (especificacao) {
+    const especificacaoEl = document.createElement('span')
+    especificacaoEl.className = 'seirmg-favoritos-especificacao'
+    especificacaoEl.textContent = `· ${especificacao}`
+    detalhes.appendChild(especificacaoEl)
+  }
+
+  td.appendChild(detalhes)
+  return td
+}
+
+function montarCelulaMarcadores(linhaNativa: Element): HTMLTableCellElement {
+  const td = document.createElement('td')
+  const nomes = obterMarcadoresDaLinha(linhaNativa)
+  if (nomes.length === 0) {
+    td.className = 'seirmg-favoritos-vazio'
+    td.textContent = '—'
+    return td
+  }
+  nomes.forEach((nome) => {
+    const pill = document.createElement('span')
+    pill.className = 'seirmg-favoritos-marcador'
+    pill.textContent = nome
+    td.appendChild(pill)
+  })
+  return td
+}
+
+function montarCelulaPrazo(linhaNativa: Element, config: ControleProcessosConfig['prazos']): HTMLTableCellElement {
+  const td = document.createElement('td')
+  const prazo = calcularPrazoFavorito(linhaNativa, config)
+  if (!prazo) {
+    td.className = 'seirmg-favoritos-vazio'
+    td.textContent = '—'
+    return td
+  }
+
+  const linhaDias = document.createElement('div')
+  const classesPorClassificacao: Record<'alerta' | 'critico', string> = {
+    alerta: 'seirmg-favoritos-prazo seirmg-favoritos-prazo-alerta',
+    critico: 'seirmg-favoritos-prazo seirmg-favoritos-prazo-critico',
+  }
+  linhaDias.className = prazo.classificacao ? classesPorClassificacao[prazo.classificacao] : 'seirmg-favoritos-prazo'
+  linhaDias.textContent = prazo.diasTexto
+  td.appendChild(linhaDias)
+
+  const linhaData = document.createElement('div')
+  linhaData.className = 'seirmg-favoritos-prazo-data'
+  linhaData.textContent = prazo.dataTexto
+  td.appendChild(linhaData)
+
+  return td
+}
+
+function montarCelulaAtribuicao(linhaNativa: Element): HTMLTableCellElement {
+  const td = document.createElement('td')
+  const atribuicao = obterTextoAtribuido(linhaNativa)
+  if (!atribuicao) {
+    td.className = 'seirmg-favoritos-vazio'
+    td.textContent = '—'
+    return td
+  }
+  td.textContent = atribuicao
+  return td
+}
+
+function montarCelulaRemover(item: FavoritoProcesso): HTMLTableCellElement {
+  const td = document.createElement('td')
   const botaoRemover = document.createElement('span')
   botaoRemover.className = 'seirmg-favorito-estrela'
   botaoRemover.dataset.nup = item.numero
@@ -603,9 +779,31 @@ function montarLinhaPainelFavoritos(item: FavoritoProcesso, aberto: boolean): HT
       console.error('[SEIRMG] Falha ao remover favorito:', error)
     })
   })
-  tdRemover.appendChild(botaoRemover)
-  tr.appendChild(tdRemover)
+  td.appendChild(botaoRemover)
+  return td
+}
 
+function montarLinhaPainelFavoritos(
+  item: FavoritoProcesso,
+  linhaNativa: Element | undefined,
+  config: ControleProcessosConfig['prazos']
+): HTMLTableRowElement {
+  const tr = document.createElement('tr')
+  const especificacao = linhaNativa ? (obterEspecificacaoDaLinha(linhaNativa) ?? item.especificacao) : item.especificacao
+
+  if (!linhaNativa) {
+    const tdFechado = montarCelulaProcesso(item, false, especificacao)
+    tdFechado.colSpan = 4
+    tr.appendChild(tdFechado)
+    tr.appendChild(montarCelulaRemover(item))
+    return tr
+  }
+
+  tr.appendChild(montarCelulaProcesso(item, true, especificacao))
+  tr.appendChild(montarCelulaMarcadores(linhaNativa))
+  tr.appendChild(montarCelulaPrazo(linhaNativa, config))
+  tr.appendChild(montarCelulaAtribuicao(linhaNativa))
+  tr.appendChild(montarCelulaRemover(item))
   return tr
 }
 
@@ -629,10 +827,19 @@ function renderizarPainelFavoritos(): void {
 
     const tabela = document.createElement('table')
     tabela.className = 'infraTable'
+    tabela.style.tableLayout = 'fixed'
+
+    const colgroup = document.createElement('colgroup')
+    ;[30, 24, 20, 18, 8].forEach((largura) => {
+      const col = document.createElement('col')
+      col.style.width = `${largura}%`
+      colgroup.appendChild(col)
+    })
+    tabela.appendChild(colgroup)
 
     const thead = document.createElement('thead')
     const trHead = document.createElement('tr')
-    ;['Processo', ''].forEach((rotulo) => {
+    ;['Processo', 'Marcadores', 'Prazo', 'Atribuição', ''].forEach((rotulo) => {
       const th = document.createElement('th')
       th.className = 'infraTh'
       th.textContent = rotulo
@@ -642,9 +849,9 @@ function renderizarPainelFavoritos(): void {
     tabela.appendChild(thead)
 
     const tbody = document.createElement('tbody')
-    const nupsAbertos = nupsAbertosNaPagina()
+    const linhasAbertas = mapaLinhasAbertasNaPagina()
     ordenarFavoritosPorData(itensFavoritados).forEach((item) => {
-      tbody.appendChild(montarLinhaPainelFavoritos(item, nupsAbertos.has(item.numero)))
+      tbody.appendChild(montarLinhaPainelFavoritos(item, linhasAbertas.get(item.numero), configPrazosAtual))
     })
     tabela.appendChild(tbody)
     painel.appendChild(tabela)
@@ -1427,6 +1634,7 @@ async function bootstrap(): Promise<void> {
 
     favoritosAtivo = config.controleProcessos.favoritos.ativo
     itensFavoritados = config.controleProcessos.favoritos.itens
+    configPrazosAtual = config.controleProcessos.prazos
 
     const todasAsLinhas = IDS_TABELAS.flatMap((idTabela) => linhasDaTabela(idTabela))
     aplicarEstrelasEmLinhas(todasAsLinhas)
