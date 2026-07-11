@@ -186,6 +186,34 @@ describe('createSyncConfigStore', () => {
     await store.set(atualizado)
     expect(await store.get()).toEqual(atualizado)
   })
+
+  it('inclui ferramentasIA padrão quando vazio', async () => {
+    const store = createSyncConfigStore(criarAreaFalsa())
+    expect((await store.get()).ferramentasIA).toEqual({
+      ativo: false,
+      provedorAtivo: 'openai',
+      openai: { apiKey: '', modelo: 'gpt-4o-mini' },
+      gemini: { apiKey: '', modelo: 'gemini-2.0-flash' },
+      claude: { apiKey: '', modelo: 'claude-3-5-haiku-20241022' },
+    })
+  })
+
+  it('persiste alteração de ferramentasIA', async () => {
+    const area = criarAreaFalsa()
+    const store = createSyncConfigStore(area)
+    const atualizado = {
+      ...DEFAULT_SYNC_CONFIG,
+      ferramentasIA: {
+        ativo: true,
+        provedorAtivo: 'claude' as const,
+        openai: { apiKey: 'sk-teste', modelo: 'gpt-4o-mini' },
+        gemini: { apiKey: '', modelo: 'gemini-2.0-flash' },
+        claude: { apiKey: 'sk-ant-teste', modelo: 'claude-3-5-haiku-20241022' },
+      },
+    }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
 })
 
 describe('createLocalConfigStore', () => {
