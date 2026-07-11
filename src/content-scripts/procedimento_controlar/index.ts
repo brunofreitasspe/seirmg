@@ -709,6 +709,14 @@ function ultimaTabelaPresente(): Element | null {
   return null
 }
 
+function referenciaParaPainel(): Element | null {
+  // Em layouts do SEI que organizam Detalhado/Gerados/Recebidos em colunas Bootstrap
+  // (col-md-6) lado a lado dentro de #divTabelaProcesso, inserir logo após a tabela
+  // prende o painel dentro da coluna de 50%. Inserir após o container da grade inteira
+  // faz o painel ocupar a largura total abaixo das tabelas.
+  return document.getElementById('divTabelaProcesso') ?? ultimaTabelaPresente()
+}
+
 function montarCelulaProcesso(item: FavoritoProcesso, aberto: boolean, especificacao: string | undefined): HTMLTableCellElement {
   const td = document.createElement('td')
   if (item.link) {
@@ -858,7 +866,7 @@ function renderizarPainelFavoritos(): void {
 
     if (!favoritosAtivo || itensFavoritados.length === 0) return
 
-    const referencia = ultimaTabelaPresente()
+    const referencia = referenciaParaPainel()
     if (!referencia) return
 
     const painel = document.createElement('div')
