@@ -31,6 +31,9 @@ export default defineManifest({
   host_permissions: [
     '*://*.br/*controlador.php?acao=*',
     '*://*.org/*controlador.php?acao=*',
+    'https://api.openai.com/*',
+    'https://generativelanguage.googleapis.com/*',
+    'https://api.anthropic.com/*',
   ],
   optional_host_permissions: ['*://*/*'],
   content_scripts: [

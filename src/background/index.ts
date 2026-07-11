@@ -1,5 +1,6 @@
 import { processarItensBlocoAssinatura } from './blocoAssinaturaPipeline'
 import { fetchTextComGate, registrarNavegacaoReal, abrirCircuitBreaker } from './sessionGate'
+import { fetchText } from '../lib/result'
 import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
 import { NOTIFICATION_ID_PREFIX, NOTIFICATION_ID_LEMBRETE_BLOCO_ASSINATURA, notificarLembreteBlocoAssinatura } from './notifications/notify'
 import { ALARME_LEMBRETE_BLOCO_ASSINATURA, agendarLembreteBlocoAssinatura } from './lembreteBlocoAssinatura'
@@ -22,6 +23,14 @@ interface MensagemFetchSei {
   method?: string
   body?: string
   bodyRaw?: string
+}
+
+interface MensagemFetchIA {
+  type: 'seirmg:fetch-ia'
+  url: string
+  method: string
+  headers: Record<string, string>
+  body: string
 }
 
 interface MensagemTelaLoginDetectada {
@@ -49,6 +58,14 @@ function ehMensagemFetchSei(mensagem: unknown): mensagem is MensagemFetchSei {
     typeof mensagem === 'object' &&
     mensagem !== null &&
     (mensagem as { type?: unknown }).type === 'seirmg:fetch-sei'
+  )
+}
+
+function ehMensagemFetchIA(mensagem: unknown): mensagem is MensagemFetchIA {
+  return (
+    typeof mensagem === 'object' &&
+    mensagem !== null &&
+    (mensagem as { type?: unknown }).type === 'seirmg:fetch-ia'
   )
 }
 
@@ -138,6 +155,14 @@ chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
           : undefined,
     headers: mensagem.bodyRaw !== undefined ? { 'Content-Type': 'application/x-www-form-urlencoded' } : undefined,
   })
+    .then(responder)
+    .catch((error) => responder({ ok: false, error: String(error) }))
+  return true
+})
+
+chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
+  if (!ehMensagemFetchIA(mensagem)) return false
+  fetchText(mensagem.url, { method: mensagem.method, headers: mensagem.headers, body: mensagem.body })
     .then(responder)
     .catch((error) => responder({ ok: false, error: String(error) }))
   return true
