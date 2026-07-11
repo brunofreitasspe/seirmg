@@ -54,6 +54,9 @@ import {
 import type { FavoritoProcesso } from '../../lib/storage'
 import starIconSvg from 'lucide-static/icons/star.svg?raw'
 import starOffIconSvg from 'lucide-static/icons/star-off.svg?raw'
+import flagIconSvg from 'lucide-static/icons/flag.svg?raw'
+import clockIconSvg from 'lucide-static/icons/clock.svg?raw'
+import userIconSvg from 'lucide-static/icons/user.svg?raw'
 
 const IDS_TABELAS = ['#tblProcessosDetalhado', '#tblProcessosGerados', '#tblProcessosRecebidos']
 
@@ -148,8 +151,18 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     font-size: 11px;
     margin-left: 4px;
   }
+  .seirmg-favoritos-icone {
+    display: inline-flex;
+    vertical-align: -2px;
+    margin-right: 3px;
+  }
+  .seirmg-favoritos-icone svg {
+    width: 12px;
+    height: 12px;
+  }
   .seirmg-favoritos-marcador {
-    display: inline-block;
+    display: inline-flex;
+    align-items: center;
     background: #eef2f7;
     color: #445;
     border-radius: 3px;
@@ -712,6 +725,13 @@ function montarCelulaProcesso(item: FavoritoProcesso, aberto: boolean, especific
   return td
 }
 
+function criarIcone(svg: string): HTMLElement {
+  const icone = document.createElement('span')
+  icone.className = 'seirmg-favoritos-icone'
+  icone.innerHTML = svg
+  return icone
+}
+
 function montarCelulaMarcadores(linhaNativa: Element): HTMLTableCellElement {
   const td = document.createElement('td')
   const nomes = obterMarcadoresDaLinha(linhaNativa)
@@ -723,7 +743,8 @@ function montarCelulaMarcadores(linhaNativa: Element): HTMLTableCellElement {
   nomes.forEach((nome) => {
     const pill = document.createElement('span')
     pill.className = 'seirmg-favoritos-marcador'
-    pill.textContent = nome
+    pill.appendChild(criarIcone(flagIconSvg))
+    pill.appendChild(document.createTextNode(nome))
     td.appendChild(pill)
   })
   return td
@@ -744,7 +765,8 @@ function montarCelulaPrazo(linhaNativa: Element, config: ControleProcessosConfig
     critico: 'seirmg-favoritos-prazo seirmg-favoritos-prazo-critico',
   }
   linhaDias.className = prazo.classificacao ? classesPorClassificacao[prazo.classificacao] : 'seirmg-favoritos-prazo'
-  linhaDias.textContent = prazo.diasTexto
+  linhaDias.appendChild(criarIcone(clockIconSvg))
+  linhaDias.appendChild(document.createTextNode(prazo.diasTexto))
   td.appendChild(linhaDias)
 
   const linhaData = document.createElement('div')
@@ -763,7 +785,8 @@ function montarCelulaAtribuicao(linhaNativa: Element): HTMLTableCellElement {
     td.textContent = '—'
     return td
   }
-  td.textContent = atribuicao
+  td.appendChild(criarIcone(userIconSvg))
+  td.appendChild(document.createTextNode(atribuicao))
   return td
 }
 
