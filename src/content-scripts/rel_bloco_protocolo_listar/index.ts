@@ -4,11 +4,14 @@ import {
   encontrarIndiceColunaAssinaturas,
   extrairNomeUsuario,
   type TipoSelecaoDocumentos,
+  type UsuarioEUnidade,
 } from '../../features/bloco-assinatura/selecaoDocumentos'
+import { obterUnidadeAtual } from '../../features/procedimento-visualizar/painelLateral'
 import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
 import { renderBadge } from '../core/badge'
 
 const ID_SELECAO_DOCUMENTOS = 'seirmg-selecao-documentos-assinar'
+const CLASSE_CHECKBOX_JA_ASSINADO = 'seirmg-checkbox-ja-assinado'
 
 async function processarPagina(): Promise<void> {
   try {
@@ -37,7 +40,9 @@ function estaNaTelaDoBloco(): boolean {
   )
 }
 
-function aplicarSelecao(tipo: TipoSelecaoDocumentos, usuario: string): void {
+function paraCadaLinhaDeDocumento(
+  callback: (checkbox: HTMLInputElement, textoAssinaturas: string) => void
+): void {
   const tabela = document.querySelector('#divInfraAreaTabela')
   if (!tabela) return
 
@@ -53,10 +58,26 @@ function aplicarSelecao(tipo: TipoSelecaoDocumentos, usuario: string): void {
 
     const celulaAssinaturas = linha.querySelectorAll('td')[indiceAssinaturas]
     const textoAssinaturas = celulaAssinaturas?.textContent?.trim() ?? ''
-    const selecionado = deveSelecionar(tipo, textoAssinaturas, usuario)
+    callback(checkbox, textoAssinaturas)
+  })
+}
 
+function aplicarSelecao(tipo: TipoSelecaoDocumentos, credenciais: UsuarioEUnidade): void {
+  paraCadaLinhaDeDocumento((checkbox, textoAssinaturas) => {
+    const selecionado = deveSelecionar(tipo, textoAssinaturas, credenciais)
     if (selecionado !== checkbox.checked) checkbox.click()
   })
+}
+
+async function obterCredenciais(): Promise<UsuarioEUnidade | null> {
+  const tituloUsuario = document.querySelector('#lnkUsuarioSistema')?.getAttribute('title') ?? ''
+  const usuario = extrairNomeUsuario(tituloUsuario)
+  if (!usuario) return null
+
+  const localConfig = await createLocalConfigStore().get()
+  const unidade = obterUnidadeAtual(localConfig.seiVersionAtLeast4 ?? true, document) ?? ''
+
+  return { usuario, unidade }
 }
 
 async function montarSelecaoDocumentos(): Promise<void> {
@@ -67,9 +88,8 @@ async function montarSelecaoDocumentos(): Promise<void> {
     if (!estaNaTelaDoBloco()) return
     if (document.getElementById(ID_SELECAO_DOCUMENTOS)) return
 
-    const tituloUsuario = document.querySelector('#lnkUsuarioSistema')?.getAttribute('title') ?? ''
-    const usuario = extrairNomeUsuario(tituloUsuario)
-    if (!usuario) {
+    const credenciais = await obterCredenciais()
+    if (!credenciais) {
       console.error('[SEIRMG] Falha ao obter o nome do usuário para seleção em massa de documentos.')
       return
     }
@@ -97,20 +117,44 @@ async function montarSelecaoDocumentos(): Promise<void> {
       const tipo = alvo.dataset.tipo as TipoSelecaoDocumentos | undefined
       if (!tipo) return
 
-      aplicarSelecao(tipo, usuario)
+      aplicarSelecao(tipo, credenciais)
     })
   } catch (error) {
     console.error('[SEIRMG] Falha ao montar seleção em massa de documentos:', error)
   }
 }
 
+async function aplicarDesabilitacaoAssinados(): Promise<void> {
+  try {
+    const syncConfig = await createSyncConfigStore().get()
+    if (!syncConfig.featureFlags.desabilitarDocumentosAssinados) return
+
+    if (!estaNaTelaDoBloco()) return
+
+    const credenciais = await obterCredenciais()
+    if (!credenciais) return
+
+    paraCadaLinhaDeDocumento((checkbox, textoAssinaturas) => {
+      if (deveSelecionar('com-minha-assinatura', textoAssinaturas, credenciais)) {
+        checkbox.disabled = true
+        checkbox.title = 'Documento já assinado por você'
+        checkbox.classList.add(CLASSE_CHECKBOX_JA_ASSINADO)
+      }
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao desabilitar checkboxes de documentos já assinados:', error)
+  }
+}
+
 processarPagina()
 montarSelecaoDocumentos()
+aplicarDesabilitacaoAssinados()
 
 const areaTabela = document.querySelector('#divInfraAreaTabela')
 if (areaTabela) {
   const observer = new MutationObserver(() => {
     processarPagina()
+    aplicarDesabilitacaoAssinados()
   })
   observer.observe(areaTabela, { childList: true, subtree: true })
 }
