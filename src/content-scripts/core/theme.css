@@ -612,3 +612,10 @@ dialog.seirmg-alerta-nao-assinados::backdrop {
   border-color: #555;
   color: #fff;
 }
+
+/* ===== Checkbox de documento já assinado — rel_bloco_protocolo_listar ===== */
+
+.seirmg-checkbox-ja-assinado {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
