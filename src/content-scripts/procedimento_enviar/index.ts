@@ -58,23 +58,34 @@ async function bootstrap(): Promise<void> {
     if (pendencias.length === 0) return
 
     let confirmado = false
-    botoes.forEach((botao) => {
-      // Captura (não bubble) pra garantir que barra a ação nativa mesmo se o SEI usar
-      // onclick inline em vez de um submit de formulário puro.
-      botao.addEventListener(
-        'click',
-        (evento) => {
-          if (confirmado) return
-          evento.preventDefault()
-          evento.stopImmediatePropagation()
+    // Listener único em capture no document: a fase de capture termina completamente
+    // antes de a fase AT_TARGET começar, então isso roda antes de qualquer handler
+    // (inclusive onclick inline) registrado diretamente no próprio botão — diferente
+    // de um listener com capture:true no próprio botão, que corre em ordem de
+    // registro com os demais handlers do mesmo nó.
+    document.addEventListener(
+      'click',
+      (evento) => {
+        if (confirmado) return
+        const alvo = evento.target
+        if (!(alvo instanceof Element)) return
+        const botao = alvo.closest<HTMLElement>('#btnSalvar')
+        if (!botao) return
+        evento.preventDefault()
+        evento.stopImmediatePropagation()
+        try {
           abrirDialogoConfirmacao(pendencias, unidadeAtual, () => {
             confirmado = true
             botao.click()
           })
-        },
-        { capture: true }
-      )
-    })
+        } catch (error) {
+          console.error('[SEIRMG] Falha ao exibir confirmação de documentos não assinados:', error)
+          confirmado = true
+          botao.click()
+        }
+      },
+      { capture: true }
+    )
   } catch (error) {
     console.error('[SEIRMG] Falha ao verificar documentos não assinados antes do envio:', error)
   }
