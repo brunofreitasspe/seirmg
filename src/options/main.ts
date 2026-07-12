@@ -2,6 +2,7 @@ import settingsIconSvg from 'lucide-static/icons/settings.svg?raw'
 import paletteIconSvg from 'lucide-static/icons/palette.svg?raw'
 import listChecksIconSvg from 'lucide-static/icons/list-checks.svg?raw'
 import fileEditIconSvg from 'lucide-static/icons/file-edit.svg?raw'
+import sparklesIconSvg from 'lucide-static/icons/sparkles.svg?raw'
 import bellIconSvg from 'lucide-static/icons/bell.svg?raw'
 import plugIconSvg from 'lucide-static/icons/plug.svg?raw'
 import infoIconSvg from 'lucide-static/icons/info.svg?raw'
@@ -33,6 +34,7 @@ const ICONES_ABA: Record<string, string> = {
   aparencia: paletteIconSvg,
   processos: listChecksIconSvg,
   editor: fileEditIconSvg,
+  ia: sparklesIconSvg,
   notificacoes: bellIconSvg,
   integracoes: plugIconSvg,
   sobre: infoIconSvg,
@@ -341,13 +343,6 @@ async function carregarAbaEditor(): Promise<void> {
     const inputTipoPadraoArrastar = document.getElementById(
       'editor-doc-externo-tipo-padrao-arrastar'
     ) as HTMLInputElement | null
-    const inputIaAtivo = document.getElementById('ia-ativo') as HTMLInputElement | null
-    const inputIaOpenaiKey = document.getElementById('ia-openai-key') as HTMLInputElement | null
-    const inputIaOpenaiModelo = document.getElementById('ia-openai-modelo') as HTMLInputElement | null
-    const inputIaGeminiKey = document.getElementById('ia-gemini-key') as HTMLInputElement | null
-    const inputIaGeminiModelo = document.getElementById('ia-gemini-modelo') as HTMLInputElement | null
-    const inputIaClaudeKey = document.getElementById('ia-claude-key') as HTMLInputElement | null
-    const inputIaClaudeModelo = document.getElementById('ia-claude-modelo') as HTMLInputElement | null
     const status = document.getElementById('editor-status')
 
     if (inputAtivo) inputAtivo.checked = config.documentoExterno.ativo
@@ -358,13 +353,6 @@ async function carregarAbaEditor(): Promise<void> {
     if (inputTipoPadraoArrastar) {
       inputTipoPadraoArrastar.value = config.documentoExterno.tipoDocumentoPadraoArrastar
     }
-    if (inputIaAtivo) inputIaAtivo.checked = config.ferramentasIA.ativo
-    if (inputIaOpenaiKey) inputIaOpenaiKey.value = config.ferramentasIA.openai.apiKey
-    if (inputIaOpenaiModelo) inputIaOpenaiModelo.value = config.ferramentasIA.openai.modelo
-    if (inputIaGeminiKey) inputIaGeminiKey.value = config.ferramentasIA.gemini.apiKey
-    if (inputIaGeminiModelo) inputIaGeminiModelo.value = config.ferramentasIA.gemini.modelo
-    if (inputIaClaudeKey) inputIaClaudeKey.value = config.ferramentasIA.claude.apiKey
-    if (inputIaClaudeModelo) inputIaClaudeModelo.value = config.ferramentasIA.claude.modelo
 
     document.getElementById('editor-salvar')?.addEventListener('click', async () => {
       try {
@@ -378,6 +366,49 @@ async function carregarAbaEditor(): Promise<void> {
             hipoteseLegal: inputHipoteseLegal?.value ?? '',
             tipoDocumentoPadraoArrastar: inputTipoPadraoArrastar?.value.trim() || 'Anexo',
           },
+        }
+        await store.set(atualizado)
+        if (status) {
+          status.textContent = 'Salvo!'
+          setTimeout(() => {
+            status.textContent = ''
+          }, 2000)
+        }
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao salvar configuração da aba Editor de Documentos:', error)
+      }
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao carregar aba Editor de Documentos:', error)
+  }
+}
+
+async function carregarAbaIA(): Promise<void> {
+  try {
+    const store = createSyncConfigStore()
+    const config = await store.get()
+
+    const inputIaAtivo = document.getElementById('ia-ativo') as HTMLInputElement | null
+    const inputIaOpenaiKey = document.getElementById('ia-openai-key') as HTMLInputElement | null
+    const inputIaOpenaiModelo = document.getElementById('ia-openai-modelo') as HTMLInputElement | null
+    const inputIaGeminiKey = document.getElementById('ia-gemini-key') as HTMLInputElement | null
+    const inputIaGeminiModelo = document.getElementById('ia-gemini-modelo') as HTMLInputElement | null
+    const inputIaClaudeKey = document.getElementById('ia-claude-key') as HTMLInputElement | null
+    const inputIaClaudeModelo = document.getElementById('ia-claude-modelo') as HTMLInputElement | null
+    const status = document.getElementById('ia-status')
+
+    if (inputIaAtivo) inputIaAtivo.checked = config.ferramentasIA.ativo
+    if (inputIaOpenaiKey) inputIaOpenaiKey.value = config.ferramentasIA.openai.apiKey
+    if (inputIaOpenaiModelo) inputIaOpenaiModelo.value = config.ferramentasIA.openai.modelo
+    if (inputIaGeminiKey) inputIaGeminiKey.value = config.ferramentasIA.gemini.apiKey
+    if (inputIaGeminiModelo) inputIaGeminiModelo.value = config.ferramentasIA.gemini.modelo
+    if (inputIaClaudeKey) inputIaClaudeKey.value = config.ferramentasIA.claude.apiKey
+    if (inputIaClaudeModelo) inputIaClaudeModelo.value = config.ferramentasIA.claude.modelo
+
+    document.getElementById('ia-salvar')?.addEventListener('click', async () => {
+      try {
+        const atualizado = {
+          ...config,
           ferramentasIA: {
             ativo: inputIaAtivo?.checked ?? false,
             provedorAtivo: config.ferramentasIA.provedorAtivo,
@@ -403,11 +434,11 @@ async function carregarAbaEditor(): Promise<void> {
           }, 2000)
         }
       } catch (error) {
-        console.error('[SEIRMG] Falha ao salvar configuração da aba Editor de Documentos:', error)
+        console.error('[SEIRMG] Falha ao salvar configuração da aba Ferramentas de IA:', error)
       }
     })
   } catch (error) {
-    console.error('[SEIRMG] Falha ao carregar aba Editor de Documentos:', error)
+    console.error('[SEIRMG] Falha ao carregar aba Ferramentas de IA:', error)
   }
 }
 
@@ -542,6 +573,7 @@ async function carregarAbaIntegracoes(): Promise<void> {
 }
 
 carregarAbaEditor()
+carregarAbaIA()
 carregarAbaProcessos()
 carregarAbaAparencia()
 carregarAbaGeral()

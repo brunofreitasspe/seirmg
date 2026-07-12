@@ -15,12 +15,13 @@
     </header>
     <div class="layout">
       <nav id="abas">
-        <button data-aba="geral" class="aba-btn ativa">Geral</button>
         <button data-aba="aparencia" class="aba-btn">Aparência</button>
-        <button data-aba="processos" class="aba-btn">Processos</button>
         <button data-aba="editor" class="aba-btn">Editor de Documentos</button>
-        <button data-aba="notificacoes" class="aba-btn">Notificações</button>
+        <button data-aba="ia" class="aba-btn">Ferramentas de IA</button>
+        <button data-aba="geral" class="aba-btn ativa">Geral</button>
         <button data-aba="integracoes" class="aba-btn">Integrações</button>
+        <button data-aba="notificacoes" class="aba-btn">Notificações</button>
+        <button data-aba="processos" class="aba-btn">Processos</button>
         <button data-aba="sobre" class="aba-btn">Sobre</button>
       </nav>
       <main class="conteudo">
@@ -184,29 +185,33 @@
         <input type="text" id="editor-doc-externo-tipo-padrao-arrastar" placeholder="Anexo" />
       </label>
       <br />
-      <h3>Inteligência Artificial</h3>
+      <button id="editor-salvar">Salvar</button>
+      <span id="editor-status"></span>
+    </section>
+    <section id="painel-ia" class="painel">
+      <h2>Ferramentas de IA</h2>
       <label>
         <input type="checkbox" id="ia-ativo" />
         Ativar ferramentas de IA no editor de documentos
       </label>
       <br />
-      <h4>ChatGPT (OpenAI)</h4>
+      <h3>ChatGPT (OpenAI)</h3>
       <label>Chave de API: <input type="password" id="ia-openai-key" /></label>
       <br />
       <label>Modelo: <input type="text" id="ia-openai-modelo" placeholder="gpt-4o-mini" /></label>
       <br />
-      <h4>Gemini (Google)</h4>
+      <h3>Gemini (Google)</h3>
       <label>Chave de API: <input type="password" id="ia-gemini-key" /></label>
       <br />
       <label>Modelo: <input type="text" id="ia-gemini-modelo" placeholder="gemini-2.0-flash" /></label>
       <br />
-      <h4>Claude (Anthropic)</h4>
+      <h3>Claude (Anthropic)</h3>
       <label>Chave de API: <input type="password" id="ia-claude-key" /></label>
       <br />
       <label>Modelo: <input type="text" id="ia-claude-modelo" placeholder="claude-3-5-haiku-20241022" /></label>
       <br />
-      <button id="editor-salvar">Salvar</button>
-      <span id="editor-status"></span>
+      <button id="ia-salvar">Salvar</button>
+      <span id="ia-status"></span>
     </section>
     <section id="painel-notificacoes" class="painel">
       <h2>Notificações</h2>
