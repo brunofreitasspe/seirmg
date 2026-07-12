@@ -31,20 +31,18 @@ function normalizar(texto: string): string {
   return texto.trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
-function contemAssinaturaDoUsuario(textoAssinaturas: string, credenciais: UsuarioEUnidade): boolean {
+function contemAssinaturaDoUsuario(textoAssinaturas: string, usuario: string): boolean {
   const assinaturas = normalizar(textoAssinaturas)
   if (assinaturas.length === 0) return false
 
-  const usuario = normalizar(credenciais.usuario)
-  const unidade = normalizar(credenciais.unidade)
-
-  return (usuario !== '' && assinaturas.includes(usuario)) || (unidade !== '' && assinaturas.includes(unidade))
+  const usuarioNormalizado = normalizar(usuario)
+  return usuarioNormalizado !== '' && assinaturas.includes(usuarioNormalizado)
 }
 
 export function deveSelecionar(
   tipo: TipoSelecaoDocumentos,
   textoAssinaturas: string,
-  credenciais: UsuarioEUnidade
+  usuario: string
 ): boolean {
   const assinaturas = textoAssinaturas.trim()
 
@@ -56,8 +54,18 @@ export function deveSelecionar(
     case 'sem-assinatura':
       return assinaturas.length === 0
     case 'sem-minha-assinatura':
-      return !contemAssinaturaDoUsuario(textoAssinaturas, credenciais)
+      return !contemAssinaturaDoUsuario(textoAssinaturas, usuario)
     case 'com-minha-assinatura':
-      return contemAssinaturaDoUsuario(textoAssinaturas, credenciais)
+      return contemAssinaturaDoUsuario(textoAssinaturas, usuario)
   }
+}
+
+export function documentoJaAssinadoPorMim(textoAssinaturas: string, credenciais: UsuarioEUnidade): boolean {
+  const assinaturas = normalizar(textoAssinaturas)
+  if (assinaturas.length === 0) return false
+
+  const usuario = normalizar(credenciais.usuario)
+  const unidade = normalizar(credenciais.unidade)
+
+  return (usuario !== '' && assinaturas.includes(usuario)) || (unidade !== '' && assinaturas.includes(unidade))
 }

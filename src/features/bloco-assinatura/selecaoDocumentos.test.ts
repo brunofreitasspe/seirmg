@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { deveSelecionar, encontrarIndiceColunaAssinaturas, extrairNomeUsuario } from './selecaoDocumentos'
+import {
+  deveSelecionar,
+  documentoJaAssinadoPorMim,
+  encontrarIndiceColunaAssinaturas,
+  extrairNomeUsuario,
+} from './selecaoDocumentos'
 
 describe('extrairNomeUsuario', () => {
   it('extrai o nome no formato "NOME - usuário"', () => {
@@ -35,49 +40,81 @@ describe('encontrarIndiceColunaAssinaturas', () => {
 
 describe('deveSelecionar', () => {
   it('"todos" sempre seleciona', () => {
-    expect(deveSelecionar('todos', '', { usuario: 'joao', unidade: '' })).toBe(true)
-    expect(deveSelecionar('todos', 'Assinado por João', { usuario: 'joao', unidade: '' })).toBe(true)
+    expect(deveSelecionar('todos', '', 'joao')).toBe(true)
+    expect(deveSelecionar('todos', 'Assinado por João', 'joao')).toBe(true)
   })
 
   it('"nenhum" nunca seleciona', () => {
-    expect(deveSelecionar('nenhum', '', { usuario: 'joao', unidade: '' })).toBe(false)
-    expect(deveSelecionar('nenhum', 'Assinado por João', { usuario: 'joao', unidade: '' })).toBe(false)
+    expect(deveSelecionar('nenhum', '', 'joao')).toBe(false)
+    expect(deveSelecionar('nenhum', 'Assinado por João', 'joao')).toBe(false)
   })
 
   it('"sem-assinatura" seleciona só documentos sem nenhuma assinatura', () => {
-    expect(deveSelecionar('sem-assinatura', '', { usuario: 'João', unidade: '' })).toBe(true)
-    expect(deveSelecionar('sem-assinatura', 'Assinado por Maria', { usuario: 'João', unidade: '' })).toBe(false)
+    expect(deveSelecionar('sem-assinatura', '', 'João')).toBe(true)
+    expect(deveSelecionar('sem-assinatura', 'Assinado por Maria', 'João')).toBe(false)
   })
 
   it('"sem-minha-assinatura" seleciona documentos sem assinatura ou só com a de outro usuário', () => {
-    expect(deveSelecionar('sem-minha-assinatura', '', { usuario: 'João', unidade: '' })).toBe(true)
-    expect(
-      deveSelecionar('sem-minha-assinatura', 'Assinado por Maria', { usuario: 'João', unidade: '' })
-    ).toBe(true)
-    expect(
-      deveSelecionar('sem-minha-assinatura', 'Assinado por João', { usuario: 'João', unidade: '' })
-    ).toBe(false)
+    expect(deveSelecionar('sem-minha-assinatura', '', 'João')).toBe(true)
+    expect(deveSelecionar('sem-minha-assinatura', 'Assinado por Maria', 'João')).toBe(true)
+    expect(deveSelecionar('sem-minha-assinatura', 'Assinado por João', 'João')).toBe(false)
   })
 
   it('"com-minha-assinatura" seleciona só documentos que incluem a assinatura do usuário', () => {
-    expect(
-      deveSelecionar('com-minha-assinatura', 'Assinado por João e Maria', { usuario: 'João', unidade: '' })
-    ).toBe(true)
-    expect(
-      deveSelecionar('com-minha-assinatura', 'Assinado por Maria', { usuario: 'João', unidade: '' })
-    ).toBe(false)
-    expect(deveSelecionar('com-minha-assinatura', '', { usuario: 'João', unidade: '' })).toBe(false)
+    expect(deveSelecionar('com-minha-assinatura', 'Assinado por João e Maria', 'João')).toBe(true)
+    expect(deveSelecionar('com-minha-assinatura', 'Assinado por Maria', 'João')).toBe(false)
+    expect(deveSelecionar('com-minha-assinatura', '', 'João')).toBe(false)
   })
 
-  it('"com-minha-assinatura" também seleciona por correspondência de unidade', () => {
+  it('correspondência é case-insensitive', () => {
+    expect(deveSelecionar('com-minha-assinatura', 'ASSINADO POR JOÃO DA SILVA', 'joão da silva')).toBe(true)
+  })
+
+  it('correspondência tolera espaços extras/quebras de linha na célula', () => {
+    expect(deveSelecionar('com-minha-assinatura', 'Assinado   por\nJoão    da Silva', 'João da Silva')).toBe(
+      true
+    )
+  })
+
+  it('ignora usuário vazio (não seleciona tudo por engano)', () => {
+    expect(deveSelecionar('com-minha-assinatura', 'Assinado por Maria', '')).toBe(false)
+  })
+})
+
+describe('documentoJaAssinadoPorMim', () => {
+  it('corresponde pelo usuário', () => {
     expect(
-      deveSelecionar('com-minha-assinatura', 'Assinado por Maria (HMMG-DIR ADM)', {
+      documentoJaAssinadoPorMim('Assinado por João e Maria', { usuario: 'João', unidade: '' })
+    ).toBe(true)
+  })
+
+  it('corresponde pela unidade', () => {
+    expect(
+      documentoJaAssinadoPorMim('Assinado por Maria (HMMG-DIR ADM)', {
         usuario: 'João',
         unidade: 'HMMG-DIR ADM',
       })
     ).toBe(true)
+  })
+
+  it('corresponde por usuário OU unidade (não precisa dos dois)', () => {
     expect(
-      deveSelecionar('com-minha-assinatura', 'Assinado por Maria (HMMG-DJUR)', {
+      documentoJaAssinadoPorMim('Assinado por Maria (HMMG-DJUR)', {
+        usuario: 'João',
+        unidade: 'HMMG-DJUR',
+      })
+    ).toBe(true)
+    expect(
+      documentoJaAssinadoPorMim('Assinado por João (HMMG-DJUR)', {
+        usuario: 'João',
+        unidade: 'HMMG-DIR ADM',
+      })
+    ).toBe(true)
+  })
+
+  it('não corresponde quando nem usuário nem unidade aparecem', () => {
+    expect(
+      documentoJaAssinadoPorMim('Assinado por Maria (HMMG-DJUR)', {
         usuario: 'João',
         unidade: 'HMMG-DIR ADM',
       })
@@ -86,13 +123,13 @@ describe('deveSelecionar', () => {
 
   it('correspondência é case-insensitive', () => {
     expect(
-      deveSelecionar('com-minha-assinatura', 'ASSINADO POR JOÃO DA SILVA', {
+      documentoJaAssinadoPorMim('ASSINADO POR JOÃO DA SILVA (hmmg-dir adm)', {
         usuario: 'joão da silva',
-        unidade: '',
+        unidade: 'HMMG-DIR ADM',
       })
     ).toBe(true)
     expect(
-      deveSelecionar('com-minha-assinatura', 'Assinado por Maria (hmmg-dir adm)', {
+      documentoJaAssinadoPorMim('Assinado por Maria (hmmg-dir adm)', {
         usuario: 'joão',
         unidade: 'HMMG-DIR ADM',
       })
@@ -101,7 +138,7 @@ describe('deveSelecionar', () => {
 
   it('correspondência tolera espaços extras/quebras de linha na célula', () => {
     expect(
-      deveSelecionar('com-minha-assinatura', 'Assinado   por\nJoão    da Silva', {
+      documentoJaAssinadoPorMim('Assinado   por\nJoão    da Silva', {
         usuario: 'João da Silva',
         unidade: '',
       })
@@ -110,7 +147,17 @@ describe('deveSelecionar', () => {
 
   it('ignora unidade vazia (não seleciona tudo por engano)', () => {
     expect(
-      deveSelecionar('com-minha-assinatura', 'Assinado por Maria', { usuario: 'João', unidade: '' })
+      documentoJaAssinadoPorMim('Assinado por Maria', { usuario: 'João', unidade: '' })
     ).toBe(false)
+  })
+
+  it('ignora usuário vazio (não seleciona tudo por engano)', () => {
+    expect(
+      documentoJaAssinadoPorMim('Assinado por Maria', { usuario: '', unidade: 'HMMG-DJUR' })
+    ).toBe(false)
+  })
+
+  it('não corresponde quando o texto de assinaturas está vazio', () => {
+    expect(documentoJaAssinadoPorMim('', { usuario: 'João', unidade: 'HMMG-DIR ADM' })).toBe(false)
   })
 })

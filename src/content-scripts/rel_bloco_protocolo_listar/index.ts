@@ -1,6 +1,7 @@
 import { parseBlocoAssinaturaTable } from '../../features/bloco-assinatura/parser'
 import {
   deveSelecionar,
+  documentoJaAssinadoPorMim,
   encontrarIndiceColunaAssinaturas,
   extrairNomeUsuario,
   type TipoSelecaoDocumentos,
@@ -62,9 +63,9 @@ function paraCadaLinhaDeDocumento(
   })
 }
 
-function aplicarSelecao(tipo: TipoSelecaoDocumentos, credenciais: UsuarioEUnidade): void {
+function aplicarSelecao(tipo: TipoSelecaoDocumentos, usuario: string): void {
   paraCadaLinhaDeDocumento((checkbox, textoAssinaturas) => {
-    const selecionado = deveSelecionar(tipo, textoAssinaturas, credenciais)
+    const selecionado = deveSelecionar(tipo, textoAssinaturas, usuario)
     if (selecionado !== checkbox.checked) checkbox.click()
   })
 }
@@ -117,7 +118,7 @@ async function montarSelecaoDocumentos(): Promise<void> {
       const tipo = alvo.dataset.tipo as TipoSelecaoDocumentos | undefined
       if (!tipo) return
 
-      aplicarSelecao(tipo, credenciais)
+      aplicarSelecao(tipo, credenciais.usuario)
     })
   } catch (error) {
     console.error('[SEIRMG] Falha ao montar seleção em massa de documentos:', error)
@@ -135,7 +136,7 @@ async function aplicarDesabilitacaoAssinados(): Promise<void> {
     if (!credenciais) return
 
     paraCadaLinhaDeDocumento((checkbox, textoAssinaturas) => {
-      if (deveSelecionar('com-minha-assinatura', textoAssinaturas, credenciais)) {
+      if (documentoJaAssinadoPorMim(textoAssinaturas, credenciais)) {
         checkbox.disabled = true
         checkbox.title = 'Documento já assinado por você'
         checkbox.classList.add(CLASSE_CHECKBOX_JA_ASSINADO)
