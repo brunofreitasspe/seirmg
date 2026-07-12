@@ -9,19 +9,26 @@ import claudeIconSvg from '@lobehub/icons-static-svg/icons/claude-color.svg?raw'
 
 const ESTILO_PAINEL_IA = `
   #seirmg-botao-ia {
-    height: 24px;
-    padding: 0 8px;
-    background: #fff;
-    border: 1px solid #017fff;
-    border-radius: 3px;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 10000;
+    height: 32px;
+    padding: 0 12px;
+    background: #017fff;
+    border: none;
+    border-radius: 16px;
     display: inline-flex;
     align-items: center;
-    gap: 5px;
-    font-size: 12px;
-    color: #017fff;
+    gap: 6px;
+    font-size: 13px;
+    color: #fff;
     font-weight: bold;
     cursor: pointer;
-    margin: 2px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .25);
+  }
+  #seirmg-botao-ia:hover {
+    background: #0066cc;
   }
   #seirmg-painel-ia {
     position: fixed;
@@ -596,17 +603,18 @@ function obterInstanciaCKEditor(): EditorCKEditor | null {
   return Object.values(instances)[0] ?? null
 }
 
-function inserirBotaoNaBarra(editor: EditorCKEditor, config: FerramentasIAConfig): void {
+// Botão flutuante, independente da barra de ferramentas do CKEditor — item próprio,
+// não misturado com os botões nativos de formatação do editor.
+function montarBotaoFlutuante(editor: EditorCKEditor, config: FerramentasIAConfig): void {
   if (document.getElementById('seirmg-botao-ia')) return
-  const marcadorInicioBarra = document.querySelector('.cke_toolbox .cke_toolbar:first-child .cke_toolbar_start')
-  if (!marcadorInicioBarra) return
 
-  const botao = document.createElement('span')
+  const botao = document.createElement('button')
+  botao.type = 'button'
   botao.id = 'seirmg-botao-ia'
-  botao.textContent = '✨ IA'
+  botao.textContent = '✨ Ferramentas de IA'
   botao.title = 'Ferramentas de IA'
   botao.addEventListener('click', () => montarPainel(config, editor))
-  marcadorInicioBarra.insertAdjacentElement('afterend', botao)
+  document.body.appendChild(botao)
 }
 
 async function bootstrap(): Promise<void> {
@@ -618,7 +626,7 @@ async function bootstrap(): Promise<void> {
     esperarCKEditor(() => {
       const editor = obterInstanciaCKEditor()
       if (!editor) return
-      inserirBotaoNaBarra(editor, config.ferramentasIA)
+      montarBotaoFlutuante(editor, config.ferramentasIA)
     })
   } catch (error) {
     console.error('[SEIRMG] Falha ao inicializar ferramentas de IA no editor:', error)
