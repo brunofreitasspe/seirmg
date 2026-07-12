@@ -71,6 +71,7 @@ describe('createSyncConfigStore', () => {
       rolagemInfinita: { ativo: false },
       agrupamento: { criterio: 'nenhum' },
       favoritos: { ativo: false, itens: [] },
+      alertaNaoAssinados: { ativo: true },
     })
   })
 

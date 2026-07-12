@@ -284,6 +284,7 @@ async function carregarAbaProcessos(): Promise<void> {
               ativo: inputFavoritosAtivo?.checked ?? false,
               itens: config.controleProcessos.favoritos.itens,
             },
+            alertaNaoAssinados: config.controleProcessos.alertaNaoAssinados,
           },
           pontoControle: {
             ativo: inputPontoControleAtivo?.checked ?? true,

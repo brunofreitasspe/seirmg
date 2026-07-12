@@ -66,6 +66,10 @@ export interface FavoritosConfig {
   itens: FavoritoProcesso[]
 }
 
+export interface AlertaNaoAssinadosConfig {
+  ativo: boolean
+}
+
 export interface ControleProcessosConfig {
   prazos: PrazosConfig
   coresProcesso: CoresProcessoConfig
@@ -73,6 +77,7 @@ export interface ControleProcessosConfig {
   rolagemInfinita: RolagemInfinitaConfig
   agrupamento: AgrupamentoConfig
   favoritos: FavoritosConfig
+  alertaNaoAssinados: AlertaNaoAssinadosConfig
 }
 
 export interface ConfiguracaoPontoControle {
@@ -192,6 +197,9 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     favoritos: {
       ativo: false,
       itens: [],
+    },
+    alertaNaoAssinados: {
+      ativo: true,
     },
   },
   pontoControle: {
