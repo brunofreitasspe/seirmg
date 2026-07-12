@@ -2,6 +2,11 @@ import { createLocalConfigStore } from '../../lib/storage'
 
 const BADGE_ID = 'seirmg-badge-pendencias'
 
+export function encontrarContainerBadge(doc: Document): Element | null {
+  const logo = doc.querySelector('#lnkInfraLogo, #divLogoSEI, .infraLogo')
+  return logo?.parentElement ?? null
+}
+
 export async function renderBadge(): Promise<void> {
   const existente = document.getElementById(BADGE_ID)
   if (existente) existente.remove()
@@ -10,8 +15,8 @@ export async function renderBadge(): Promise<void> {
   const totalPendente = localConfig.blocoAssinaturaPendenteAtual.length
   if (totalPendente === 0) return
 
-  const logo = document.querySelector('#lnkInfraLogo, #divLogoSEI, .infraLogo')
-  const container = logo?.parentElement ?? document.body
+  const container = encontrarContainerBadge(document)
+  if (!container) return
 
   const badge = document.createElement('span')
   badge.id = BADGE_ID
