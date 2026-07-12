@@ -197,6 +197,9 @@ async function carregarAbaProcessos(): Promise<void> {
       'processos-rolagem-infinita-ativo'
     ) as HTMLInputElement | null
     const inputFavoritosAtivo = document.getElementById('processos-favoritos-ativo') as HTMLInputElement | null
+    const inputAlertaNaoAssinadosAtivo = document.getElementById(
+      'processos-alerta-nao-assinados-ativo'
+    ) as HTMLInputElement | null
     const status = document.getElementById('processos-status')
 
     if (inputPrazosAtivo) inputPrazosAtivo.checked = config.controleProcessos.prazos.ativo
@@ -217,6 +220,9 @@ async function carregarAbaProcessos(): Promise<void> {
     }
     if (inputFavoritosAtivo) {
       inputFavoritosAtivo.checked = config.controleProcessos.favoritos.ativo
+    }
+    if (inputAlertaNaoAssinadosAtivo) {
+      inputAlertaNaoAssinadosAtivo.checked = config.controleProcessos.alertaNaoAssinados.ativo
     }
 
     const containerCores = document.getElementById('processos-cores-lista')
@@ -284,7 +290,9 @@ async function carregarAbaProcessos(): Promise<void> {
               ativo: inputFavoritosAtivo?.checked ?? false,
               itens: config.controleProcessos.favoritos.itens,
             },
-            alertaNaoAssinados: config.controleProcessos.alertaNaoAssinados,
+            alertaNaoAssinados: {
+              ativo: inputAlertaNaoAssinadosAtivo?.checked ?? true,
+            },
           },
           pontoControle: {
             ativo: inputPontoControleAtivo?.checked ?? true,
