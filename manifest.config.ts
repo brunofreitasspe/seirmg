@@ -57,8 +57,8 @@ export default defineManifest({
     },
     {
       matches: [
-        '*://*.br/*controlador.php?acao=bloco_assinatura_listar*',
-        '*://*.org/*controlador.php?acao=bloco_assinatura_listar*',
+        '*://*.br/*controlador.php?acao=rel_bloco_protocolo_listar*',
+        '*://*.org/*controlador.php?acao=rel_bloco_protocolo_listar*',
       ],
       js: ['src/content-scripts/rel_bloco_protocolo_listar/index.ts'],
       run_at: 'document_idle',
