@@ -105,10 +105,16 @@ async function carregarAbaGeral(): Promise<void> {
     const inputSelecaoMassa = document.getElementById(
       'geral-selecao-massa-ativo'
     ) as HTMLInputElement | null
+    const inputDesabilitarAssinados = document.getElementById(
+      'geral-desabilitar-assinados-ativo'
+    ) as HTMLInputElement | null
     const status = document.getElementById('geral-status')
 
     if (inputSelecaoMassa) {
       inputSelecaoMassa.checked = config.featureFlags.selecaoEmMassaBlocoAssinatura
+    }
+    if (inputDesabilitarAssinados) {
+      inputDesabilitarAssinados.checked = config.featureFlags.desabilitarDocumentosAssinados
     }
 
     document.getElementById('geral-salvar')?.addEventListener('click', async () => {
@@ -118,6 +124,7 @@ async function carregarAbaGeral(): Promise<void> {
           featureFlags: {
             ...config.featureFlags,
             selecaoEmMassaBlocoAssinatura: inputSelecaoMassa?.checked ?? true,
+            desabilitarDocumentosAssinados: inputDesabilitarAssinados?.checked ?? true,
           },
         }
         await store.set(atualizado)
