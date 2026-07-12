@@ -1,9 +1,6 @@
 import type { DocumentoPendente } from './detectarPendencias'
 
-export function montarDialogoConfirmacao(
-  pendencias: DocumentoPendente[],
-  unidadeAtual: string
-): HTMLDialogElement {
+export function montarDialogoAviso(pendencias: DocumentoPendente[], unidadeAtual: string): HTMLDialogElement {
   const dialog = document.createElement('dialog')
   dialog.className = 'seirmg-alerta-nao-assinados'
 
@@ -37,15 +34,11 @@ export function montarDialogoConfirmacao(
 
   const rodape = document.createElement('div')
   rodape.className = 'seirmg-alerta-nao-assinados-rodape'
-  const btnCancelar = document.createElement('button')
-  btnCancelar.type = 'button'
-  btnCancelar.className = 'seirmg-alerta-nao-assinados-cancelar'
-  btnCancelar.textContent = 'Cancelar'
-  const btnConfirmar = document.createElement('button')
-  btnConfirmar.type = 'button'
-  btnConfirmar.className = 'seirmg-alerta-nao-assinados-confirmar'
-  btnConfirmar.textContent = 'Enviar mesmo assim'
-  rodape.append(btnCancelar, btnConfirmar)
+  const btnEntendi = document.createElement('button')
+  btnEntendi.type = 'button'
+  btnEntendi.className = 'seirmg-alerta-nao-assinados-confirmar'
+  btnEntendi.textContent = 'Entendi'
+  rodape.appendChild(btnEntendi)
   dialog.appendChild(rodape)
 
   return dialog

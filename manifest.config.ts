@@ -99,6 +99,8 @@ export default defineManifest({
       matches: [
         '*://*.br/*controlador.php?acao=procedimento_enviar*',
         '*://*.org/*controlador.php?acao=procedimento_enviar*',
+        '*://*.br/*controlador.php?acao=arvore_visualizar*',
+        '*://*.org/*controlador.php?acao=arvore_visualizar*',
       ],
       js: ['src/content-scripts/procedimento_enviar/index.ts'],
       all_frames: true,

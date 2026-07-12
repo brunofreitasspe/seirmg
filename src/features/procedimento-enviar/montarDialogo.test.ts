@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { montarDialogoConfirmacao } from './montarDialogo'
+import { montarDialogoAviso } from './montarDialogo'
 
-describe('montarDialogoConfirmacao', () => {
+describe('montarDialogoAviso', () => {
   it('monta um <dialog> com título, unidade e lista de documentos', () => {
-    const dialog = montarDialogoConfirmacao(
+    const dialog = montarDialogoAviso(
       [
         { id: '200', nome: 'Ofício 2/2026' },
         { id: '300', nome: 'Parecer 3/2026' },
@@ -22,12 +22,11 @@ describe('montarDialogoConfirmacao', () => {
     expect(itens[1].textContent).toBe('Parecer 3/2026')
   })
 
-  it('inclui botões de cancelar e confirmar', () => {
-    const dialog = montarDialogoConfirmacao([{ id: '200', nome: 'Ofício 2/2026' }], 'HMMG-DIR ADM')
+  it('inclui um único botão de dispensar o aviso', () => {
+    const dialog = montarDialogoAviso([{ id: '200', nome: 'Ofício 2/2026' }], 'HMMG-DIR ADM')
 
-    const cancelar = dialog.querySelector('.seirmg-alerta-nao-assinados-cancelar')
-    const confirmar = dialog.querySelector('.seirmg-alerta-nao-assinados-confirmar')
-    expect(cancelar?.textContent).toBe('Cancelar')
-    expect(confirmar?.textContent).toBe('Enviar mesmo assim')
+    const botoes = dialog.querySelectorAll('.seirmg-alerta-nao-assinados-rodape button')
+    expect(botoes).toHaveLength(1)
+    expect(botoes[0].textContent).toBe('Entendi')
   })
 })

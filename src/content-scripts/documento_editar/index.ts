@@ -617,42 +617,18 @@ function montarBotaoFlutuante(editor: EditorCKEditor, config: FerramentasIAConfi
   document.body.appendChild(botao)
 }
 
-// DEBUG TEMPORÁRIO — remover depois de diagnosticar por que o botão flutuante não aparece em produção.
-function debugBanner(texto: string): void {
-  try {
-    const alvo = window.top?.document.body ?? document.body
-    const banner = alvo.ownerDocument!.createElement('div')
-    banner.textContent = `[SEIRMG DEBUG documento_editar] ${texto}`
-    banner.style.cssText =
-      'position:fixed;top:0;left:0;right:0;z-index:2147483647;background:#0066ff;color:#fff;' +
-      'font:bold 13px monospace;padding:6px 10px;white-space:pre-wrap;'
-    alvo.prepend(banner)
-  } catch (error) {
-    console.error('[SEIRMG] debugBanner falhou:', error)
-  }
-}
-
 async function bootstrap(): Promise<void> {
   try {
     const config = await createSyncConfigStore().get()
-    if (!config.ferramentasIA.ativo) {
-      debugBanner(`ferramentasIA.ativo=false em ${window.location.href}`)
-      return
-    }
+    if (!config.ferramentasIA.ativo) return
 
     injetarEstilos()
-    debugBanner(`config.ativo=true, esperando CKEditor em ${window.location.href}`)
     esperarCKEditor(() => {
       const editor = obterInstanciaCKEditor()
-      if (!editor) {
-        debugBanner(`CKEDITOR existe mas nenhuma instância encontrada em ${window.location.href}`)
-        return
-      }
-      debugBanner(`CKEditor encontrado, montando botão em ${window.location.href}`)
+      if (!editor) return
       montarBotaoFlutuante(editor, config.ferramentasIA)
     })
   } catch (error) {
-    debugBanner(`ERRO: ${error instanceof Error ? error.message : String(error)}`)
     console.error('[SEIRMG] Falha ao inicializar ferramentas de IA no editor:', error)
   }
 }
