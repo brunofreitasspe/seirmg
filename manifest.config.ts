@@ -101,6 +101,7 @@ export default defineManifest({
         '*://*.org/*controlador.php?acao=procedimento_enviar*',
       ],
       js: ['src/content-scripts/procedimento_enviar/index.ts'],
+      all_frames: true,
       run_at: 'document_idle',
     },
     {
