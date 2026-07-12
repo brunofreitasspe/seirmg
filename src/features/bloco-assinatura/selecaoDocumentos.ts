@@ -5,11 +5,6 @@ export type TipoSelecaoDocumentos =
   | 'sem-minha-assinatura'
   | 'com-minha-assinatura'
 
-export interface UsuarioEUnidade {
-  usuario: string
-  unidade: string
-}
-
 export function extrairNomeUsuario(tituloUsuario: string): string | null {
   const matchTraco = tituloUsuario.match(/(.+)\s-\s/)
   if (matchTraco) return matchTraco[1]
@@ -58,16 +53,6 @@ export function deveSelecionar(
     case 'com-minha-assinatura':
       return contemAssinaturaDoUsuario(textoAssinaturas, usuario)
   }
-}
-
-export function documentoJaAssinadoPorMim(textoAssinaturas: string, credenciais: UsuarioEUnidade): boolean {
-  const assinaturas = normalizar(textoAssinaturas)
-  if (assinaturas.length === 0) return false
-
-  const usuario = normalizar(credenciais.usuario)
-  const unidade = normalizar(credenciais.unidade)
-
-  return (usuario !== '' && assinaturas.includes(usuario)) || (unidade !== '' && assinaturas.includes(unidade))
 }
 
 const TITULO_CHECKBOX_JA_ASSINADO = 'Documento já assinado por você'

@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
   deveSelecionar,
-  documentoJaAssinadoPorMim,
   encontrarIndiceColunaAssinaturas,
   extrairNomeUsuario,
   marcarCheckboxComoJaAssinado,
@@ -79,87 +78,6 @@ describe('deveSelecionar', () => {
 
   it('ignora usuário vazio (não seleciona tudo por engano)', () => {
     expect(deveSelecionar('com-minha-assinatura', 'Assinado por Maria', '')).toBe(false)
-  })
-})
-
-describe('documentoJaAssinadoPorMim', () => {
-  it('corresponde pelo usuário', () => {
-    expect(
-      documentoJaAssinadoPorMim('Assinado por João e Maria', { usuario: 'João', unidade: '' })
-    ).toBe(true)
-  })
-
-  it('corresponde pela unidade', () => {
-    expect(
-      documentoJaAssinadoPorMim('Assinado por Maria (HMMG-DIR ADM)', {
-        usuario: 'João',
-        unidade: 'HMMG-DIR ADM',
-      })
-    ).toBe(true)
-  })
-
-  it('corresponde por usuário OU unidade (não precisa dos dois)', () => {
-    expect(
-      documentoJaAssinadoPorMim('Assinado por Maria (HMMG-DJUR)', {
-        usuario: 'João',
-        unidade: 'HMMG-DJUR',
-      })
-    ).toBe(true)
-    expect(
-      documentoJaAssinadoPorMim('Assinado por João (HMMG-DJUR)', {
-        usuario: 'João',
-        unidade: 'HMMG-DIR ADM',
-      })
-    ).toBe(true)
-  })
-
-  it('não corresponde quando nem usuário nem unidade aparecem', () => {
-    expect(
-      documentoJaAssinadoPorMim('Assinado por Maria (HMMG-DJUR)', {
-        usuario: 'João',
-        unidade: 'HMMG-DIR ADM',
-      })
-    ).toBe(false)
-  })
-
-  it('correspondência é case-insensitive', () => {
-    expect(
-      documentoJaAssinadoPorMim('ASSINADO POR JOÃO DA SILVA (hmmg-dir adm)', {
-        usuario: 'joão da silva',
-        unidade: 'HMMG-DIR ADM',
-      })
-    ).toBe(true)
-    expect(
-      documentoJaAssinadoPorMim('Assinado por Maria (hmmg-dir adm)', {
-        usuario: 'joão',
-        unidade: 'HMMG-DIR ADM',
-      })
-    ).toBe(true)
-  })
-
-  it('correspondência tolera espaços extras/quebras de linha na célula', () => {
-    expect(
-      documentoJaAssinadoPorMim('Assinado   por\nJoão    da Silva', {
-        usuario: 'João da Silva',
-        unidade: '',
-      })
-    ).toBe(true)
-  })
-
-  it('ignora unidade vazia (não seleciona tudo por engano)', () => {
-    expect(
-      documentoJaAssinadoPorMim('Assinado por Maria', { usuario: 'João', unidade: '' })
-    ).toBe(false)
-  })
-
-  it('ignora usuário vazio (não seleciona tudo por engano)', () => {
-    expect(
-      documentoJaAssinadoPorMim('Assinado por Maria', { usuario: '', unidade: 'HMMG-DJUR' })
-    ).toBe(false)
-  })
-
-  it('não corresponde quando o texto de assinaturas está vazio', () => {
-    expect(documentoJaAssinadoPorMim('', { usuario: 'João', unidade: 'HMMG-DIR ADM' })).toBe(false)
   })
 })
 

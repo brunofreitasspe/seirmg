@@ -1,5 +1,12 @@
 # Desabilitar checkbox de documentos já assinados (Bloco de Assinatura)
 
+## Nota pós-validação em produção (2026-07-12)
+
+Testado ao vivo pelo usuário contra a instância real do SEI (Campinas). Duas descobertas mudaram o desenho original abaixo — o resto do documento descreve o design **original**, mantido como histórico:
+
+1. **A correspondência por unidade foi removida.** A coluna "Assinaturas" dessa tela mostra só nome da pessoa + cargo (ex.: "BRUNO FREITAS DA SILVA PEREIRA / Diretor(a) Administrativo") — a sigla da unidade **nunca aparece** nesse texto (diferente da árvore do processo usada no Lote Q). A correspondência por unidade era, portanto, código morto nessa tela. `deveSelecionar()` voltou à assinatura original (usuário apenas, `string`, sem `UsuarioEUnidade`) — mantendo as melhorias de case-insensitive/espaços tolerantes. A função `documentoJaAssinadoPorMim` foi removida; a desabilitação agora chama `deveSelecionar('com-minha-assinatura', texto, usuario)` diretamente, igual à seleção em massa.
+2. **Bug real corrigido: o SEI renderiza o checkbox clicável como um `<label class="infraCheckboxLabel" for="...">` separado, com o `<input>` real visualmente oculto atrás.** Desabilitar/estilizar só o `<input>` não produzia nenhuma mudança visível na tela. Nova função `marcarCheckboxComoJaAssinado()` (em `selecaoDocumentos.ts`) usa `checkbox.labels` (API nativa) pra aplicar a mesma marcação no `<label>` associado.
+
 ## Contexto
 
 Na tela de Bloco de Assinatura (`acao=bloco_assinatura_listar`, content script `rel_bloco_protocolo_listar`), cada linha da tabela de documentos tem um checkbox de seleção pra assinatura em massa. Se um documento já foi assinado pelo usuário logado (ou pela unidade atual dele), tentar assiná-lo de novo é uma ação inútil/redundante — o checkbox deveria vir desabilitado, com feedback visual e textual claro.

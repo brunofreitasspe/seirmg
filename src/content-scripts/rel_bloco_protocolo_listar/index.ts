@@ -1,14 +1,11 @@
 import { parseBlocoAssinaturaTable } from '../../features/bloco-assinatura/parser'
 import {
   deveSelecionar,
-  documentoJaAssinadoPorMim,
   encontrarIndiceColunaAssinaturas,
   extrairNomeUsuario,
   marcarCheckboxComoJaAssinado,
   type TipoSelecaoDocumentos,
-  type UsuarioEUnidade,
 } from '../../features/bloco-assinatura/selecaoDocumentos'
-import { obterUnidadeAtual } from '../../features/procedimento-visualizar/painelLateral'
 import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
 import { renderBadge } from '../core/badge'
 
@@ -70,15 +67,9 @@ function aplicarSelecao(tipo: TipoSelecaoDocumentos, usuario: string): void {
   })
 }
 
-async function obterCredenciais(): Promise<UsuarioEUnidade | null> {
+function obterNomeUsuarioLogado(): string | null {
   const tituloUsuario = document.querySelector('#lnkUsuarioSistema')?.getAttribute('title') ?? ''
-  const usuario = extrairNomeUsuario(tituloUsuario)
-  if (!usuario) return null
-
-  const localConfig = await createLocalConfigStore().get()
-  const unidade = obterUnidadeAtual(localConfig.seiVersionAtLeast4 ?? true, document) ?? ''
-
-  return { usuario, unidade }
+  return extrairNomeUsuario(tituloUsuario)
 }
 
 async function montarSelecaoDocumentos(): Promise<void> {
@@ -89,8 +80,8 @@ async function montarSelecaoDocumentos(): Promise<void> {
     if (!estaNaTelaDoBloco()) return
     if (document.getElementById(ID_SELECAO_DOCUMENTOS)) return
 
-    const credenciais = await obterCredenciais()
-    if (!credenciais) {
+    const usuario = obterNomeUsuarioLogado()
+    if (!usuario) {
       console.error('[SEIRMG] Falha ao obter o nome do usuário para seleção em massa de documentos.')
       return
     }
@@ -118,7 +109,7 @@ async function montarSelecaoDocumentos(): Promise<void> {
       const tipo = alvo.dataset.tipo as TipoSelecaoDocumentos | undefined
       if (!tipo) return
 
-      aplicarSelecao(tipo, credenciais.usuario)
+      aplicarSelecao(tipo, usuario)
     })
   } catch (error) {
     console.error('[SEIRMG] Falha ao montar seleção em massa de documentos:', error)
@@ -132,11 +123,11 @@ async function aplicarDesabilitacaoAssinados(): Promise<void> {
 
     if (!estaNaTelaDoBloco()) return
 
-    const credenciais = await obterCredenciais()
-    if (!credenciais) return
+    const usuario = obterNomeUsuarioLogado()
+    if (!usuario) return
 
     paraCadaLinhaDeDocumento((checkbox, textoAssinaturas) => {
-      if (documentoJaAssinadoPorMim(textoAssinaturas, credenciais)) {
+      if (deveSelecionar('com-minha-assinatura', textoAssinaturas, usuario)) {
         marcarCheckboxComoJaAssinado(checkbox)
       }
     })
