@@ -4,6 +4,7 @@ import {
   documentoJaAssinadoPorMim,
   encontrarIndiceColunaAssinaturas,
   extrairNomeUsuario,
+  marcarCheckboxComoJaAssinado,
   type TipoSelecaoDocumentos,
   type UsuarioEUnidade,
 } from '../../features/bloco-assinatura/selecaoDocumentos'
@@ -12,7 +13,6 @@ import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage
 import { renderBadge } from '../core/badge'
 
 const ID_SELECAO_DOCUMENTOS = 'seirmg-selecao-documentos-assinar'
-const CLASSE_CHECKBOX_JA_ASSINADO = 'seirmg-checkbox-ja-assinado'
 
 async function processarPagina(): Promise<void> {
   try {
@@ -137,9 +137,7 @@ async function aplicarDesabilitacaoAssinados(): Promise<void> {
 
     paraCadaLinhaDeDocumento((checkbox, textoAssinaturas) => {
       if (documentoJaAssinadoPorMim(textoAssinaturas, credenciais)) {
-        checkbox.disabled = true
-        checkbox.title = 'Documento já assinado por você'
-        checkbox.classList.add(CLASSE_CHECKBOX_JA_ASSINADO)
+        marcarCheckboxComoJaAssinado(checkbox)
       }
     })
   } catch (error) {

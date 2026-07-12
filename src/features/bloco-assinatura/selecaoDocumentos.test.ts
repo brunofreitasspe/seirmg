@@ -4,6 +4,7 @@ import {
   documentoJaAssinadoPorMim,
   encontrarIndiceColunaAssinaturas,
   extrairNomeUsuario,
+  marcarCheckboxComoJaAssinado,
 } from './selecaoDocumentos'
 
 describe('extrairNomeUsuario', () => {
@@ -159,5 +160,39 @@ describe('documentoJaAssinadoPorMim', () => {
 
   it('não corresponde quando o texto de assinaturas está vazio', () => {
     expect(documentoJaAssinadoPorMim('', { usuario: 'João', unidade: 'HMMG-DIR ADM' })).toBe(false)
+  })
+})
+
+describe('marcarCheckboxComoJaAssinado', () => {
+  it('desabilita o checkbox e aplica título/classe nele', () => {
+    document.body.innerHTML = '<input type="checkbox" id="chkInfraItem0">'
+    const checkbox = document.getElementById('chkInfraItem0') as HTMLInputElement
+
+    marcarCheckboxComoJaAssinado(checkbox)
+
+    expect(checkbox.disabled).toBe(true)
+    expect(checkbox.title).toBe('Documento já assinado por você')
+    expect(checkbox.classList.contains('seirmg-checkbox-ja-assinado')).toBe(true)
+  })
+
+  it('aplica título/classe também no <label> associado via for (não aninhado)', () => {
+    document.body.innerHTML =
+      '<input type="checkbox" id="chkInfraItem0">' +
+      '<label class="infraCheckboxLabel" for="chkInfraItem0" title="18099421"></label>'
+    const checkbox = document.getElementById('chkInfraItem0') as HTMLInputElement
+    const label = document.querySelector('label[for="chkInfraItem0"]') as HTMLLabelElement
+
+    marcarCheckboxComoJaAssinado(checkbox)
+
+    expect(label.title).toBe('Documento já assinado por você')
+    expect(label.classList.contains('seirmg-checkbox-ja-assinado')).toBe(true)
+  })
+
+  it('não quebra quando o checkbox não tem nenhum label associado', () => {
+    document.body.innerHTML = '<input type="checkbox" id="chkSemLabel">'
+    const checkbox = document.getElementById('chkSemLabel') as HTMLInputElement
+
+    expect(() => marcarCheckboxComoJaAssinado(checkbox)).not.toThrow()
+    expect(checkbox.disabled).toBe(true)
   })
 })
