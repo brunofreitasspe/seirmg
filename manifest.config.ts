@@ -97,6 +97,14 @@ export default defineManifest({
     },
     {
       matches: [
+        '*://*.br/*controlador.php?acao=procedimento_enviar*',
+        '*://*.org/*controlador.php?acao=procedimento_enviar*',
+      ],
+      js: ['src/content-scripts/procedimento_enviar/index.ts'],
+      run_at: 'document_idle',
+    },
+    {
+      matches: [
         '*://*.br/*controlador.php?acao=procedimento_visualizar*',
         '*://*.org/*controlador.php?acao=procedimento_visualizar*',
       ],
