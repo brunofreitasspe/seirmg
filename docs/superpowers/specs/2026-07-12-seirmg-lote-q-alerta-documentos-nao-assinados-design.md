@@ -25,6 +25,14 @@ Confirmado com HTML real da árvore do processo (não é suposição):
 
 O identificador `documento_interno.svg` já é usado no Sei Pro original (`var nameDocInterno = 'documento_interno.svg'`) pra distinguir documentos internos de externos — mesmo critério aqui.
 
+**Correlação por id numérico (confirmada com HTML real da árvore):** cada documento tem um id numérico (ex.: `21013865`) compartilhado entre vários elementos:
+- `<img id="icon{id}">` — ícone do tipo do documento (ex.: `documento_interno.svg`). Documentos assinados têm um segundo ícone `<img id="iconA{id}">` (prefixo `iconA`, distinto de `icon{id}`).
+- `<a id="anchorA{id}">` — só existe se o documento estiver assinado (ver seção anterior).
+- `<a id="anchorUG{id}">` — sempre presente em documento interno; contém um `<span>` com a sigla da unidade geradora (ex.: "HMMG-DIR ADM"), confirmado com HTML real. É essa a fonte de dado pra filtrar "unidade atual" — comparando com a sigla retornada por `obterUnidadeAtual()` (`src/features/procedimento-visualizar/painelLateral.ts`).
+- `<a id="anchor{id}">` — (não confirmado com HTML real, mas usado pelo Sei Pro original pra abrir/rotular o documento) provável fonte do nome/rótulo do documento pra exibir no diálogo; se ausente, cai no fallback de mostrar só o id.
+
+Documento pendente = existe `icon{id}` com src contendo `documento_interno`, `anchorUG{id}` cujo `<span>` bate com a unidade atual, e **não** existe `anchorA{id}` correspondente.
+
 ## Arquitetura técnica
 
 - **Novo content script** para a URL `acao=procedimento_enviar` (etapa do SEI onde se escolhe a unidade de destino do envio) — nenhum content script cobre essa URL hoje.
