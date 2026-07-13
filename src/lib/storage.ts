@@ -119,6 +119,11 @@ export interface FerramentasIAConfig {
   claude: ProvedorIAConfig
 }
 
+export interface CorretorOrtograficoConfig {
+  ativo: boolean
+  palavrasIgnoradas: string[]
+}
+
 export interface SyncConfig {
   schemaVersion: 1
   featureFlags: FeatureFlags
@@ -128,6 +133,7 @@ export interface SyncConfig {
   pontoControle: PontoControleConfig
   documentoExterno: DocumentoExternoConfig
   ferramentasIA: FerramentasIAConfig
+  corretorOrtografico: CorretorOrtograficoConfig
 }
 
 export interface NotificadoState {
@@ -222,6 +228,10 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     openai: { apiKey: '', modelo: 'gpt-4o-mini' },
     gemini: { apiKey: '', modelo: 'gemini-2.0-flash' },
     claude: { apiKey: '', modelo: 'claude-3-5-haiku-20241022' },
+  },
+  corretorOrtografico: {
+    ativo: false,
+    palavrasIgnoradas: [],
   },
 }
 

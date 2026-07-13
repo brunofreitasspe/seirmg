@@ -215,6 +215,25 @@ describe('createSyncConfigStore', () => {
     await store.set(atualizado)
     expect(await store.get()).toEqual(atualizado)
   })
+
+  it('inclui corretorOrtografico desativado por padrão', async () => {
+    const store = createSyncConfigStore(criarAreaFalsa())
+    const config = await store.get()
+    expect(config.corretorOrtografico.ativo).toBe(false)
+    expect(config.corretorOrtografico.palavrasIgnoradas).toEqual([])
+  })
+
+  it('persiste alteração de corretorOrtografico', async () => {
+    const area = criarAreaFalsa()
+    const store = createSyncConfigStore(area)
+    const config = await store.get()
+    const atualizado = {
+      ...config,
+      corretorOrtografico: { ativo: true, palavrasIgnoradas: ['SEIRMG'] },
+    }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
 })
 
 describe('createLocalConfigStore', () => {
