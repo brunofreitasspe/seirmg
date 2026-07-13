@@ -6,6 +6,8 @@ import type { ProvedorIA, FerramentasIAConfig } from '../../lib/storage'
 import openaiIconSvg from '@lobehub/icons-static-svg/icons/openai.svg?raw'
 import geminiIconSvg from '@lobehub/icons-static-svg/icons/gemini-color.svg?raw'
 import claudeIconSvg from '@lobehub/icons-static-svg/icons/claude-color.svg?raw'
+import sparklesIconSvg from 'lucide-static/icons/sparkles.svg?raw'
+import { criarClienteEditor, type EditorSEI } from './ponteEditor'
 
 const ESTILO_PAINEL_IA = `
   #seirmg-botao-ia {
@@ -29,6 +31,11 @@ const ESTILO_PAINEL_IA = `
   }
   #seirmg-botao-ia:hover {
     background: #0066cc;
+  }
+  #seirmg-botao-ia svg {
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
   }
   #seirmg-painel-ia {
     position: fixed;
@@ -253,9 +260,9 @@ let estadoAtual: EstadoPainel = { provedor: 'openai', modo: 'livre', confirmado:
 let respostaAtual: string | null = null
 let enviandoAtual = false
 
-function obterTextoSelecionado(editor: { getSelection: () => { getSelectedText: () => string } | null }): string {
+async function obterTextoSelecionado(editor: EditorSEI): Promise<string> {
   try {
-    return editor.getSelection()?.getSelectedText()?.trim() ?? ''
+    return (await editor.obterTextoSelecionado()).trim()
   } catch {
     return ''
   }
@@ -412,21 +419,9 @@ function montarHtmlPainel(
   `
 }
 
-export interface EditorCKEditor {
-  getSelection: () => { getSelectedText: () => string } | null
-  insertHtml: (html: string) => void
-  insertText: (texto: string) => void
-  editable?: () => { getText: () => string } | undefined
-  document: {
-    $: Document
-    getBody: () => { $: HTMLElement }
-    getWindow: () => { $: Window }
-  }
-}
-
-function obterTextoDocumentoInteiro(editor: EditorCKEditor): string {
+async function obterTextoDocumentoInteiro(editor: EditorSEI): Promise<string> {
   try {
-    return editor.editable?.()?.getText()?.trim() ?? ''
+    return (await editor.obterTextoCompleto()).trim()
   } catch {
     return ''
   }
@@ -442,21 +437,22 @@ function detectarDocumentoRestrito(): boolean {
   return document.getElementById(`anchorNA${idDocumento}`) !== null
 }
 
-function atualizarPainel(config: FerramentasIAConfig, editor: EditorCKEditor): void {
+async function atualizarPainel(config: FerramentasIAConfig, editor: EditorSEI): Promise<void> {
   const painel = document.getElementById('seirmg-painel-ia')
   if (!painel) return
-  painel.innerHTML = montarHtmlPainel(config, obterTextoSelecionado(editor), detectarDocumentoRestrito())
+  const textoSelecionado = await obterTextoSelecionado(editor)
+  painel.innerHTML = montarHtmlPainel(config, textoSelecionado, detectarDocumentoRestrito())
 }
 
 async function enviar(
   prompt: string,
   provedor: ProvedorIA,
   config: FerramentasIAConfig,
-  editor: EditorCKEditor
+  editor: EditorSEI
 ): Promise<void> {
   enviandoAtual = true
   respostaAtual = null
-  atualizarPainel(config, editor)
+  await atualizarPainel(config, editor)
 
   try {
     const provedorConfig = config[provedor]
@@ -476,11 +472,11 @@ async function enviar(
     respostaAtual = `Erro inesperado: ${error instanceof Error ? error.message : String(error)}`
   } finally {
     enviandoAtual = false
-    atualizarPainel(config, editor)
+    await atualizarPainel(config, editor)
   }
 }
 
-function tratarCliquePainel(evento: MouseEvent, config: FerramentasIAConfig, editor: EditorCKEditor): void {
+async function tratarCliquePainel(evento: MouseEvent, config: FerramentasIAConfig, editor: EditorSEI): Promise<void> {
   if (!(evento.target instanceof HTMLElement)) return
   const elemento = evento.target.closest<HTMLElement>('[data-acao]')
   if (!elemento) return
@@ -495,7 +491,7 @@ function tratarCliquePainel(evento: MouseEvent, config: FerramentasIAConfig, edi
     const provedor = elemento.dataset.provedor as ProvedorPainel
     estadoAtual = { ...estadoAtual, provedor }
     respostaAtual = null
-    atualizarPainel(config, editor)
+    await atualizarPainel(config, editor)
     return
   }
 
@@ -503,31 +499,31 @@ function tratarCliquePainel(evento: MouseEvent, config: FerramentasIAConfig, edi
     const modo = elemento.dataset.modo as ModoPainel
     estadoAtual = { ...estadoAtual, modo }
     respostaAtual = null
-    atualizarPainel(config, editor)
+    await atualizarPainel(config, editor)
     return
   }
 
   if (acao === 'confirmar' && elemento instanceof HTMLInputElement) {
     estadoAtual = { ...estadoAtual, confirmado: elemento.checked }
-    atualizarPainel(config, editor)
+    await atualizarPainel(config, editor)
     return
   }
 
   if (acao === 'descartar') {
     respostaAtual = null
-    atualizarPainel(config, editor)
+    await atualizarPainel(config, editor)
     return
   }
 
   if (acao === 'inserir') {
-    if (respostaAtual) editor.insertHtml(escaparHtml(respostaAtual).replace(/\n/g, '<br>'))
+    if (respostaAtual) await editor.inserirHtml(escaparHtml(respostaAtual).replace(/\n/g, '<br>'))
     document.getElementById('seirmg-painel-ia')?.remove()
     return
   }
 
   if (acao === 'ir-jusia') {
     if (!estadoAtual.confirmado) return
-    const textoSelecionado = obterTextoSelecionado(editor)
+    const textoSelecionado = await obterTextoSelecionado(editor)
     if (textoSelecionado) {
       navigator.clipboard.writeText(textoSelecionado).catch((error) => {
         console.error('[SEIRMG] Falha ao copiar texto pra área de transferência:', error)
@@ -542,12 +538,10 @@ function tratarCliquePainel(evento: MouseEvent, config: FerramentasIAConfig, edi
     const textarea = document.getElementById('seirmg-ia-instrucao') as HTMLTextAreaElement | null
     const pergunta = textarea?.value.trim() ?? ''
     if (!pergunta || !estadoAtual.confirmado || enviandoAtual) return
-    const textoSelecionado = obterTextoSelecionado(editor)
-    const contexto = textoSelecionado || obterTextoDocumentoInteiro(editor)
+    const textoSelecionado = await obterTextoSelecionado(editor)
+    const contexto = textoSelecionado || (await obterTextoDocumentoInteiro(editor))
     const prompt = montarPromptComContexto(pergunta, contexto || null)
-    enviar(prompt, estadoAtual.provedor, config, editor).catch((error) => {
-      console.error('[SEIRMG] Falha ao enviar prompt pra IA:', error)
-    })
+    await enviar(prompt, estadoAtual.provedor, config, editor)
     return
   }
 
@@ -556,27 +550,23 @@ function tratarCliquePainel(evento: MouseEvent, config: FerramentasIAConfig, edi
     const textarea = document.getElementById('seirmg-ia-instrucao') as HTMLTextAreaElement | null
     const instrucao = textarea?.value.trim() ?? ''
     if (!instrucao || !estadoAtual.confirmado || enviandoAtual) return
-    const textoSelecionado = obterTextoSelecionado(editor)
+    const textoSelecionado = await obterTextoSelecionado(editor)
     const prompt = montarPromptComContexto(instrucao, textoSelecionado || null)
-    enviar(prompt, estadoAtual.provedor, config, editor).catch((error) => {
-      console.error('[SEIRMG] Falha ao enviar prompt pra IA:', error)
-    })
+    await enviar(prompt, estadoAtual.provedor, config, editor)
     return
   }
 
   if (acao === 'enviar-pronto') {
     if (estadoAtual.provedor === 'jusia') return
     const tipo = elemento.dataset.tipo as TipoPromptPronto
-    const textoSelecionado = obterTextoSelecionado(editor)
+    const textoSelecionado = await obterTextoSelecionado(editor)
     if (!textoSelecionado || !estadoAtual.confirmado || enviandoAtual) return
     const prompt = montarPromptPronto(tipo, textoSelecionado)
-    enviar(prompt, estadoAtual.provedor, config, editor).catch((error) => {
-      console.error('[SEIRMG] Falha ao enviar prompt pronto pra IA:', error)
-    })
+    await enviar(prompt, estadoAtual.provedor, config, editor)
   }
 }
 
-function montarPainel(config: FerramentasIAConfig, editor: EditorCKEditor): void {
+function montarPainel(config: FerramentasIAConfig, editor: EditorSEI): void {
   document.getElementById('seirmg-painel-ia')?.remove()
   estadoAtual = { provedor: config.provedorAtivo, modo: 'livre', confirmado: false }
   respostaAtual = null
@@ -585,61 +575,26 @@ function montarPainel(config: FerramentasIAConfig, editor: EditorCKEditor): void
   const painel = document.createElement('div')
   painel.id = 'seirmg-painel-ia'
   document.body.appendChild(painel)
-  painel.addEventListener('click', (evento) => tratarCliquePainel(evento, config, editor))
-
-  atualizarPainel(config, editor)
-}
-
-interface JanelaComCKEditor {
-  CKEDITOR?: { instances: Record<string, EditorCKEditor> }
-}
-
-// LIMITAÇÃO CONHECIDA (não resolvida): content scripts rodam num "mundo" JS isolado do
-// mundo da própria página. window.CKEDITOR é setado pelo script do SEI no mundo da página,
-// não no mundo isolado — por isso esta checagem nunca encontra CKEDITOR, não importa quantas
-// tentativas ou quanto tempo se espere (confirmado em teste real numa instância do SEI com
-// múltiplas instâncias de CKEditor na mesma tela). A correção de verdade exige rodar código
-// no mundo principal da página (ex.: injetando uma <script> ou usando
-// chrome.scripting.executeScript com world:"MAIN") e fazer esse código conversar com o
-// content script — não é um ajuste deste laço de espera. Registrado para retomar depois.
-function esperarCKEditor(callback: () => void, tentativasRestantes = 30): void {
-  if (typeof (window as unknown as JanelaComCKEditor).CKEDITOR !== 'undefined') {
-    callback()
-    return
-  }
-  if (tentativasRestantes <= 0) return
-  setTimeout(() => esperarCKEditor(callback, tentativasRestantes - 1), 200)
-}
-
-// A tela de edição de documento do SEI tem várias instâncias de CKEditor na mesma página —
-// uma por campo de texto rico do formulário (cabeçalho, despacho, data, corpo do documento,
-// rodapé/protocolo), e só uma delas é de fato editável (contenteditable=true); as demais são
-// campos fixos, só leitura. Pegar "a primeira" (Object.values(instances)[0]) pega uma dessas
-// arbitrariamente, não necessariamente a editável — confirmado em teste real (a extensão
-// verificava ortografia e tentava reagir a cliques no cabeçalho fixo, não no corpo do texto).
-function obterInstanciaCKEditor(): EditorCKEditor | null {
-  const instances = (window as unknown as JanelaComCKEditor).CKEDITOR?.instances
-  if (!instances) return null
-  const editores = Object.values(instances)
-  const editavel = editores.find((editor) => {
-    try {
-      return editor.document.getBody().$.contentEditable === 'true'
-    } catch {
-      return false
-    }
+  painel.addEventListener('click', (evento) => {
+    tratarCliquePainel(evento, config, editor).catch((error) => {
+      console.error('[SEIRMG] Falha ao tratar clique no painel de IA:', error)
+    })
   })
-  return editavel ?? editores[0] ?? null
+
+  atualizarPainel(config, editor).catch((error) => {
+    console.error('[SEIRMG] Falha ao atualizar painel de IA:', error)
+  })
 }
 
 // Botão flutuante, independente da barra de ferramentas do CKEditor — item próprio,
 // não misturado com os botões nativos de formatação do editor.
-function montarBotaoFlutuante(editor: EditorCKEditor, config: FerramentasIAConfig): void {
+function montarBotaoFlutuante(editor: EditorSEI, config: FerramentasIAConfig): void {
   if (document.getElementById('seirmg-botao-ia')) return
 
   const botao = document.createElement('button')
   botao.type = 'button'
   botao.id = 'seirmg-botao-ia'
-  botao.textContent = '✨ Ferramentas de IA'
+  botao.innerHTML = `${sparklesIconSvg}<span>Ferramentas de IA</span>`
   botao.title = 'Ferramentas de IA'
   botao.addEventListener('click', () => montarPainel(config, editor))
   document.body.appendChild(botao)
@@ -648,26 +603,19 @@ function montarBotaoFlutuante(editor: EditorCKEditor, config: FerramentasIAConfi
 async function bootstrap(): Promise<void> {
   try {
     const config = await createSyncConfigStore().get()
+    if (!config.ferramentasIA.ativo && !config.corretorOrtografico.ativo) return
+
+    const clienteEditor = criarClienteEditor(window)
+    const editor = await clienteEditor.aguardarEditorPronto()
 
     if (config.ferramentasIA.ativo) {
       injetarEstilos()
-      esperarCKEditor(() => {
-        const editor = obterInstanciaCKEditor()
-        if (!editor) return
-        montarBotaoFlutuante(editor, config.ferramentasIA)
-      })
+      montarBotaoFlutuante(editor, config.ferramentasIA)
     }
 
     if (config.corretorOrtografico.ativo) {
-      esperarCKEditor(() => {
-        const editor = obterInstanciaCKEditor()
-        if (!editor) return
-        import('./corretorOrtografico')
-          .then(({ iniciarCorretorOrtografico }) => iniciarCorretorOrtografico(editor, config.corretorOrtografico))
-          .catch((error) => {
-            console.error('[SEIRMG] Falha ao inicializar corretor ortográfico:', error)
-          })
-      })
+      const { iniciarCorretorOrtografico } = await import('./corretorOrtografico')
+      await iniciarCorretorOrtografico(editor, config.corretorOrtografico)
     }
   } catch (error) {
     console.error('[SEIRMG] Falha ao inicializar recursos do editor de documentos:', error)
