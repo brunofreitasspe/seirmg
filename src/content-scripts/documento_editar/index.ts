@@ -600,24 +600,52 @@ function montarBotaoFlutuante(editor: EditorSEI, config: FerramentasIAConfig): v
   document.body.appendChild(botao)
 }
 
+// DIAGNÓSTICO TEMPORÁRIO (Lote R) — remover depois de descobrir por que a ponte
+// não está ativando nada em produção. Banner visível na página em vez de console,
+// porque o usuário não usa DevTools.
+function atualizarBannerDiagnosticoIsolado(texto: string): void {
+  let banner = document.getElementById('seirmg-diag-isolado')
+  if (!banner) {
+    banner = document.createElement('div')
+    banner.id = 'seirmg-diag-isolado'
+    banner.style.cssText =
+      'position:fixed;top:28px;left:8px;z-index:2147483647;background:#003;color:#0ff;' +
+      'font:12px monospace;padding:4px 8px;border-radius:4px;max-width:70vw;white-space:pre-wrap;'
+    document.documentElement.appendChild(banner)
+  }
+  banner.textContent = `[SEIRMG isolado] ${texto}`
+}
+
 async function bootstrap(): Promise<void> {
+  atualizarBannerDiagnosticoIsolado('bootstrap iniciado')
   try {
     const config = await createSyncConfigStore().get()
-    if (!config.ferramentasIA.ativo && !config.corretorOrtografico.ativo) return
+    atualizarBannerDiagnosticoIsolado(
+      `config carregada — IA ativo=${config.ferramentasIA.ativo} corretor ativo=${config.corretorOrtografico.ativo}`
+    )
+    if (!config.ferramentasIA.ativo && !config.corretorOrtografico.ativo) {
+      atualizarBannerDiagnosticoIsolado('ambos desativados nas Opções, parando aqui')
+      return
+    }
 
     const clienteEditor = criarClienteEditor(window)
+    atualizarBannerDiagnosticoIsolado('aguardando "editor pronto" vindo do main world...')
     const editor = await clienteEditor.aguardarEditorPronto()
+    atualizarBannerDiagnosticoIsolado('editor pronto recebido! montando features...')
 
     if (config.ferramentasIA.ativo) {
       injetarEstilos()
       montarBotaoFlutuante(editor, config.ferramentasIA)
+      atualizarBannerDiagnosticoIsolado('botão de Ferramentas de IA montado')
     }
 
     if (config.corretorOrtografico.ativo) {
       const { iniciarCorretorOrtografico } = await import('./corretorOrtografico')
       await iniciarCorretorOrtografico(editor, config.corretorOrtografico)
+      atualizarBannerDiagnosticoIsolado('corretor ortográfico iniciado')
     }
   } catch (error) {
+    atualizarBannerDiagnosticoIsolado(`ERRO: ${error instanceof Error ? error.message : String(error)}`)
     console.error('[SEIRMG] Falha ao inicializar recursos do editor de documentos:', error)
   }
 }
