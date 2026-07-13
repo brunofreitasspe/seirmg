@@ -1,7 +1,7 @@
 import { criarCorretor, type Corretor, type ErroOrtografico } from '../../features/corretor-ortografico/corretor'
 import { diffarParagrafos, type ParagrafoAtual } from '../../features/corretor-ortografico/diffParagrafos'
 import { createSyncConfigStore, type CorretorOrtograficoConfig } from '../../lib/storage'
-import type { EditorCKEditor } from './index'
+import type { EditorSEI } from './ponteEditor'
 
 const NOME_HIGHLIGHT = 'seirmg-erro-ortografico'
 const ATRASO_DEBOUNCE_MS = 600
@@ -62,11 +62,11 @@ function criarRangeDaPalavra(elemento: HTMLElement, inicio: number, fim: number)
   return range
 }
 
-function obterJanelaComHighlight(editor: EditorCKEditor): JanelaComHighlightApi {
-  return editor.document.getWindow().$ as unknown as JanelaComHighlightApi
+function obterJanelaComHighlight(editor: EditorSEI): JanelaComHighlightApi {
+  return editor.janela as unknown as JanelaComHighlightApi
 }
 
-function atualizarDestaque(editor: EditorCKEditor): void {
+function atualizarDestaque(editor: EditorSEI): void {
   const janela = obterJanelaComHighlight(editor)
   const todosOsRanges = Array.from(errosPorParagrafo.values()).flatMap((erros) =>
     erros.map((erro) => erro.range)
@@ -87,10 +87,10 @@ function atualizarIndicador(): void {
     totalErros > 0 ? `Corretor: ${totalErros} erro(s) encontrado(s)` : 'Corretor: nenhum erro encontrado'
 }
 
-function reescanearAlterados(editor: EditorCKEditor): void {
+function reescanearAlterados(editor: EditorSEI): void {
   try {
     if (!corretor) return
-    const corpo = editor.document.getBody().$
+    const corpo = editor.corpo
     const elementosParagrafo = obterParagrafos(corpo)
 
     const atuais = elementosParagrafo.map((elemento) => ({
@@ -127,7 +127,7 @@ function reescanearAlterados(editor: EditorCKEditor): void {
   }
 }
 
-function agendarReescaneamento(editor: EditorCKEditor): void {
+function agendarReescaneamento(editor: EditorSEI): void {
   if (temporizadorDebounce) clearTimeout(temporizadorDebounce)
   temporizadorDebounce = setTimeout(() => reescanearAlterados(editor), ATRASO_DEBOUNCE_MS)
 }
@@ -156,25 +156,25 @@ function removerErroDoMapa(erro: ErroComRange): void {
   })
 }
 
-function aplicarSugestao(erro: ErroComRange, sugestao: string, editor: EditorCKEditor): void {
+async function aplicarSugestao(erro: ErroComRange, sugestao: string, editor: EditorSEI): Promise<void> {
   const janela = obterJanelaComHighlight(editor)
   const selecao = janela.getSelection()
   if (!selecao) return
   selecao.removeAllRanges()
   selecao.addRange(erro.range.cloneRange())
-  editor.insertText(sugestao)
+  await editor.inserirTexto(sugestao)
   removerErroDoMapa(erro)
   atualizarDestaque(editor)
   atualizarIndicador()
 }
 
-function ignorarOcorrencia(erro: ErroComRange, editor: EditorCKEditor): void {
+function ignorarOcorrencia(erro: ErroComRange, editor: EditorSEI): void {
   removerErroDoMapa(erro)
   atualizarDestaque(editor)
   atualizarIndicador()
 }
 
-async function adicionarAoDicionario(palavra: string, editor: EditorCKEditor): Promise<void> {
+async function adicionarAoDicionario(palavra: string, editor: EditorSEI): Promise<void> {
   if (!corretor) return
   corretor.adicionarPalavra(palavra)
 
@@ -204,7 +204,7 @@ function abrirMenuSugestoes(
   erro: ErroComRange,
   x: number,
   y: number,
-  editor: EditorCKEditor,
+  editor: EditorSEI,
   documentoEditor: Document
 ): void {
   fecharMenuSugestoes(documentoEditor)
@@ -223,7 +223,9 @@ function abrirMenuSugestoes(
     item.className = 'seirmg-menu-corretor-item'
     item.textContent = sugestao
     item.addEventListener('click', () => {
-      aplicarSugestao(erro, sugestao, editor)
+      aplicarSugestao(erro, sugestao, editor).catch((error) => {
+        console.error('[SEIRMG] Falha ao aplicar sugestão do corretor ortográfico:', error)
+      })
       fecharMenuSugestoes(documentoEditor)
     })
     menu.appendChild(item)
@@ -259,7 +261,7 @@ let ultimoMousedownInterceptado = false
 
 function tentarInterceptarCliqueDireito(
   evento: MouseEvent,
-  editor: EditorCKEditor,
+  editor: EditorSEI,
   documentoEditor: Document
 ): boolean {
   const erro = encontrarErroNoPonto(evento.clientX, evento.clientY)
@@ -274,7 +276,7 @@ function tentarInterceptarCliqueDireito(
 // 'contextmenu' de sequer disparar), então tratamos os dois eventos: o mousedown intercepta
 // primeiro na maioria dos casos; o contextmenu fica como reforço para quando o mousedown não
 // for suficiente.
-function tratarMousedown(evento: MouseEvent, editor: EditorCKEditor, documentoEditor: Document): void {
+function tratarMousedown(evento: MouseEvent, editor: EditorSEI, documentoEditor: Document): void {
   try {
     if (evento.button !== 2) return
     ultimoMousedownInterceptado = tentarInterceptarCliqueDireito(evento, editor, documentoEditor)
@@ -283,7 +285,7 @@ function tratarMousedown(evento: MouseEvent, editor: EditorCKEditor, documentoEd
   }
 }
 
-function tratarContextMenu(evento: MouseEvent, editor: EditorCKEditor, documentoEditor: Document): void {
+function tratarContextMenu(evento: MouseEvent, editor: EditorSEI, documentoEditor: Document): void {
   try {
     if (ultimoMousedownInterceptado) {
       ultimoMousedownInterceptado = false
@@ -359,14 +361,14 @@ function injetarEstiloSeAusente(documentoAlvo: Document, id: string, css: string
 }
 
 export async function iniciarCorretorOrtografico(
-  editor: EditorCKEditor,
+  editor: EditorSEI,
   config: CorretorOrtograficoConfig
 ): Promise<void> {
   corretor = await criarCorretor(config.palavrasIgnoradas)
 
-  const documentoEditor = editor.document.$
-  const corpo = editor.document.getBody().$
-  const janelaEditor = editor.document.getWindow().$
+  const documentoEditor = editor.documento
+  const corpo = editor.corpo
+  const janelaEditor = editor.janela
 
   injetarEstiloSeAusente(documentoEditor, 'seirmg-estilo-destaque-corretor', ESTILO_DESTAQUE)
   injetarEstiloSeAusente(documentoEditor, 'seirmg-estilo-menu-corretor', ESTILO_MENU)
