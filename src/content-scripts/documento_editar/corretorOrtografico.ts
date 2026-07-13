@@ -342,7 +342,12 @@ export async function iniciarCorretorOrtografico(
   injetarEstiloSeAusente(document, 'seirmg-estilo-indicador-corretor', ESTILO_INDICADOR)
 
   corpo.addEventListener('input', () => agendarReescaneamento(editor))
-  corpo.addEventListener('contextmenu', (evento) => tratarContextMenu(evento, editor, documentoEditor), true)
+  // Escutado no documento (não no corpo) em fase de captura: a fase de captura corre da raiz
+  // pro alvo por posição na árvore, então isso garante que rodamos antes de qualquer listener
+  // que o próprio CKEditor tenha anexado no corpo (ou mais abaixo) — independente da ordem de
+  // registro. Anexar no corpo perderia essa garantia sempre que o CKEditor já tivesse anexado
+  // o dele primeiro, deixando o menu nativo abrir antes do preventDefault() surtir efeito.
+  documentoEditor.addEventListener('contextmenu', (evento) => tratarContextMenu(evento, editor, documentoEditor), true)
 
   reescanearAlterados(editor)
 }
