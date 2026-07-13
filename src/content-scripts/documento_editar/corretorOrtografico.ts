@@ -336,18 +336,22 @@ export async function iniciarCorretorOrtografico(
 
   const documentoEditor = editor.document.$
   const corpo = editor.document.getBody().$
+  const janelaEditor = editor.document.getWindow().$
 
   injetarEstiloSeAusente(documentoEditor, 'seirmg-estilo-destaque-corretor', ESTILO_DESTAQUE)
   injetarEstiloSeAusente(documentoEditor, 'seirmg-estilo-menu-corretor', ESTILO_MENU)
   injetarEstiloSeAusente(document, 'seirmg-estilo-indicador-corretor', ESTILO_INDICADOR)
 
   corpo.addEventListener('input', () => agendarReescaneamento(editor))
-  // Escutado no documento (não no corpo) em fase de captura: a fase de captura corre da raiz
-  // pro alvo por posição na árvore, então isso garante que rodamos antes de qualquer listener
-  // que o próprio CKEditor tenha anexado no corpo (ou mais abaixo) — independente da ordem de
-  // registro. Anexar no corpo perderia essa garantia sempre que o CKEditor já tivesse anexado
-  // o dele primeiro, deixando o menu nativo abrir antes do preventDefault() surtir efeito.
-  documentoEditor.addEventListener('contextmenu', (evento) => tratarContextMenu(evento, editor, documentoEditor), true)
+  // Escutado na window (não no document nem no corpo), em fase de captura: window é o nível
+  // mais alto possível na cadeia de propagação de um evento — nenhum listener em document/corpo
+  // consegue rodar antes do nosso, mesmo que o do próprio CKEditor também esteja em fase de
+  // captura E também tenha sido registrado antes do nosso (o que de fato acontece, já que o
+  // CKEditor monta seu próprio menu de contexto antes de esperarCKEditor() nos liberar pra
+  // rodar). Uma tentativa anterior anexou isso no document e não resolveu, exatamente porque
+  // o próprio CKEditor também escuta no document (empate de mesmo elemento resolvido por ordem
+  // de registro, que o CKEditor sempre vence). Não existe nível mais alto que window pra disputar.
+  janelaEditor.addEventListener('contextmenu', (evento) => tratarContextMenu(evento, editor, documentoEditor), true)
 
   reescanearAlterados(editor)
 }

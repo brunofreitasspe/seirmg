@@ -116,6 +116,17 @@ export default defineManifest({
     },
     {
       matches: [
+        '*://*.br/*controlador.php?acao=procedimento_visualizar*',
+        '*://*.org/*controlador.php?acao=procedimento_visualizar*',
+        '*://*.br/*controlador.php?acao=arvore_visualizar*',
+        '*://*.org/*controlador.php?acao=arvore_visualizar*',
+      ],
+      js: ['src/content-scripts/documento_externo_arraste/index.ts'],
+      all_frames: true,
+      run_at: 'document_idle',
+    },
+    {
+      matches: [
         '*://*.br/*controlador.php?acao=anotacao_registrar*',
         '*://*.org/*controlador.php?acao=anotacao_registrar*',
       ],
