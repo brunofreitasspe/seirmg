@@ -24,10 +24,22 @@ function criarLinhaDiagnostico(id: string, topoPx: number, corTexto: string): (t
 const linhaPoll = criarLinhaDiagnostico('seirmg-diag-main-poll', 4, '#0f0')
 const linhaEvento = criarLinhaDiagnostico('seirmg-diag-main-evento', 24, '#0ff')
 const linhaErro = criarLinhaDiagnostico('seirmg-diag-main-erro', 44, '#f55')
+const linhaFrame = criarLinhaDiagnostico('seirmg-diag-main-frame', 64, '#ff0')
+const linhaBattimento = criarLinhaDiagnostico('seirmg-diag-main-batimento', 84, '#f0f')
 
 linhaPoll('[poll] script main-world carregado, procurando window.CKEDITOR...')
 linhaEvento('[evento] aguardando EVENTO_PRONTO (ainda não disparou)...')
 linhaErro('[erro] nenhum erro capturado ainda')
+linhaFrame(
+  `[frame-main] topo=${window === window.top} url=${window.location.href.slice(0, 60)}`
+)
+
+let batimentos = 0
+setInterval(() => {
+  batimentos++
+  linhaBattimento(`[batimento-main] enviando #${batimentos}`)
+  window.dispatchEvent(new CustomEvent('seirmg:diag-batimento', { detail: { n: batimentos } }))
+}, 1000)
 
 let tentativasDiagnostico = 0
 const intervaloDiagnostico = setInterval(() => {

@@ -616,6 +616,32 @@ function atualizarBannerDiagnosticoIsolado(texto: string): void {
   banner.textContent = `[SEIRMG isolado] ${texto}`
 }
 
+function criarLinhaDiagnosticoIsolado(id: string, topoPx: number, corTexto: string): (texto: string) => void {
+  return (texto: string) => {
+    let banner = document.getElementById(id)
+    if (!banner) {
+      banner = document.createElement('div')
+      banner.id = id
+      banner.style.cssText =
+        `position:fixed;top:${topoPx}px;right:8px;z-index:2147483647;background:#000;color:${corTexto};` +
+        'font:12px monospace;padding:4px 8px;border-radius:4px;max-width:40vw;white-space:pre-wrap;pointer-events:none;'
+      document.documentElement.appendChild(banner)
+    }
+    banner.textContent = texto
+  }
+}
+
+const linhaFrameIsolado = criarLinhaDiagnosticoIsolado('seirmg-diag-isolado-frame', 104, '#ff0')
+const linhaBatimentoIsolado = criarLinhaDiagnosticoIsolado('seirmg-diag-isolado-batimento', 124, '#f0f')
+
+linhaFrameIsolado(`[frame-isolado] topo=${window === window.top} url=${window.location.href.slice(0, 60)}`)
+linhaBatimentoIsolado('[batimento-isolado] aguardando primeiro batimento do main world...')
+
+window.addEventListener('seirmg:diag-batimento', (evento) => {
+  const { n } = (evento as CustomEvent<{ n: number }>).detail
+  linhaBatimentoIsolado(`[batimento-isolado] recebido #${n}`)
+})
+
 async function bootstrap(): Promise<void> {
   atualizarBannerDiagnosticoIsolado('bootstrap iniciado')
   try {
