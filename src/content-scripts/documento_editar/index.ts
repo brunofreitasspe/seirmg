@@ -412,10 +412,16 @@ function montarHtmlPainel(
   `
 }
 
-interface EditorCKEditor {
+export interface EditorCKEditor {
   getSelection: () => { getSelectedText: () => string } | null
   insertHtml: (html: string) => void
+  insertText: (texto: string) => void
   editable?: () => { getText: () => string } | undefined
+  document: {
+    $: Document
+    getBody: () => { $: HTMLElement }
+    getWindow: () => { $: Window }
+  }
 }
 
 function obterTextoDocumentoInteiro(editor: EditorCKEditor): string {
@@ -620,16 +626,31 @@ function montarBotaoFlutuante(editor: EditorCKEditor, config: FerramentasIAConfi
 async function bootstrap(): Promise<void> {
   try {
     const config = await createSyncConfigStore().get()
-    if (!config.ferramentasIA.ativo) return
 
-    injetarEstilos()
-    esperarCKEditor(() => {
-      const editor = obterInstanciaCKEditor()
-      if (!editor) return
-      montarBotaoFlutuante(editor, config.ferramentasIA)
-    })
+    if (config.ferramentasIA.ativo) {
+      injetarEstilos()
+      esperarCKEditor(() => {
+        const editor = obterInstanciaCKEditor()
+        if (!editor) return
+        montarBotaoFlutuante(editor, config.ferramentasIA)
+      })
+    }
+
+    if (config.corretorOrtografico.ativo) {
+      esperarCKEditor(() => {
+        const editor = obterInstanciaCKEditor()
+        if (!editor) return
+        import('./corretorOrtografico')
+          .then(({ iniciarCorretorOrtografico }) =>
+            iniciarCorretorOrtografico(editor, config.corretorOrtografico)
+          )
+          .catch((error) => {
+            console.error('[SEIRMG] Falha ao inicializar corretor ortográfico:', error)
+          })
+      })
+    }
   } catch (error) {
-    console.error('[SEIRMG] Falha ao inicializar ferramentas de IA no editor:', error)
+    console.error('[SEIRMG] Falha ao inicializar recursos do editor de documentos:', error)
   }
 }
 
