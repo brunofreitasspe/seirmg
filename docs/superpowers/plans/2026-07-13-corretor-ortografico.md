@@ -6,7 +6,7 @@
 
 **Architecture:** Lógica pura e testável (tokenização, diff de parágrafos, verificação/sugestão via `nspell` + dicionário Hunspell pt-BR vendorizado) em `src/features/corretor-ortografico/`. Um módulo de integração em `src/content-scripts/documento_editar/` conecta essa lógica ao DOM real do CKEditor: sublinhado via CSS Custom Highlight API (não toca no conteúdo do documento), menu de contexto próprio só quando o clique cai numa palavra sinalizada, e correção via `editor.insertText()` (mesma API do CKEditor já usada pelo painel de Ferramentas de IA, preserva undo/redo).
 
-**Tech Stack:** TypeScript, Vite + `@crxjs/vite-plugin`, Vitest (`environment: jsdom`), `nspell` (motor de sugestão Hunspell em JS puro), dicionário Hunspell pt-BR vendorizado a partir do pacote `dictionary-pt` (VERO, LGPL-3.0/MPL-2.0).
+**Tech Stack:** TypeScript, Vite + `@crxjs/vite-plugin`, Vitest (`environment: jsdom`), `hunspell-asm` (Hunspell real compilado pra WebAssembly, aplica afixos sob demanda — `nspell`, motor JS puro cogitado inicialmente, trava com o dicionário pt-BR real, ver nota na Task 4), dicionário Hunspell pt-BR vendorizado a partir do pacote `dictionary-pt` (VERO, LGPL-3.0/MPL-2.0).
 
 ## Global Constraints
 
@@ -340,6 +340,8 @@ git commit -m "feat(corretor-ortografico): diff de parágrafos alterados/removid
 
 ### Task 4: Dicionário pt-BR vendorizado + verificador (`criarCorretor`)
 
+> **Nota de revisão de plano:** a primeira tentativa desta task usava `nspell` como motor de sugestão. Descobrimos, na prática, que `nspell` expande antecipadamente (na hora de carregar o dicionário) todas as combinações de regras de afixo pra todas as ~312 mil palavras — e isso trava (14+ minutos, memória subindo sem parar) com o dicionário pt-BR real. Isso é um bug conhecido e documentado do próprio projeto (https://github.com/wooorm/nspell/issues/11: "The Italian (also Portuguese) languages hang the app that uses nspell"), não uma falha do ambiente. A versão abaixo já usa `hunspell-asm` (o mesmo motor Hunspell real, compilado pra WebAssembly, que aplica as regras de afixo sob demanda por palavra consultada, sem expandir tudo de uma vez — por isso não sofre desse problema).
+
 **Files:**
 - Create: `src/features/corretor-ortografico/dicionario/pt-br.aff` (vendorizado, ~980KB)
 - Create: `src/features/corretor-ortografico/dicionario/pt-br.dic` (vendorizado, ~4.5MB)
@@ -347,21 +349,35 @@ git commit -m "feat(corretor-ortografico): diff de parágrafos alterados/removid
 - Create: `src/features/corretor-ortografico/corretor.ts`
 - Test: `src/features/corretor-ortografico/corretor.test.ts`
 - Modify: `package.json`
+- Modify: `src/vite-env.d.ts`
 
 **Interfaces:**
 - Consumes: `tokenizar` de `./tokenizador` (Task 2)
-- Produces: `export interface ErroOrtografico { palavra: string; inicio: number; fim: number; sugestoes: string[] }`, `export interface Corretor { verificarTexto: (texto: string) => ErroOrtografico[]; adicionarPalavra: (palavra: string) => void }`, `export function criarCorretor(palavrasIgnoradas?: string[]): Corretor`
+- Produces: `export interface ErroOrtografico { palavra: string; inicio: number; fim: number; sugestoes: string[] }`, `export interface Corretor { verificarTexto: (texto: string) => ErroOrtografico[]; adicionarPalavra: (palavra: string) => void }`, `export async function criarCorretor(palavrasIgnoradas?: string[]): Promise<Corretor>` — **note bem: é `async`/`Promise`, diferente da assinatura síncrona de tentativas anteriores**, porque `hunspell-asm` carrega um módulo WebAssembly (`loadModule()` é assíncrono). Isso se propaga pra Task 5: quem chamar `criarCorretor(...)` precisa de `await`.
 
 **Por que vendorizar em vez de importar o pacote npm direto:** o pacote `dictionary-pt` (que embute o dicionário VERO de português do Brasil) declara `"exports": "./index.js"` no `package.json`, o que bloqueia importar `dictionary-pt/index.aff` diretamente — e o próprio `index.js` do pacote usa `node:fs/promises` (só funciona em Node, não num content script de navegador). A solução é vendorizar os dois arquivos de dados (`.aff`/`.dic`, que são só texto UTF-8 no formato Hunspell) direto no nosso repositório e importá-los com o `?raw` do Vite — mesmo mecanismo que o projeto já usa pros ícones SVG (`import openaiIconSvg from '...svg?raw'` em `src/content-scripts/documento_editar/index.ts`).
 
+**Por que `hunspell-asm` e não `nspell`:** ver a nota de revisão acima. `hunspell-asm` (https://github.com/kwonoj/hunspell-asm, MIT, TypeScript nativo — `"types": "./dist/types/index.d.ts"` no seu `package.json`, não precisa de `@types` separado) embrulha o Hunspell real compilado pra WebAssembly, aplicando afixos sob demanda por palavra, sem a explosão combinatória do `nspell`.
+
 - [ ] **Step 1: Instalar as dependências**
 
+Se uma tentativa anterior desta task deixou `nspell`/`@types/nspell` instalados, remova-os primeiro:
+
 ```bash
-bun add nspell
-bun add -d @types/nspell
+bun remove nspell @types/nspell
 ```
 
+Depois instale a dependência correta:
+
+```bash
+bun add hunspell-asm
+```
+
+(`hunspell-asm` já inclui seus próprios tipos TypeScript — não precisa de um pacote `@types/` separado.)
+
 - [ ] **Step 2: Vendorizar os arquivos do dicionário**
+
+Se uma tentativa anterior já baixou e verificou `pt-br.aff`/`pt-br.dic`/`LICENSE.md` em `src/features/corretor-ortografico/dicionario/`, pule este passo — os arquivos de dados do dicionário não mudam com a troca de motor.
 
 ```powershell
 New-Item -ItemType Directory -Force src/features/corretor-ortografico/dicionario
@@ -407,13 +423,13 @@ import { describe, expect, it } from 'vitest'
 import { criarCorretor } from './corretor'
 
 describe('criarCorretor', () => {
-  it('não aponta erro em palavras corretas', () => {
-    const corretor = criarCorretor()
+  it('não aponta erro em palavras corretas', async () => {
+    const corretor = await criarCorretor()
     expect(corretor.verificarTexto('Este despacho foi enviado corretamente.')).toEqual([])
   })
 
-  it('aponta erro em uma palavra incorreta e sugere a forma certa', () => {
-    const corretor = criarCorretor()
+  it('aponta erro em uma palavra incorreta e sugere a forma certa', async () => {
+    const corretor = await criarCorretor()
     const erros = corretor.verificarTexto('Este processo contem um erro.')
     expect(erros).toHaveLength(1)
     expect(erros[0].palavra).toBe('contem')
@@ -422,21 +438,21 @@ describe('criarCorretor', () => {
     expect(erros[0].sugestoes).toContain('contém')
   })
 
-  it('limita a no máximo 5 sugestões', () => {
-    const corretor = criarCorretor()
+  it('limita a no máximo 5 sugestões', async () => {
+    const corretor = await criarCorretor()
     const erros = corretor.verificarTexto('isso e um teste com palavra errda.')
     const erro = erros.find((item) => item.palavra === 'errda')
     expect(erro?.sugestoes.length).toBeLessThanOrEqual(5)
   })
 
-  it('não aponta erro em palavra passada como já ignorada na criação', () => {
-    const corretor = criarCorretor(['Seirmg'])
+  it('não aponta erro em palavra passada como já ignorada na criação', async () => {
+    const corretor = await criarCorretor(['Seirmg'])
     const erros = corretor.verificarTexto('A extensão Seirmg ajuda no processo.')
     expect(erros.some((erro) => erro.palavra === 'Seirmg')).toBe(false)
   })
 
-  it('para de apontar erro numa palavra depois de adicionarPalavra', () => {
-    const corretor = criarCorretor()
+  it('para de apontar erro numa palavra depois de adicionarPalavra', async () => {
+    const corretor = await criarCorretor()
     expect(corretor.verificarTexto('Isso e um jusia.').some((erro) => erro.palavra === 'jusia')).toBe(true)
     corretor.adicionarPalavra('jusia')
     expect(corretor.verificarTexto('Isso e um jusia.').some((erro) => erro.palavra === 'jusia')).toBe(false)
@@ -444,19 +460,33 @@ describe('criarCorretor', () => {
 })
 ```
 
-Note: o teste usa `Seirmg` (com apenas a primeira letra maiúscula), não `SEIRMG` — uma sigla toda em caixa alta seria filtrada pelo `tokenizar` (Task 2) antes mesmo de chegar no dicionário, e o teste então não estaria de fato exercitando o parâmetro `palavrasIgnoradas` de `criarCorretor`.
+Note: o teste usa `Seirmg` (com apenas a primeira letra maiúscula), não `SEIRMG` — uma sigla toda em caixa alta seria filtrada pelo `tokenizar` (Task 2) antes mesmo de chegar no dicionário, e o teste então não estaria de fato exercitando o parâmetro `palavrasIgnoradas` de `criarCorretor`. Note também que `criarCorretor` agora é `async` — cada teste precisa de `await` na chamada.
 
 - [ ] **Step 4: Rodar o teste e confirmar que falha**
 
 Run: `npx vitest run src/features/corretor-ortografico/corretor.test.ts`
-Expected: FAIL — módulo `./corretor` não existe ainda.
+Expected: FAIL — módulo `./corretor` não existe ainda (ou, se uma tentativa anterior deixou um `corretor.ts` baseado em `nspell`, os testes vão falhar porque `criarCorretor()` sem `await` retorna uma Promise, não um `Corretor` — o que confirma que o arquivo antigo precisa ser reescrito no Step 5).
 
 - [ ] **Step 5: Implementar**
 
-Crie `src/features/corretor-ortografico/corretor.ts`:
+Se `src/vite-env.d.ts` ainda não declara os módulos `*.aff?raw`/`*.dic?raw` (uma tentativa anterior pode já ter feito isso — confira antes), adicione, seguindo o padrão já existente para `*.svg?raw` no mesmo arquivo:
 
 ```ts
-import nspell from 'nspell'
+declare module '*.aff?raw' {
+  const content: string
+  export default content
+}
+
+declare module '*.dic?raw' {
+  const content: string
+  export default content
+}
+```
+
+Crie (ou sobrescreva, se uma tentativa anterior deixou uma versão baseada em `nspell`) `src/features/corretor-ortografico/corretor.ts`:
+
+```ts
+import { loadModule } from 'hunspell-asm'
 import affTexto from './dicionario/pt-br.aff?raw'
 import dicTexto from './dicionario/pt-br.dic?raw'
 import { tokenizar } from './tokenizador'
@@ -473,26 +503,31 @@ export interface Corretor {
   adicionarPalavra: (palavra: string) => void
 }
 
-export function criarCorretor(palavrasIgnoradas: string[] = []): Corretor {
-  const verificador = nspell({ aff: affTexto, dic: dicTexto })
-  palavrasIgnoradas.forEach((palavra) => verificador.add(palavra))
+export async function criarCorretor(palavrasIgnoradas: string[] = []): Promise<Corretor> {
+  const fabrica = await loadModule()
+  const codificador = new TextEncoder()
+  const caminhoAff = fabrica.mountBuffer(codificador.encode(affTexto), 'pt-br.aff')
+  const caminhoDic = fabrica.mountBuffer(codificador.encode(dicTexto), 'pt-br.dic')
+  const hunspell = fabrica.create(caminhoAff, caminhoDic)
+
+  palavrasIgnoradas.forEach((palavra) => hunspell.addWord(palavra))
 
   return {
     verificarTexto(texto: string): ErroOrtografico[] {
       return tokenizar(texto).flatMap((token) => {
-        if (verificador.correct(token.palavra)) return []
+        if (hunspell.spell(token.palavra)) return []
         return [
           {
             palavra: token.palavra,
             inicio: token.inicio,
             fim: token.fim,
-            sugestoes: verificador.suggest(token.palavra).slice(0, 5),
+            sugestoes: hunspell.suggest(token.palavra).slice(0, 5),
           },
         ]
       })
     },
     adicionarPalavra(palavra: string): void {
-      verificador.add(palavra)
+      hunspell.addWord(palavra)
     },
   }
 }
@@ -501,7 +536,7 @@ export function criarCorretor(palavrasIgnoradas: string[] = []): Corretor {
 - [ ] **Step 6: Rodar o teste e confirmar que passa**
 
 Run: `npx vitest run src/features/corretor-ortografico/corretor.test.ts`
-Expected: PASS (5 testes — pode levar 1-2s a mais que os outros arquivos de teste, por carregar o dicionário real)
+Expected: PASS (5 testes). Como o motor agora é WebAssembly aplicando afixos sob demanda (não expandindo o dicionário inteiro antecipadamente como o `nspell` fazia), a carga deve ser rápida — segundos, não minutos. **Se o teste ficar rodando por mais de ~30 segundos sem terminar, pare (Ctrl+C) e reporte BLOCKED** com o que observou — não deixe rodando indefinidamente “pra ver se termina”.
 
 - [ ] **Step 7: Typecheck e commit**
 
@@ -509,8 +544,8 @@ Run: `npx tsc --noEmit`
 Expected: sem erros
 
 ```bash
-git add src/features/corretor-ortografico/dicionario/ src/features/corretor-ortografico/corretor.ts src/features/corretor-ortografico/corretor.test.ts package.json bun.lock
-git commit -m "feat(corretor-ortografico): dicionário pt-BR vendorizado + verificador com nspell"
+git add src/features/corretor-ortografico/dicionario/ src/features/corretor-ortografico/corretor.ts src/features/corretor-ortografico/corretor.test.ts src/vite-env.d.ts package.json bun.lock
+git commit -m "feat(corretor-ortografico): dicionário pt-BR vendorizado + verificador com hunspell-asm"
 ```
 
 ---
@@ -920,7 +955,7 @@ export async function iniciarCorretorOrtografico(
   editor: EditorCKEditor,
   config: CorretorOrtograficoConfig
 ): Promise<void> {
-  corretor = criarCorretor(config.palavrasIgnoradas)
+  corretor = await criarCorretor(config.palavrasIgnoradas)
 
   const documentoEditor = editor.document.$
   const corpo = editor.document.getBody().$

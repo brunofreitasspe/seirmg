@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@lobehub/icons-static-svg": "^1.91.0",
+    "hunspell-asm": "^4.0.2",
     "jquery": "^4.0.0",
     "lucide-static": "^1.23.0"
   },
