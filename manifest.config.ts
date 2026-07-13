@@ -142,5 +142,15 @@ export default defineManifest({
       all_frames: true,
       run_at: 'document_idle',
     },
+    {
+      matches: [
+        '*://*.br/*controlador.php?acao=*',
+        '*://*.org/*controlador.php?acao=*',
+      ],
+      js: ['src/content-scripts/documento_editar/pontePrincipalMain.ts'],
+      all_frames: true,
+      run_at: 'document_idle',
+      world: 'MAIN',
+    },
   ],
 })
