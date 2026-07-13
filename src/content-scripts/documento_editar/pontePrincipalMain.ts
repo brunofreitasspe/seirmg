@@ -13,8 +13,8 @@ function criarLinhaDiagnostico(id: string, topoPx: number, corTexto: string): (t
       banner = document.createElement('div')
       banner.id = id
       banner.style.cssText =
-        `position:fixed;top:${topoPx}px;left:8px;z-index:2147483647;background:#000;color:${corTexto};` +
-        'font:12px monospace;padding:4px 8px;border-radius:4px;max-width:70vw;white-space:pre-wrap;'
+        `position:fixed;top:${topoPx}px;right:8px;z-index:2147483647;background:#000;color:${corTexto};` +
+        'font:12px monospace;padding:4px 8px;border-radius:4px;max-width:40vw;white-space:pre-wrap;pointer-events:none;'
       document.documentElement.appendChild(banner)
     }
     banner.textContent = texto

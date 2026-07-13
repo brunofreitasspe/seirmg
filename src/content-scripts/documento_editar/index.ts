@@ -609,8 +609,8 @@ function atualizarBannerDiagnosticoIsolado(texto: string): void {
     banner = document.createElement('div')
     banner.id = 'seirmg-diag-isolado'
     banner.style.cssText =
-      'position:fixed;top:28px;left:8px;z-index:2147483647;background:#003;color:#0ff;' +
-      'font:12px monospace;padding:4px 8px;border-radius:4px;max-width:70vw;white-space:pre-wrap;'
+      'position:fixed;top:64px;right:8px;z-index:2147483647;background:#003;color:#0ff;' +
+      'font:12px monospace;padding:4px 8px;border-radius:4px;max-width:40vw;white-space:pre-wrap;pointer-events:none;'
     document.documentElement.appendChild(banner)
   }
   banner.textContent = `[SEIRMG isolado] ${texto}`
