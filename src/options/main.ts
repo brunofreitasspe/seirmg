@@ -6,6 +6,7 @@ import sparklesIconSvg from 'lucide-static/icons/sparkles.svg?raw'
 import bellIconSvg from 'lucide-static/icons/bell.svg?raw'
 import plugIconSvg from 'lucide-static/icons/plug.svg?raw'
 import infoIconSvg from 'lucide-static/icons/info.svg?raw'
+import spellCheckIconSvg from 'lucide-static/icons/spell-check.svg?raw'
 import { ativarAba } from './tabs'
 import {
   createLocalConfigStore,
@@ -26,6 +27,11 @@ interface RegraPontoControleEditavel {
   cor: string
   [chave: string]: string
 }
+
+interface PalavraIgnoradaEditavel {
+  palavra: string
+  [chave: string]: string
+}
 const botoesAba = document.querySelectorAll('.aba-btn')
 const paineis = document.querySelectorAll('.painel')
 
@@ -34,6 +40,7 @@ const ICONES_ABA: Record<string, string> = {
   aparencia: paletteIconSvg,
   processos: listChecksIconSvg,
   editor: fileEditIconSvg,
+  corretor: spellCheckIconSvg,
   ia: sparklesIconSvg,
   notificacoes: bellIconSvg,
   integracoes: plugIconSvg,
@@ -383,6 +390,50 @@ async function carregarAbaEditor(): Promise<void> {
   }
 }
 
+async function carregarAbaCorretor(): Promise<void> {
+  try {
+    const store = createSyncConfigStore()
+    const config = await store.get()
+
+    const inputAtivo = document.getElementById('corretor-ativo') as HTMLInputElement | null
+    const status = document.getElementById('corretor-status')
+
+    if (inputAtivo) inputAtivo.checked = config.corretorOrtografico.ativo
+
+    const containerPalavras = document.getElementById('corretor-palavras-lista')
+    const listaPalavras = containerPalavras
+      ? montarListaEditavel<PalavraIgnoradaEditavel>(
+          containerPalavras,
+          [{ chave: 'palavra', rotulo: 'Palavra', tipo: 'text' }],
+          config.corretorOrtografico.palavrasIgnoradas.map((palavra) => ({ palavra }))
+        )
+      : null
+
+    document.getElementById('corretor-salvar')?.addEventListener('click', async () => {
+      try {
+        const atualizado = {
+          ...config,
+          corretorOrtografico: {
+            ativo: inputAtivo?.checked ?? false,
+            palavrasIgnoradas: (listaPalavras?.obterItens() ?? []).map((item) => item.palavra),
+          },
+        }
+        await store.set(atualizado)
+        if (status) {
+          status.textContent = 'Salvo!'
+          setTimeout(() => {
+            status.textContent = ''
+          }, 2000)
+        }
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao salvar configuração do corretor ortográfico:', error)
+      }
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao carregar aba do corretor ortográfico:', error)
+  }
+}
+
 async function carregarAbaIA(): Promise<void> {
   try {
     const store = createSyncConfigStore()
@@ -573,6 +624,7 @@ async function carregarAbaIntegracoes(): Promise<void> {
 }
 
 carregarAbaEditor()
+carregarAbaCorretor()
 carregarAbaIA()
 carregarAbaProcessos()
 carregarAbaAparencia()

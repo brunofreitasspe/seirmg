@@ -17,6 +17,7 @@
       <nav id="abas">
         <button data-aba="aparencia" class="aba-btn">Aparência</button>
         <button data-aba="editor" class="aba-btn">Editor de Documentos</button>
+        <button data-aba="corretor" class="aba-btn">Corretor Ortográfico</button>
         <button data-aba="ia" class="aba-btn">Ferramentas de IA</button>
         <button data-aba="geral" class="aba-btn ativa">Geral</button>
         <button data-aba="integracoes" class="aba-btn">Integrações</button>
@@ -187,6 +188,18 @@
       <br />
       <button id="editor-salvar">Salvar</button>
       <span id="editor-status"></span>
+    </section>
+    <section id="painel-corretor" class="painel">
+      <h2>Corretor Ortográfico</h2>
+      <label>
+        <input type="checkbox" id="corretor-ativo" />
+        Ativar corretor ortográfico no editor de documentos
+      </label>
+      <h3>Palavras adicionadas ao dicionário</h3>
+      <div id="corretor-palavras-lista"></div>
+      <br />
+      <button id="corretor-salvar">Salvar</button>
+      <span id="corretor-status"></span>
     </section>
     <section id="painel-ia" class="painel">
       <h2>Ferramentas de IA</h2>
