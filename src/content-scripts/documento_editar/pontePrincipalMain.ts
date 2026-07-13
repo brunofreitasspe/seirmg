@@ -42,4 +42,16 @@ window.addEventListener(EVENTO_PRONTO, (evento) => {
   atualizarBannerDiagnosticoMain(`EVENTO_PRONTO disparado! instância editável = "${nome}"`)
 })
 
-criarPonteMainWorld(window)
+window.addEventListener('error', (evento) => {
+  atualizarBannerDiagnosticoMain(
+    `ERRO NÃO CAPTURADO no main world: ${evento.message} (${evento.filename}:${evento.lineno}:${evento.colno})`
+  )
+})
+
+try {
+  criarPonteMainWorld(window)
+} catch (error) {
+  atualizarBannerDiagnosticoMain(
+    `EXCEÇÃO SÍNCRONA ao criar a ponte: ${error instanceof Error ? error.message : String(error)}`
+  )
+}
