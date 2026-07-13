@@ -255,13 +255,43 @@ function abrirMenuSugestoes(
   documentoEditor.addEventListener('click', () => fecharMenuSugestoes(documentoEditor), { once: true })
 }
 
+let ultimoMousedownInterceptado = false
+
+function tentarInterceptarCliqueDireito(
+  evento: MouseEvent,
+  editor: EditorCKEditor,
+  documentoEditor: Document
+): boolean {
+  const erro = encontrarErroNoPonto(evento.clientX, evento.clientY)
+  if (!erro) return false
+  evento.preventDefault()
+  evento.stopPropagation()
+  abrirMenuSugestoes(erro, evento.clientX, evento.clientY, editor, documentoEditor)
+  return true
+}
+
+// O CKEditor pode suprimir o menu nativo já no mousedown do botão direito (impedindo o
+// 'contextmenu' de sequer disparar), então tratamos os dois eventos: o mousedown intercepta
+// primeiro na maioria dos casos; o contextmenu fica como reforço para quando o mousedown não
+// for suficiente.
+function tratarMousedown(evento: MouseEvent, editor: EditorCKEditor, documentoEditor: Document): void {
+  try {
+    if (evento.button !== 2) return
+    ultimoMousedownInterceptado = tentarInterceptarCliqueDireito(evento, editor, documentoEditor)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao tratar mousedown do corretor ortográfico:', error)
+  }
+}
+
 function tratarContextMenu(evento: MouseEvent, editor: EditorCKEditor, documentoEditor: Document): void {
   try {
-    const erro = encontrarErroNoPonto(evento.clientX, evento.clientY)
-    if (!erro) return
-    evento.preventDefault()
-    evento.stopPropagation()
-    abrirMenuSugestoes(erro, evento.clientX, evento.clientY, editor, documentoEditor)
+    if (ultimoMousedownInterceptado) {
+      ultimoMousedownInterceptado = false
+      evento.preventDefault()
+      evento.stopPropagation()
+      return
+    }
+    tentarInterceptarCliqueDireito(evento, editor, documentoEditor)
   } catch (error) {
     console.error('[SEIRMG] Falha ao tratar clique direito do corretor ortográfico:', error)
   }
@@ -343,14 +373,12 @@ export async function iniciarCorretorOrtografico(
   injetarEstiloSeAusente(document, 'seirmg-estilo-indicador-corretor', ESTILO_INDICADOR)
 
   corpo.addEventListener('input', () => agendarReescaneamento(editor))
-  // Escutado na window (não no document nem no corpo), em fase de captura: window é o nível
-  // mais alto possível na cadeia de propagação de um evento — nenhum listener em document/corpo
-  // consegue rodar antes do nosso, mesmo que o do próprio CKEditor também esteja em fase de
-  // captura E também tenha sido registrado antes do nosso (o que de fato acontece, já que o
-  // CKEditor monta seu próprio menu de contexto antes de esperarCKEditor() nos liberar pra
-  // rodar). Uma tentativa anterior anexou isso no document e não resolveu, exatamente porque
-  // o próprio CKEditor também escuta no document (empate de mesmo elemento resolvido por ordem
-  // de registro, que o CKEditor sempre vence). Não existe nível mais alto que window pra disputar.
+  // Testado em uma instância real do SEI: nem escutar 'contextmenu' no document nem na window
+  // (fase de captura) chegou a disparar — sinal de que o CKEditor bloqueia o menu nativo já no
+  // 'mousedown' do botão direito, antes do 'contextmenu' sequer existir. Por isso escutamos os
+  // dois: 'mousedown' intercepta primeiro (cobre esse caso); 'contextmenu' fica como reforço,
+  // e evita abrir os dois menus quando o mousedown já resolveu.
+  janelaEditor.addEventListener('mousedown', (evento) => tratarMousedown(evento, editor, documentoEditor), true)
   janelaEditor.addEventListener('contextmenu', (evento) => tratarContextMenu(evento, editor, documentoEditor), true)
 
   reescanearAlterados(editor)

@@ -594,6 +594,14 @@ interface JanelaComCKEditor {
   CKEDITOR?: { instances: Record<string, EditorCKEditor> }
 }
 
+// LIMITAÇÃO CONHECIDA (não resolvida): content scripts rodam num "mundo" JS isolado do
+// mundo da própria página. window.CKEDITOR é setado pelo script do SEI no mundo da página,
+// não no mundo isolado — por isso esta checagem nunca encontra CKEDITOR, não importa quantas
+// tentativas ou quanto tempo se espere (confirmado em teste real numa instância do SEI com
+// múltiplas instâncias de CKEditor na mesma tela). A correção de verdade exige rodar código
+// no mundo principal da página (ex.: injetando uma <script> ou usando
+// chrome.scripting.executeScript com world:"MAIN") e fazer esse código conversar com o
+// content script — não é um ajuste deste laço de espera. Registrado para retomar depois.
 function esperarCKEditor(callback: () => void, tentativasRestantes = 30): void {
   if (typeof (window as unknown as JanelaComCKEditor).CKEDITOR !== 'undefined') {
     callback()
@@ -603,10 +611,24 @@ function esperarCKEditor(callback: () => void, tentativasRestantes = 30): void {
   setTimeout(() => esperarCKEditor(callback, tentativasRestantes - 1), 200)
 }
 
+// A tela de edição de documento do SEI tem várias instâncias de CKEditor na mesma página —
+// uma por campo de texto rico do formulário (cabeçalho, despacho, data, corpo do documento,
+// rodapé/protocolo), e só uma delas é de fato editável (contenteditable=true); as demais são
+// campos fixos, só leitura. Pegar "a primeira" (Object.values(instances)[0]) pega uma dessas
+// arbitrariamente, não necessariamente a editável — confirmado em teste real (a extensão
+// verificava ortografia e tentava reagir a cliques no cabeçalho fixo, não no corpo do texto).
 function obterInstanciaCKEditor(): EditorCKEditor | null {
   const instances = (window as unknown as JanelaComCKEditor).CKEDITOR?.instances
   if (!instances) return null
-  return Object.values(instances)[0] ?? null
+  const editores = Object.values(instances)
+  const editavel = editores.find((editor) => {
+    try {
+      return editor.document.getBody().$.contentEditable === 'true'
+    } catch {
+      return false
+    }
+  })
+  return editavel ?? editores[0] ?? null
 }
 
 // Botão flutuante, independente da barra de ferramentas do CKEditor — item próprio,
@@ -641,9 +663,7 @@ async function bootstrap(): Promise<void> {
         const editor = obterInstanciaCKEditor()
         if (!editor) return
         import('./corretorOrtografico')
-          .then(({ iniciarCorretorOrtografico }) =>
-            iniciarCorretorOrtografico(editor, config.corretorOrtografico)
-          )
+          .then(({ iniciarCorretorOrtografico }) => iniciarCorretorOrtografico(editor, config.corretorOrtografico))
           .catch((error) => {
             console.error('[SEIRMG] Falha ao inicializar corretor ortográfico:', error)
           })
