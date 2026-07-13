@@ -21,6 +21,7 @@ let proximoIdParagrafo = 0
 let temporizadorDebounce: ReturnType<typeof setTimeout> | undefined
 const textoAnteriorPorParagrafo = new Map<string, string>()
 const errosPorParagrafo = new Map<string, ErroComRange[]>()
+const idsPorElemento = new WeakMap<HTMLElement, string>()
 
 function obterParagrafos(corpo: HTMLElement): HTMLElement[] {
   const elementos = Array.from(corpo.querySelectorAll<HTMLElement>('p, li, td, th'))
@@ -28,10 +29,10 @@ function obterParagrafos(corpo: HTMLElement): HTMLElement[] {
 }
 
 function obterOuCriarIdParagrafo(elemento: HTMLElement): string {
-  const existente = elemento.getAttribute('data-seirmg-par-id')
+  const existente = idsPorElemento.get(elemento)
   if (existente) return existente
   const novoId = `p${proximoIdParagrafo++}`
-  elemento.setAttribute('data-seirmg-par-id', novoId)
+  idsPorElemento.set(elemento, novoId)
   return novoId
 }
 
@@ -87,39 +88,43 @@ function atualizarIndicador(): void {
 }
 
 function reescanearAlterados(editor: EditorCKEditor): void {
-  if (!corretor) return
-  const corpo = editor.document.getBody().$
-  const elementosParagrafo = obterParagrafos(corpo)
+  try {
+    if (!corretor) return
+    const corpo = editor.document.getBody().$
+    const elementosParagrafo = obterParagrafos(corpo)
 
-  const atuais = elementosParagrafo.map((elemento) => ({
-    elemento,
-    id: obterOuCriarIdParagrafo(elemento),
-    texto: elemento.textContent ?? '',
-  }))
+    const atuais = elementosParagrafo.map((elemento) => ({
+      elemento,
+      id: obterOuCriarIdParagrafo(elemento),
+      texto: elemento.textContent ?? '',
+    }))
 
-  const paragrafosParaDiff: ParagrafoAtual[] = atuais.map(({ id, texto }) => ({ id, texto }))
-  const { novosOuAlterados, removidos } = diffarParagrafos(paragrafosParaDiff, textoAnteriorPorParagrafo)
+    const paragrafosParaDiff: ParagrafoAtual[] = atuais.map(({ id, texto }) => ({ id, texto }))
+    const { novosOuAlterados, removidos } = diffarParagrafos(paragrafosParaDiff, textoAnteriorPorParagrafo)
 
-  removidos.forEach((id) => {
-    textoAnteriorPorParagrafo.delete(id)
-    errosPorParagrafo.delete(id)
-  })
-
-  novosOuAlterados.forEach((id) => {
-    const paragrafo = atuais.find((item) => item.id === id)
-    if (!paragrafo || !corretor) return
-    textoAnteriorPorParagrafo.set(id, paragrafo.texto)
-
-    const erros = corretor.verificarTexto(paragrafo.texto)
-    const errosComRange = erros.flatMap((erro) => {
-      const range = criarRangeDaPalavra(paragrafo.elemento, erro.inicio, erro.fim)
-      return range ? [{ ...erro, range }] : []
+    removidos.forEach((id) => {
+      textoAnteriorPorParagrafo.delete(id)
+      errosPorParagrafo.delete(id)
     })
-    errosPorParagrafo.set(id, errosComRange)
-  })
 
-  atualizarDestaque(editor)
-  atualizarIndicador()
+    novosOuAlterados.forEach((id) => {
+      const paragrafo = atuais.find((item) => item.id === id)
+      if (!paragrafo || !corretor) return
+      textoAnteriorPorParagrafo.set(id, paragrafo.texto)
+
+      const erros = corretor.verificarTexto(paragrafo.texto)
+      const errosComRange = erros.flatMap((erro) => {
+        const range = criarRangeDaPalavra(paragrafo.elemento, erro.inicio, erro.fim)
+        return range ? [{ ...erro, range }] : []
+      })
+      errosPorParagrafo.set(id, errosComRange)
+    })
+
+    atualizarDestaque(editor)
+    atualizarIndicador()
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao reescanear parágrafos do corretor ortográfico:', error)
+  }
 }
 
 function agendarReescaneamento(editor: EditorCKEditor): void {
@@ -144,6 +149,13 @@ function fecharMenuSugestoes(documentoEditor: Document): void {
   documentoEditor.getElementById('seirmg-menu-corretor')?.remove()
 }
 
+function removerErroDoMapa(erro: ErroComRange): void {
+  errosPorParagrafo.forEach((erros, id) => {
+    const filtrados = erros.filter((item) => item !== erro)
+    if (filtrados.length !== erros.length) errosPorParagrafo.set(id, filtrados)
+  })
+}
+
 function aplicarSugestao(erro: ErroComRange, sugestao: string, editor: EditorCKEditor): void {
   const janela = obterJanelaComHighlight(editor)
   const selecao = janela.getSelection()
@@ -151,13 +163,13 @@ function aplicarSugestao(erro: ErroComRange, sugestao: string, editor: EditorCKE
   selecao.removeAllRanges()
   selecao.addRange(erro.range.cloneRange())
   editor.insertText(sugestao)
+  removerErroDoMapa(erro)
+  atualizarDestaque(editor)
+  atualizarIndicador()
 }
 
 function ignorarOcorrencia(erro: ErroComRange, editor: EditorCKEditor): void {
-  errosPorParagrafo.forEach((erros, id) => {
-    const filtrados = erros.filter((item) => item !== erro)
-    if (filtrados.length !== erros.length) errosPorParagrafo.set(id, filtrados)
-  })
+  removerErroDoMapa(erro)
   atualizarDestaque(editor)
   atualizarIndicador()
 }
@@ -244,11 +256,15 @@ function abrirMenuSugestoes(
 }
 
 function tratarContextMenu(evento: MouseEvent, editor: EditorCKEditor, documentoEditor: Document): void {
-  const erro = encontrarErroNoPonto(evento.clientX, evento.clientY)
-  if (!erro) return
-  evento.preventDefault()
-  evento.stopPropagation()
-  abrirMenuSugestoes(erro, evento.clientX, evento.clientY, editor, documentoEditor)
+  try {
+    const erro = encontrarErroNoPonto(evento.clientX, evento.clientY)
+    if (!erro) return
+    evento.preventDefault()
+    evento.stopPropagation()
+    abrirMenuSugestoes(erro, evento.clientX, evento.clientY, editor, documentoEditor)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao tratar clique direito do corretor ortográfico:', error)
+  }
 }
 
 const ESTILO_MENU = `
