@@ -10,7 +10,9 @@ import tableIconSvg from 'lucide-static/icons/table.svg?raw'
 import separatorHorizontalIconSvg from 'lucide-static/icons/separator-horizontal.svg?raw'
 import listOrderedIconSvg from 'lucide-static/icons/list-ordered.svg?raw'
 import superscriptIconSvg from 'lucide-static/icons/superscript.svg?raw'
+import sigmaIconSvg from 'lucide-static/icons/sigma.svg?raw'
 import { injetarEstiloSeAusente } from './dom'
+import { abrirDialogoLatex } from './latex'
 import { CLASSES_ALINHAMENTO, proximoTamanhoFontePx } from '../../features/formatacao-basica/paragrafoEstilos'
 import type { AlinhamentoTexto } from '../../features/formatacao-basica/paragrafoEstilos'
 import { lerEstiloElemento } from '../../features/formatacao-basica/estiloTexto'
@@ -236,6 +238,12 @@ function montarBotaoNotaRodape(editor: EditorSEI): HTMLElement {
   })
 }
 
+function montarBotaoLatex(editor: EditorSEI): HTMLElement {
+  return criarBotaoToolbar('seirmg-cke-latex', 'Inserir equação (LaTeX)', sigmaIconSvg, () => {
+    abrirDialogoLatex(editor)
+  })
+}
+
 function registrarAtalhos(editor: EditorSEI, atalhos: AtalhoParagrafo[]): void {
   if (atalhos.length === 0) return
   const porTecla = new Map(atalhos.map((atalho) => [atalho.tecla.toLowerCase(), atalho]))
@@ -266,6 +274,7 @@ export async function iniciarFormatacaoBasica(
     montarBotaoQuebraPagina(editor),
     montarBotaoSumario(editor),
     montarBotaoNotaRodape(editor),
+    montarBotaoLatex(editor),
   ]
   botoes.forEach((botao) => toolbox.appendChild(botao))
 
