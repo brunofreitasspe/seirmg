@@ -5,10 +5,12 @@ import alignJustifyIconSvg from 'lucide-static/icons/align-justify.svg?raw'
 import zoomInIconSvg from 'lucide-static/icons/zoom-in.svg?raw'
 import zoomOutIconSvg from 'lucide-static/icons/zoom-out.svg?raw'
 import paintbrushIconSvg from 'lucide-static/icons/paintbrush.svg?raw'
+import caseSensitiveIconSvg from 'lucide-static/icons/case-sensitive.svg?raw'
 import { injetarEstiloSeAusente } from './dom'
 import { CLASSES_ALINHAMENTO, proximoTamanhoFontePx } from '../../features/formatacao-basica/paragrafoEstilos'
 import type { AlinhamentoTexto } from '../../features/formatacao-basica/paragrafoEstilos'
 import { lerEstiloElemento } from '../../features/formatacao-basica/estiloTexto'
+import { primeiraLetraMaiuscula } from '../../features/formatacao-basica/maiuscula'
 import type { DescritorEstiloTexto } from './protocolo'
 import type { EditorSEI } from './ponteEditor'
 import type { AtalhoParagrafo, FormatacaoBasicaConfig } from '../../lib/storage'
@@ -135,6 +137,15 @@ function montarBotaoCopiarFormatacao(editor: EditorSEI): HTMLElement {
   return botao
 }
 
+function montarBotaoMaiuscula(editor: EditorSEI): HTMLElement {
+  return criarBotaoToolbar('seirmg-cke-maiuscula', 'Primeira letra maiúscula', caseSensitiveIconSvg, () => {
+    editor
+      .obterTextoSelecionado()
+      .then((texto) => (texto ? editor.inserirTexto(primeiraLetraMaiuscula(texto)) : undefined))
+      .catch(tratarErro('Falha ao aplicar maiúscula automática'))
+  })
+}
+
 function registrarAtalhos(editor: EditorSEI, atalhos: AtalhoParagrafo[]): void {
   if (atalhos.length === 0) return
   const porTecla = new Map(atalhos.map((atalho) => [atalho.tecla.toLowerCase(), atalho]))
@@ -156,7 +167,12 @@ export async function iniciarFormatacaoBasica(
   const toolbox = await aguardarToolbox(editor.iframe, intervaloMs, tentativasMax)
   injetarEstiloSeAusente(document, 'seirmg-estilo-botoes-formatacao', ESTILO_BOTOES)
 
-  const botoes = [...montarBotoesAlinhamento(editor), ...montarBotoesFonte(editor), montarBotaoCopiarFormatacao(editor)]
+  const botoes = [
+    ...montarBotoesAlinhamento(editor),
+    ...montarBotoesFonte(editor),
+    montarBotaoCopiarFormatacao(editor),
+    montarBotaoMaiuscula(editor),
+  ]
   botoes.forEach((botao) => toolbox.appendChild(botao))
 
   registrarAtalhos(editor, config.atalhos)

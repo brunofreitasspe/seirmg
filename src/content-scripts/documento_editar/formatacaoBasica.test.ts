@@ -87,4 +87,19 @@ describe('iniciarFormatacaoBasica', () => {
     )
     expect(botao.title).toBe('Copiar formatação')
   })
+
+  it('maiúscula automática: lê a seleção, capitaliza e reinsere', async () => {
+    const { iframe, toolbox } = montarToolboxFalsa()
+    const editor = criarEditorFalso(iframe)
+    editor.obterTextoSelecionado = vi.fn().mockResolvedValue('processo administrativo')
+
+    await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
+
+    const botao = toolbox.querySelector('#seirmg-cke-maiuscula') as HTMLElement
+    botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(editor.inserirTexto).toHaveBeenCalledWith('Processo administrativo')
+  })
 })
