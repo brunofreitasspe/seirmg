@@ -183,7 +183,10 @@ function montarBotaoSumario(editor: EditorSEI): HTMLElement {
     if (paragrafos.length === 0) return
 
     const itens = extrairItensSumario(
-      paragrafos.map((p) => ({ classe: p.className, texto: p.textContent ?? '' }))
+      paragrafos.map((p) => ({
+        classe: CLASSES_PARAGRAFO_NUMERADO.find((c) => p.classList.contains(c)) ?? '',
+        texto: p.textContent ?? '',
+      }))
     )
     // Atribuição de id é metadado estrutural invisível (âncora), não conteúdo novo do
     // usuário — mutação direta do DOM, mesma exceção documentada na spec pra nota de

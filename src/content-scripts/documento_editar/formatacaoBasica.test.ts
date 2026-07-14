@@ -158,4 +158,19 @@ describe('iniciarFormatacaoBasica', () => {
     expect(paragrafoNumerado.id).not.toBe('')
     expect(editor.inserirHtml).toHaveBeenCalledWith(expect.stringContaining(`href="#${paragrafoNumerado.id}"`))
   })
+
+  it('sumário: parágrafo com classe numerada composta com classe de alinhamento continua sendo classificado corretamente', async () => {
+    const { iframe, toolbox } = montarToolboxFalsa()
+    const editor = criarEditorFalso(iframe)
+    editor.corpo.innerHTML =
+      '<p class="Paragrafo_Numerado_Nivel1 Texto_Alinhado_Centro">Introdução</p><p>texto comum</p>'
+
+    await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
+    const botao = toolbox.querySelector('#seirmg-cke-sumario') as HTMLElement
+    expect(() => botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))).not.toThrow()
+
+    const paragrafoNumerado = editor.corpo.querySelector('.Paragrafo_Numerado_Nivel1') as HTMLElement
+    expect(paragrafoNumerado.id).not.toBe('')
+    expect(editor.inserirHtml).toHaveBeenCalledWith(expect.stringContaining(`href="#${paragrafoNumerado.id}"`))
+  })
 })
