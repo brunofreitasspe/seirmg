@@ -1,9 +1,25 @@
-import katexCss from 'katex/dist/katex.min.css?raw'
+import katexCssBruto from 'katex/dist/katex.min.css?inline'
 import { injetarEstiloSeAusente } from './dom'
 import { renderizarLatexHtml } from '../../features/latex/renderizarLatex'
 import type { EditorSEI } from './ponteEditor'
 
 const ID_DIALOGO_LATEX = 'seirmg-dialogo-latex'
+
+// O CSS do KaTeX importado com `?inline` já vem com os `url(...)` das fontes
+// reescritos pelo Vite para o caminho final do bundle (ex.: `/assets/KaTeX_Main-Regular-HASH.woff2`),
+// mas esse caminho é relativo à raiz do documento onde o <style> é injetado — e aqui o
+// <style> é injetado dentro de páginas do SEI (`document`) ou do iframe do CKEditor
+// (`editor.documento`), nunca numa página da própria extensão. Sem reescrever para uma
+// URL absoluta `chrome-extension://<id>/...` via `chrome.runtime.getURL`, o navegador
+// tentaria buscar as fontes no domínio do SEI (ex. `https://sei.exemplo.gov.br/assets/...`),
+// que não existe, e as fontes falhariam do mesmo jeito que com `?raw`.
+function resolverUrlsDeFonteParaExtensao(css: string): string {
+  return css.replace(/url\((['"]?)(\/assets\/[^'")]+)\1\)/g, (_match, aspas: string, caminho: string) => {
+    return `url(${aspas}${chrome.runtime.getURL(caminho)}${aspas})`
+  })
+}
+
+const katexCss = resolverUrlsDeFonteParaExtensao(katexCssBruto)
 
 const ESTILO_DIALOGO = `
   #${ID_DIALOGO_LATEX} {
@@ -46,6 +62,7 @@ function fecharDialogo(): void {
 export function abrirDialogoLatex(editor: EditorSEI): void {
   fecharDialogo()
   injetarEstiloSeAusente(document, 'seirmg-estilo-dialogo-latex', ESTILO_DIALOGO)
+  injetarEstiloSeAusente(document, 'seirmg-estilo-katex-dialogo', katexCss)
   injetarEstiloSeAusente(editor.documento, 'seirmg-estilo-katex-editor', katexCss)
 
   const dialogo = document.createElement('div')
