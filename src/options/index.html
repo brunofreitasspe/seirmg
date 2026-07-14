@@ -190,6 +190,20 @@
         <input type="text" id="editor-doc-externo-tipo-padrao-arrastar" placeholder="Anexo" />
       </label>
       <br />
+      <h3>Formatação Básica</h3>
+      <label>
+        <input type="checkbox" id="editor-formatacao-basica-ativo" />
+        Ativar botões de formatação básica na barra do editor (alinhar texto, fonte, copiar formatação,
+        tabela rápida, quebra de página, sumário, nota de rodapé, maiúscula automática, LaTeX)
+      </label>
+      <br />
+      <label>
+        Teclas de atalho (uma por linha, formato <code>tecla=classe:rótulo</code>, ex.: <code>1=Titulo1:Título 1</code>) —
+        sempre combinadas com Ctrl+Alt+Shift:
+        <br />
+        <textarea id="editor-formatacao-basica-atalhos" rows="4" placeholder="1=Titulo1:Título 1"></textarea>
+      </label>
+      <br />
       <button id="editor-salvar">Salvar</button>
       <span id="editor-status"></span>
     </section>

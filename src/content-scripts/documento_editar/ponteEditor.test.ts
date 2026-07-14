@@ -92,4 +92,34 @@ describe('criarClienteEditor', () => {
 
     await expect(editor.obterTextoCompleto()).rejects.toThrow('Timeout')
   })
+
+  it('aplicarClasseParagrafo envia comando com a classe e resolve quando não há erro', async () => {
+    document.body.innerHTML = `<iframe title="Corpo do Texto" ${ATRIBUTO_EDITOR_ALVO}="classe"></iframe>`
+    cliente = criarClienteEditor(window)
+    pararDeResponder = responderComando(window, (detalhe) => {
+      expect(detalhe.tipo).toBe('aplicarClasseParagrafo')
+      expect(detalhe.args).toEqual(['Texto_Alinhado_Centro'])
+      return { resultado: null, erro: null }
+    })
+
+    window.dispatchEvent(new CustomEvent(EVENTO_PRONTO, { detail: { nome: 'classe' } }))
+    const editor = await cliente.aguardarEditorPronto(document)
+
+    await expect(editor.aplicarClasseParagrafo('Texto_Alinhado_Centro')).resolves.toBeUndefined()
+  })
+
+  it('aplicarEstiloTexto envia comando com o descritor e resolve quando não há erro', async () => {
+    document.body.innerHTML = `<iframe title="Corpo do Texto" ${ATRIBUTO_EDITOR_ALVO}="estilo"></iframe>`
+    cliente = criarClienteEditor(window)
+    pararDeResponder = responderComando(window, (detalhe) => {
+      expect(detalhe.tipo).toBe('aplicarEstiloTexto')
+      expect(detalhe.args).toEqual([{ fontSizePx: 16 }])
+      return { resultado: null, erro: null }
+    })
+
+    window.dispatchEvent(new CustomEvent(EVENTO_PRONTO, { detail: { nome: 'estilo' } }))
+    const editor = await cliente.aguardarEditorPronto(document)
+
+    await expect(editor.aplicarEstiloTexto({ fontSizePx: 16 })).resolves.toBeUndefined()
+  })
 })

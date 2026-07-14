@@ -10,7 +10,13 @@ export const EVENTO_RESPOSTA = 'seirmg:resposta-editor'
 // a partir de texto visível.
 export const ATRIBUTO_EDITOR_ALVO = 'data-seirmg-editor-nome'
 
-export type TipoComando = 'getSelectedText' | 'insertHtml' | 'insertText' | 'getTextoCompleto'
+export type TipoComando =
+  | 'getSelectedText'
+  | 'insertHtml'
+  | 'insertText'
+  | 'getTextoCompleto'
+  | 'aplicarClasseParagrafo'
+  | 'aplicarEstiloTexto'
 
 export interface DetalheComando {
   id: string
@@ -26,4 +32,12 @@ export interface DetalheResposta {
 
 export interface DetalhePronto {
   nome: string
+}
+
+export interface DescritorEstiloTexto {
+  fontSizePx?: number
+  bold?: boolean
+  italic?: boolean
+  underline?: boolean
+  color?: string
 }

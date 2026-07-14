@@ -1,6 +1,7 @@
 import { criarCorretor, type Corretor, type ErroOrtografico } from '../../features/corretor-ortografico/corretor'
 import { diffarParagrafos, type ParagrafoAtual } from '../../features/corretor-ortografico/diffParagrafos'
 import { createSyncConfigStore, type CorretorOrtograficoConfig } from '../../lib/storage'
+import { injetarEstiloSeAusente } from './dom'
 import type { EditorSEI } from './ponteEditor'
 
 const NOME_HIGHLIGHT = 'seirmg-erro-ortografico'
@@ -374,14 +375,6 @@ const ESTILO_INDICADOR = `
     padding: 2px 10px;
   }
 `
-
-function injetarEstiloSeAusente(documentoAlvo: Document, id: string, css: string): void {
-  if (documentoAlvo.getElementById(id)) return
-  const estilo = documentoAlvo.createElement('style')
-  estilo.id = id
-  estilo.textContent = css
-  documentoAlvo.head.appendChild(estilo)
-}
 
 export async function iniciarCorretorOrtografico(
   editor: EditorSEI,

@@ -611,7 +611,7 @@ const clienteEditorGlobal = criarClienteEditor(window)
 async function bootstrap(): Promise<void> {
   try {
     const config = await createSyncConfigStore().get()
-    if (!config.ferramentasIA.ativo && !config.corretorOrtografico.ativo) return
+    if (!config.ferramentasIA.ativo && !config.corretorOrtografico.ativo && !config.formatacaoBasica.ativo) return
 
     const editor = await clienteEditorGlobal.aguardarEditorPronto()
 
@@ -623,6 +623,11 @@ async function bootstrap(): Promise<void> {
     if (config.corretorOrtografico.ativo) {
       const { iniciarCorretorOrtografico } = await import('./corretorOrtografico')
       await iniciarCorretorOrtografico(editor, config.corretorOrtografico)
+    }
+
+    if (config.formatacaoBasica.ativo) {
+      const { iniciarFormatacaoBasica } = await import('./formatacaoBasica')
+      await iniciarFormatacaoBasica(editor, config.formatacaoBasica)
     }
   } catch (error) {
     console.error('[SEIRMG] Falha ao inicializar recursos do editor de documentos:', error)

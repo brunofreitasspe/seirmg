@@ -21,6 +21,7 @@ import {
 import { montarListaEditavel } from './listaEditavel'
 import { colorToFilter } from '../features/ponto-controle/colorToFilter'
 import { decodificarPayloadJwtSemVerificar, tokenValido } from '../features/planka/token'
+import { formatarAtalhos, parsearAtalhos } from '../features/formatacao-basica/atalhos'
 
 interface RegraPontoControleEditavel {
   nome: string
@@ -368,6 +369,13 @@ async function carregarAbaEditor(): Promise<void> {
     ) as HTMLInputElement | null
     const status = document.getElementById('editor-status')
 
+    const inputFormatacaoBasicaAtivo = document.getElementById(
+      'editor-formatacao-basica-ativo'
+    ) as HTMLInputElement | null
+    const inputFormatacaoBasicaAtalhos = document.getElementById(
+      'editor-formatacao-basica-atalhos'
+    ) as HTMLTextAreaElement | null
+
     if (inputAtivo) inputAtivo.checked = config.documentoExterno.ativo
     if (selectFormato) selectFormato.value = config.documentoExterno.formato
     if (inputTipoConferencia) inputTipoConferencia.value = config.documentoExterno.tipoConferencia
@@ -375,6 +383,13 @@ async function carregarAbaEditor(): Promise<void> {
     if (inputHipoteseLegal) inputHipoteseLegal.value = config.documentoExterno.hipoteseLegal
     if (inputTipoPadraoArrastar) {
       inputTipoPadraoArrastar.value = config.documentoExterno.tipoDocumentoPadraoArrastar
+    }
+
+    if (inputFormatacaoBasicaAtivo) {
+      inputFormatacaoBasicaAtivo.checked = config.formatacaoBasica.ativo
+    }
+    if (inputFormatacaoBasicaAtalhos) {
+      inputFormatacaoBasicaAtalhos.value = formatarAtalhos(config.formatacaoBasica.atalhos)
     }
 
     document.getElementById('editor-salvar')?.addEventListener('click', async () => {
@@ -388,6 +403,11 @@ async function carregarAbaEditor(): Promise<void> {
             nivelAcesso: (selectNivelAcesso?.value ?? 'P') as NivelAcessoDocumento,
             hipoteseLegal: inputHipoteseLegal?.value ?? '',
             tipoDocumentoPadraoArrastar: inputTipoPadraoArrastar?.value.trim() || 'Anexo',
+          },
+          formatacaoBasica: {
+            ...config.formatacaoBasica,
+            ativo: inputFormatacaoBasicaAtivo?.checked ?? false,
+            atalhos: parsearAtalhos(inputFormatacaoBasicaAtalhos?.value ?? ''),
           },
         }
         await store.set(atualizado)
