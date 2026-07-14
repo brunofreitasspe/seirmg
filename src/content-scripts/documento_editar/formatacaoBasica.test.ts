@@ -102,4 +102,34 @@ describe('iniciarFormatacaoBasica', () => {
 
     expect(editor.inserirTexto).toHaveBeenCalledWith('Processo administrativo')
   })
+
+  it('tabela rápida: pede linhas/colunas/estilo via prompt e insere a tabela já com o estilo escolhido', async () => {
+    const { iframe, toolbox } = montarToolboxFalsa()
+    const editor = criarEditorFalso(iframe)
+    const promptOriginal = window.prompt
+    window.prompt = vi.fn().mockReturnValueOnce('2').mockReturnValueOnce('3').mockReturnValueOnce('bordas')
+
+    await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
+    const botao = toolbox.querySelector('#seirmg-cke-tabela') as HTMLElement
+    botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    expect(editor.inserirHtml).toHaveBeenCalledWith(
+      expect.stringContaining('<table class="Tabela" style="border-collapse:collapse;width:100%;border:1px solid #000">')
+    )
+    window.prompt = promptOriginal
+  })
+
+  it('tabela rápida: estilo inválido ou vazio cai no padrão (tabela sem style extra)', async () => {
+    const { iframe, toolbox } = montarToolboxFalsa()
+    const editor = criarEditorFalso(iframe)
+    const promptOriginal = window.prompt
+    window.prompt = vi.fn().mockReturnValueOnce('1').mockReturnValueOnce('1').mockReturnValueOnce('')
+
+    await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
+    const botao = toolbox.querySelector('#seirmg-cke-tabela') as HTMLElement
+    botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    expect(editor.inserirHtml).toHaveBeenCalledWith(expect.stringContaining('<table class="Tabela">'))
+    window.prompt = promptOriginal
+  })
 })

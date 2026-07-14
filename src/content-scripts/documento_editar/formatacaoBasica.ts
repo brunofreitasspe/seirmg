@@ -6,11 +6,13 @@ import zoomInIconSvg from 'lucide-static/icons/zoom-in.svg?raw'
 import zoomOutIconSvg from 'lucide-static/icons/zoom-out.svg?raw'
 import paintbrushIconSvg from 'lucide-static/icons/paintbrush.svg?raw'
 import caseSensitiveIconSvg from 'lucide-static/icons/case-sensitive.svg?raw'
+import tableIconSvg from 'lucide-static/icons/table.svg?raw'
 import { injetarEstiloSeAusente } from './dom'
 import { CLASSES_ALINHAMENTO, proximoTamanhoFontePx } from '../../features/formatacao-basica/paragrafoEstilos'
 import type { AlinhamentoTexto } from '../../features/formatacao-basica/paragrafoEstilos'
 import { lerEstiloElemento } from '../../features/formatacao-basica/estiloTexto'
 import { primeiraLetraMaiuscula } from '../../features/formatacao-basica/maiuscula'
+import { CATALOGO_ESTILOS_TABELA, aplicarEstiloTabelaHtml, montarTabelaHtml } from '../../features/formatacao-basica/tabelaRapida'
 import type { DescritorEstiloTexto } from './protocolo'
 import type { EditorSEI } from './ponteEditor'
 import type { AtalhoParagrafo, FormatacaoBasicaConfig } from '../../lib/storage'
@@ -146,6 +148,22 @@ function montarBotaoMaiuscula(editor: EditorSEI): HTMLElement {
   })
 }
 
+function montarBotaoTabelaRapida(editor: EditorSEI): HTMLElement {
+  return criarBotaoToolbar('seirmg-cke-tabela', 'Inserir tabela rápida', tableIconSvg, () => {
+    const linhas = Number.parseInt(window.prompt('Quantas linhas?', '2') ?? '', 10)
+    const colunas = Number.parseInt(window.prompt('Quantas colunas?', '2') ?? '', 10)
+    if (!Number.isInteger(linhas) || !Number.isInteger(colunas) || linhas < 1 || colunas < 1) return
+
+    const idsValidos = CATALOGO_ESTILOS_TABELA.map((estilo) => estilo.id).join('/')
+    const idEstilo = window.prompt(`Estilo (${idsValidos}) ou deixe em branco pro padrão:`, '') ?? ''
+    const estilo = CATALOGO_ESTILOS_TABELA.find((item) => item.id === idEstilo.trim())
+
+    const tabelaHtml = montarTabelaHtml(linhas, colunas)
+    const htmlFinal = estilo ? aplicarEstiloTabelaHtml(tabelaHtml, estilo) : tabelaHtml
+    editor.inserirHtml(htmlFinal).catch(tratarErro('Falha ao inserir tabela rápida'))
+  })
+}
+
 function registrarAtalhos(editor: EditorSEI, atalhos: AtalhoParagrafo[]): void {
   if (atalhos.length === 0) return
   const porTecla = new Map(atalhos.map((atalho) => [atalho.tecla.toLowerCase(), atalho]))
@@ -172,6 +190,7 @@ export async function iniciarFormatacaoBasica(
     ...montarBotoesFonte(editor),
     montarBotaoCopiarFormatacao(editor),
     montarBotaoMaiuscula(editor),
+    montarBotaoTabelaRapida(editor),
   ]
   botoes.forEach((botao) => toolbox.appendChild(botao))
 
