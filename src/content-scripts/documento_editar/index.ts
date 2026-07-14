@@ -666,10 +666,10 @@ async function bootstrap(): Promise<void> {
   try {
     const config = await createSyncConfigStore().get()
     atualizarBannerDiagnosticoIsolado(
-      `config carregada — IA ativo=${config.ferramentasIA.ativo} corretor ativo=${config.corretorOrtografico.ativo}`
+      `config carregada — IA ativo=${config.ferramentasIA.ativo} corretor ativo=${config.corretorOrtografico.ativo} formatação básica ativo=${config.formatacaoBasica.ativo}`
     )
-    if (!config.ferramentasIA.ativo && !config.corretorOrtografico.ativo) {
-      atualizarBannerDiagnosticoIsolado('ambos desativados nas Opções, parando aqui')
+    if (!config.ferramentasIA.ativo && !config.corretorOrtografico.ativo && !config.formatacaoBasica.ativo) {
+      atualizarBannerDiagnosticoIsolado('todos desativados nas Opções, parando aqui')
       return
     }
 
@@ -687,6 +687,12 @@ async function bootstrap(): Promise<void> {
       const { iniciarCorretorOrtografico } = await import('./corretorOrtografico')
       await iniciarCorretorOrtografico(editor, config.corretorOrtografico)
       atualizarBannerDiagnosticoIsolado('corretor ortográfico iniciado')
+    }
+
+    if (config.formatacaoBasica.ativo) {
+      const { iniciarFormatacaoBasica } = await import('./formatacaoBasica')
+      await iniciarFormatacaoBasica(editor, config.formatacaoBasica)
+      atualizarBannerDiagnosticoIsolado('formatação básica iniciada')
     }
   } catch (error) {
     atualizarBannerDiagnosticoIsolado(`ERRO: ${error instanceof Error ? error.message : String(error)}`)
