@@ -8,8 +8,9 @@ export function lerEstiloElemento(elemento: Element): DescritorEstiloTexto {
   const fontSizePx = Number.parseFloat(estiloComputado.fontSize)
   const peso = estiloComputado.fontWeight
 
-  // Check textDecoration first (contains the shorthand value like "underline")
-  // Fall back to textDecorationLine if needed
+  // Prioriza `textDecoration` (contém o valor abreviado, ex.: "underline") — no jsdom,
+  // `textDecorationLine` não reflete corretamente um `text-decoration:underline` inline
+  // (retorna "none"), então cai pra ele só como reforço.
   const decoracao = estiloComputado.textDecoration || estiloComputado.textDecorationLine || ''
   const underline = decoracao.includes('underline')
 

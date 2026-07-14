@@ -211,4 +211,52 @@ describe('iniciarFormatacaoBasica', () => {
     expect(entradas).toEqual(['1. Nota Y ↑', '2. Nota Y ↑'])
     window.prompt = promptOriginal
   })
+
+  it('atalho de tecla numérica (Ctrl+Alt+Shift+1) aplica a classe configurada, mesmo com Shift trocando o caractere de "1" pra "!"', async () => {
+    const { iframe } = montarToolboxFalsa()
+    const editor = criarEditorFalso(iframe)
+
+    await iniciarFormatacaoBasica(editor, {
+      ativo: true,
+      atalhos: [{ tecla: '1', classe: 'Titulo1', rotulo: 'Título 1' }],
+    })
+
+    // Reproduz o evento real do navegador: com Shift pressionado, `key` vem como "!" (o
+    // caractere já processado pelo layout), não "1" — só `code` ("Digit1") é estável.
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: '!',
+        code: 'Digit1',
+        ctrlKey: true,
+        altKey: true,
+        shiftKey: true,
+        cancelable: true,
+      })
+    )
+
+    expect(editor.aplicarClasseParagrafo).toHaveBeenCalledWith('Titulo1')
+  })
+
+  it('atalho de tecla de letra (Ctrl+Alt+Shift+A) continua funcionando', async () => {
+    const { iframe } = montarToolboxFalsa()
+    const editor = criarEditorFalso(iframe)
+
+    await iniciarFormatacaoBasica(editor, {
+      ativo: true,
+      atalhos: [{ tecla: 'a', classe: 'Titulo2', rotulo: 'Título 2' }],
+    })
+
+    window.dispatchEvent(
+      new KeyboardEvent('keydown', {
+        key: 'A',
+        code: 'KeyA',
+        ctrlKey: true,
+        altKey: true,
+        shiftKey: true,
+        cancelable: true,
+      })
+    )
+
+    expect(editor.aplicarClasseParagrafo).toHaveBeenCalledWith('Titulo2')
+  })
 })

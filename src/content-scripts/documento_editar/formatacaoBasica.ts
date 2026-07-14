@@ -244,12 +244,28 @@ function montarBotaoLatex(editor: EditorSEI): HTMLElement {
   })
 }
 
+// `evento.key` reflete o caractere já processado pelo layout/modificadores — com Shift
+// pressionado (exigido pelo atalho, junto com Ctrl+Alt), uma tecla numérica como "1"
+// chega como "!" em teclados padrão, nunca como "1". `evento.code` é a tecla física,
+// imune a modificadores, então é o que precisa ser comparado aqui.
+function codigoDaTecla(tecla: string): string | null {
+  const caractere = tecla.trim()
+  if (/^[0-9]$/.test(caractere)) return `Digit${caractere}`
+  if (/^[a-zA-Z]$/.test(caractere)) return `Key${caractere.toUpperCase()}`
+  return null
+}
+
 function registrarAtalhos(editor: EditorSEI, atalhos: AtalhoParagrafo[]): void {
   if (atalhos.length === 0) return
-  const porTecla = new Map(atalhos.map((atalho) => [atalho.tecla.toLowerCase(), atalho]))
+  const porCodigo = new Map(
+    atalhos.flatMap((atalho) => {
+      const codigo = codigoDaTecla(atalho.tecla)
+      return codigo ? [[codigo, atalho] as const] : []
+    })
+  )
   editor.janela.addEventListener('keydown', (evento) => {
     if (!(evento.ctrlKey && evento.altKey && evento.shiftKey)) return
-    const atalho = porTecla.get(evento.key.toLowerCase())
+    const atalho = porCodigo.get(evento.code)
     if (!atalho) return
     evento.preventDefault()
     editor.aplicarClasseParagrafo(atalho.classe).catch(tratarErro('Falha ao aplicar atalho de formatação'))
