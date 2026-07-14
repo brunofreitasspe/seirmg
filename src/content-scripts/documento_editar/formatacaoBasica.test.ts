@@ -66,9 +66,14 @@ describe('iniciarFormatacaoBasica', () => {
   it('copiar formatação: primeiro clique lê o estilo, segundo aplica e limpa', async () => {
     const { iframe, toolbox } = montarToolboxFalsa()
     const editor = criarEditorFalso(iframe)
-    document.body.innerHTML +=
+    // insertAdjacentHTML (não `innerHTML +=`) preserva os nós já existentes — `+=`
+    // re-serializa e reconstrói o body inteiro, invalidando as referências `iframe`/
+    // `toolbox` já capturadas acima (viravam nós órfãos, desconectados do documento).
+    document.body.insertAdjacentHTML(
+      'beforeend',
       '<span id="origem" style="font-size:20px;font-weight:bold">origem</span>' +
-      '<span id="destino">destino</span>'
+        '<span id="destino">destino</span>'
+    )
 
     await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
 
@@ -258,5 +263,24 @@ describe('iniciarFormatacaoBasica', () => {
     )
 
     expect(editor.aplicarClasseParagrafo).toHaveBeenCalledWith('Titulo2')
+  })
+
+  it('acha a toolbox mesmo quando ela vive num container .cke separado do container do iframe editável (barra compartilhada entre instâncias, confirmado ao vivo no SEI)', async () => {
+    document.body.innerHTML =
+      // Instância que hospeda a barra compartilhada (ex.: cabeçalho) — sem nenhum <iframe> aqui.
+      '<div id="cke_txaEditor_298" class="cke cke_shared cke_detached">' +
+      '<span class="cke_inner"><span class="cke_top"><span class="cke_toolbox"></span></span></span>' +
+      '</div>' +
+      // Instância editável (corpo do texto) — container .cke próprio, sem toolbox dentro dele.
+      '<div id="cke_txaEditor_174" class="cke_4 cke cke_reset cke_chrome cke_editor_txaEditor_174">' +
+      '<div class="cke_inner"><div class="cke_contents"><iframe title="Corpo do Texto"></iframe></div></div>' +
+      '</div>'
+    const iframe = document.querySelector('iframe') as HTMLIFrameElement
+    const toolbox = document.querySelector('.cke_toolbox') as HTMLElement
+    const editor = criarEditorFalso(iframe)
+
+    await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
+
+    expect(toolbox.querySelectorAll('.seirmg-cke-button').length).toBeGreaterThanOrEqual(6)
   })
 })

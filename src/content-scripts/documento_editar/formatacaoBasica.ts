@@ -35,9 +35,16 @@ const ESTILO_BOTOES = `
   }
 `
 
+// Confirmado ao vivo numa instância SEI real: as 5 instâncias de CKEditor da tela
+// (cabeçalho/título/data/corpo/rodapé) compartilham UMA única barra de ferramentas
+// (CKEditor 4 "sharedSpaces") — ela fica dentro do container da instância que a
+// hospeda (a primeira criada), não dentro do container da instância editável. Por
+// isso `iframe.closest('.cke')` acha o container certo da instância editável, mas
+// não tem `.cke_toolbox` lá dentro — a barra real está em outro container. Como só
+// existe uma barra compartilhada na página inteira, buscar direto no documento
+// (sem escopar pelo container do iframe) é o jeito confiável de achá-la.
 function localizarToolbox(iframe: HTMLIFrameElement): HTMLElement | null {
-  const container = iframe.closest('.cke')
-  return container?.querySelector<HTMLElement>('.cke_toolbox') ?? null
+  return iframe.ownerDocument.querySelector<HTMLElement>('.cke_toolbox')
 }
 
 // DIAGNÓSTICO TEMPORÁRIO (Lote I) — a suposição de que o iframe do CKEditor tem um
