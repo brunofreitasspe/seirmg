@@ -7,12 +7,14 @@ import zoomOutIconSvg from 'lucide-static/icons/zoom-out.svg?raw'
 import paintbrushIconSvg from 'lucide-static/icons/paintbrush.svg?raw'
 import caseSensitiveIconSvg from 'lucide-static/icons/case-sensitive.svg?raw'
 import tableIconSvg from 'lucide-static/icons/table.svg?raw'
+import separatorHorizontalIconSvg from 'lucide-static/icons/separator-horizontal.svg?raw'
 import { injetarEstiloSeAusente } from './dom'
 import { CLASSES_ALINHAMENTO, proximoTamanhoFontePx } from '../../features/formatacao-basica/paragrafoEstilos'
 import type { AlinhamentoTexto } from '../../features/formatacao-basica/paragrafoEstilos'
 import { lerEstiloElemento } from '../../features/formatacao-basica/estiloTexto'
 import { primeiraLetraMaiuscula } from '../../features/formatacao-basica/maiuscula'
 import { CATALOGO_ESTILOS_TABELA, aplicarEstiloTabelaHtml, montarTabelaHtml } from '../../features/formatacao-basica/tabelaRapida'
+import { montarQuebraPaginaHtml } from '../../features/formatacao-basica/quebraPagina'
 import type { DescritorEstiloTexto } from './protocolo'
 import type { EditorSEI } from './ponteEditor'
 import type { AtalhoParagrafo, FormatacaoBasicaConfig } from '../../lib/storage'
@@ -164,6 +166,12 @@ function montarBotaoTabelaRapida(editor: EditorSEI): HTMLElement {
   })
 }
 
+function montarBotaoQuebraPagina(editor: EditorSEI): HTMLElement {
+  return criarBotaoToolbar('seirmg-cke-quebra-pagina', 'Inserir quebra de página', separatorHorizontalIconSvg, () => {
+    editor.inserirHtml(montarQuebraPaginaHtml()).catch(tratarErro('Falha ao inserir quebra de página'))
+  })
+}
+
 function registrarAtalhos(editor: EditorSEI, atalhos: AtalhoParagrafo[]): void {
   if (atalhos.length === 0) return
   const porTecla = new Map(atalhos.map((atalho) => [atalho.tecla.toLowerCase(), atalho]))
@@ -191,6 +199,7 @@ export async function iniciarFormatacaoBasica(
     montarBotaoCopiarFormatacao(editor),
     montarBotaoMaiuscula(editor),
     montarBotaoTabelaRapida(editor),
+    montarBotaoQuebraPagina(editor),
   ]
   botoes.forEach((botao) => toolbox.appendChild(botao))
 

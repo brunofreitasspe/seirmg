@@ -132,4 +132,15 @@ describe('iniciarFormatacaoBasica', () => {
     expect(editor.inserirHtml).toHaveBeenCalledWith(expect.stringContaining('<table class="Tabela">'))
     window.prompt = promptOriginal
   })
+
+  it('quebra de página: insere o marcador direto, sem diálogo', async () => {
+    const { iframe, toolbox } = montarToolboxFalsa()
+    const editor = criarEditorFalso(iframe)
+
+    await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
+    const botao = toolbox.querySelector('#seirmg-cke-quebra-pagina') as HTMLElement
+    botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    expect(editor.inserirHtml).toHaveBeenCalledWith('<div class="Quebra_Pagina" style="page-break-after:always">&nbsp;</div>')
+  })
 })
