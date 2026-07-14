@@ -173,4 +173,42 @@ describe('iniciarFormatacaoBasica', () => {
     expect(paragrafoNumerado.id).not.toBe('')
     expect(editor.inserirHtml).toHaveBeenCalledWith(expect.stringContaining(`href="#${paragrafoNumerado.id}"`))
   })
+
+  it('nota de rodapé: pede o texto via prompt, insere a chamada e anexa a entrada no fim do corpo', async () => {
+    const { iframe, toolbox } = montarToolboxFalsa()
+    const editor = criarEditorFalso(iframe)
+    const promptOriginal = window.prompt
+    window.prompt = vi.fn().mockReturnValue('Texto da nota')
+
+    await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
+    const botao = toolbox.querySelector('#seirmg-cke-nota-rodape') as HTMLElement
+    botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    await Promise.resolve()
+
+    expect(editor.inserirHtml).toHaveBeenCalledWith(expect.stringContaining('<sup id="chamada-'))
+    expect(editor.corpo.querySelector('.Nota_Rodape')?.textContent).toContain('Texto da nota')
+    window.prompt = promptOriginal
+  })
+
+  it('nota de rodapé: duas notas clicadas em sequência, sem esperar a primeira resolver, recebem números 1 e 2 (não repetem)', async () => {
+    const { iframe, toolbox } = montarToolboxFalsa()
+    const editor = criarEditorFalso(iframe)
+    const promptOriginal = window.prompt
+    window.prompt = vi.fn().mockReturnValue('Nota Y')
+
+    await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
+    const botao = toolbox.querySelector('#seirmg-cke-nota-rodape') as HTMLElement
+    // Dispara os dois cliques antes de aguardar qualquer resolução: reproduz o cenário real
+    // em que inserirHtml faz um round-trip assíncrono pela ponte e o DOM só reflete a
+    // primeira nota depois que sua Promise resolve.
+    botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    const entradas = Array.from(editor.corpo.querySelectorAll('.Nota_Rodape')).map((e) => e.textContent)
+    expect(entradas).toEqual(['1. Nota Y ↑', '2. Nota Y ↑'])
+    window.prompt = promptOriginal
+  })
 })

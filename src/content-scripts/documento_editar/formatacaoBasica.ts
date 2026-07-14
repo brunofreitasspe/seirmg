@@ -9,6 +9,7 @@ import caseSensitiveIconSvg from 'lucide-static/icons/case-sensitive.svg?raw'
 import tableIconSvg from 'lucide-static/icons/table.svg?raw'
 import separatorHorizontalIconSvg from 'lucide-static/icons/separator-horizontal.svg?raw'
 import listOrderedIconSvg from 'lucide-static/icons/list-ordered.svg?raw'
+import superscriptIconSvg from 'lucide-static/icons/superscript.svg?raw'
 import { injetarEstiloSeAusente } from './dom'
 import { CLASSES_ALINHAMENTO, proximoTamanhoFontePx } from '../../features/formatacao-basica/paragrafoEstilos'
 import type { AlinhamentoTexto } from '../../features/formatacao-basica/paragrafoEstilos'
@@ -18,6 +19,7 @@ import { CATALOGO_ESTILOS_TABELA, aplicarEstiloTabelaHtml, montarTabelaHtml } fr
 import { montarQuebraPaginaHtml } from '../../features/formatacao-basica/quebraPagina'
 import { CLASSES_PARAGRAFO_NUMERADO } from '../../features/formatacao-basica/numeracaoParagrafos'
 import { extrairItensSumario, montarSumarioHtml } from '../../features/formatacao-basica/sumario'
+import { montarChamadaHtml, montarEntradaHtml } from '../../features/formatacao-basica/notaRodape'
 import type { DescritorEstiloTexto } from './protocolo'
 import type { EditorSEI } from './ponteEditor'
 import type { AtalhoParagrafo, FormatacaoBasicaConfig } from '../../lib/storage'
@@ -199,6 +201,41 @@ function montarBotaoSumario(editor: EditorSEI): HTMLElement {
   })
 }
 
+function proximoNumeroNota(corpo: HTMLElement): number {
+  return corpo.querySelectorAll('.Nota_Rodape').length + 1
+}
+
+function montarBotaoNotaRodape(editor: EditorSEI): HTMLElement {
+  // O número é reservado de forma síncrona (fora do .then()) porque inserirHtml faz um
+  // round-trip assíncrono real pela ponte: se o usuário inserir uma segunda nota antes da
+  // primeira resolver, ler a contagem do DOM nesse momento repetiria o mesmo número (o DOM
+  // só ganha a entrada da primeira nota depois que sua Promise resolve). O contador abaixo
+  // evita essa corrida sem mudar o escopo documentado (sem renumeração ao excluir).
+  let proximoNumero: number | null = null
+
+  return criarBotaoToolbar('seirmg-cke-nota-rodape', 'Inserir nota de rodapé', superscriptIconSvg, () => {
+    const texto = window.prompt('Texto da nota de rodapé:')
+    if (!texto) return
+
+    if (proximoNumero === null) {
+      proximoNumero = proximoNumeroNota(editor.corpo)
+    }
+    const numero = proximoNumero
+    proximoNumero += 1
+
+    const id = `n${Date.now()}`
+    editor
+      .inserirHtml(montarChamadaHtml(id, numero))
+      .then(() => {
+        // Entrada é anexada direto no DOM (não passa pela ponte): é bookkeeping
+        // estrutural do documento (lista de notas), não texto novo digitado pelo
+        // usuário no ponto do cursor — mesma exceção documentada na spec.
+        editor.corpo.insertAdjacentHTML('beforeend', montarEntradaHtml(id, numero, texto))
+      })
+      .catch(tratarErro('Falha ao inserir nota de rodapé'))
+  })
+}
+
 function registrarAtalhos(editor: EditorSEI, atalhos: AtalhoParagrafo[]): void {
   if (atalhos.length === 0) return
   const porTecla = new Map(atalhos.map((atalho) => [atalho.tecla.toLowerCase(), atalho]))
@@ -228,6 +265,7 @@ export async function iniciarFormatacaoBasica(
     montarBotaoTabelaRapida(editor),
     montarBotaoQuebraPagina(editor),
     montarBotaoSumario(editor),
+    montarBotaoNotaRodape(editor),
   ]
   botoes.forEach((botao) => toolbox.appendChild(botao))
 
