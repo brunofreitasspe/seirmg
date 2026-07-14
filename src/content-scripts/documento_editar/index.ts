@@ -8,6 +8,8 @@ import geminiIconSvg from '@lobehub/icons-static-svg/icons/gemini-color.svg?raw'
 import claudeIconSvg from '@lobehub/icons-static-svg/icons/claude-color.svg?raw'
 import sparklesIconSvg from 'lucide-static/icons/sparkles.svg?raw'
 import { criarClienteEditor, type EditorSEI } from './ponteEditor'
+import { EVENTO_PRONTO as EVENTO_PRONTO_DIAGNOSTICO } from './protocolo'
+import type { DetalhePronto as DetalheProntoDiagnostico } from './protocolo'
 
 const ESTILO_PAINEL_IA = `
   #seirmg-botao-ia {
@@ -633,13 +635,22 @@ function criarLinhaDiagnosticoIsolado(id: string, topoPx: number, corTexto: stri
 
 const linhaFrameIsolado = criarLinhaDiagnosticoIsolado('seirmg-diag-isolado-frame', 104, '#ff0')
 const linhaBatimentoIsolado = criarLinhaDiagnosticoIsolado('seirmg-diag-isolado-batimento', 124, '#f0f')
+const linhaEventoProntoDireto = criarLinhaDiagnosticoIsolado('seirmg-diag-isolado-evento-direto', 144, '#0f0')
 
 linhaFrameIsolado(`[frame-isolado] topo=${window === window.top} url=${window.location.href.slice(0, 60)}`)
 linhaBatimentoIsolado('[batimento-isolado] aguardando primeiro batimento do main world...')
+linhaEventoProntoDireto('[evento-pronto-direto] aguardando EVENTO_PRONTO real (listener cru, sem ponteEditor)...')
 
 window.addEventListener('seirmg:diag-batimento', (evento) => {
   const { n } = (evento as CustomEvent<{ n: number }>).detail
   linhaBatimentoIsolado(`[batimento-isolado] recebido #${n}`)
+})
+
+// Listener CRU, direto no window, sem passar pela lógica de criarClienteEditor —
+// pra isolar se o problema é no evento em si ou na lógica interna do ponteEditor.ts.
+window.addEventListener(EVENTO_PRONTO_DIAGNOSTICO, (evento) => {
+  const { nome } = (evento as CustomEvent<DetalheProntoDiagnostico>).detail
+  linhaEventoProntoDireto(`[evento-pronto-direto] RECEBIDO! nome="${nome}"`)
 })
 
 // Precisa ser criado de forma síncrona, assim que o script carrega — não dentro do
