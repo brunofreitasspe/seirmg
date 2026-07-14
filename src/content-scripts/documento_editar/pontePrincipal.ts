@@ -1,4 +1,4 @@
-import { EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
+import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
 import type { DetalheComando, DetalheResposta, DetalhePronto, TipoComando } from './protocolo'
 
 interface InstanciaCKEditor {
@@ -7,7 +7,23 @@ interface InstanciaCKEditor {
   insertHtml: (html: string) => void
   insertText: (texto: string) => void
   editable?: () => { getText: () => string } | undefined
-  document: { getBody: () => { $: HTMLElement } }
+  document: { getBody: () => { $: HTMLElement }; getWindow: () => { $: Window } }
+}
+
+// Isolated e main world enxergam o mesmo DOM (só a execução JS é isolada), então
+// marcar aqui o iframe que o CKEditor realmente usa é confiável — ao contrário de
+// tentar re-descobrir esse iframe no isolated world a partir de texto visível
+// (title/label), que não tem nenhuma relação garantida com o nome da instância.
+function marcarIframeDaInstancia(instancia: InstanciaCKEditor): void {
+  try {
+    const frame = instancia.document.getWindow().$.frameElement
+    if (frame instanceof HTMLIFrameElement) {
+      frame.setAttribute(ATRIBUTO_EDITOR_ALVO, instancia.name)
+    }
+  } catch {
+    // Instância sem iframe acessível (ex.: editor inline, fora do escopo do Lote R)
+    // — ponteEditor.ts reporta isso na mensagem de erro em vez de travar aqui.
+  }
 }
 
 interface JanelaComCKEditor {
@@ -87,6 +103,7 @@ export function criarPonteMainWorld(
     const instancia = obterInstanciaEditavel(janelaGlobal)
     if (instancia) {
       instanciaAtual = instancia
+      marcarIframeDaInstancia(instancia)
       reanunciarPeriodicamente(reanunciosMax)
       return
     }

@@ -1,13 +1,13 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { criarPonteMainWorld } from './pontePrincipal'
-import { EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
+import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
 import type { DetalheComando, DetalhePronto, DetalheResposta } from './protocolo'
 
 function criarJanelaFalsa(): Window {
   return new EventTarget() as unknown as Window
 }
 
-function criarInstanciaFalsa(nome: string, editavel: boolean) {
+function criarInstanciaFalsa(nome: string, editavel: boolean, frameElement: HTMLIFrameElement | null = null) {
   return {
     name: nome,
     getSelection: () => ({ getSelectedText: () => `selecionado-${nome}` }),
@@ -16,6 +16,7 @@ function criarInstanciaFalsa(nome: string, editavel: boolean) {
     editable: () => ({ getText: () => `texto-completo-${nome}` }),
     document: {
       getBody: () => ({ $: { contentEditable: editavel ? 'true' : 'false' } as unknown as HTMLElement }),
+      getWindow: () => ({ $: { frameElement } as unknown as Window }),
     },
   }
 }
@@ -25,6 +26,33 @@ function definirCkeditor(janela: Window, instances: Record<string, unknown>): vo
 }
 
 describe('criarPonteMainWorld', () => {
+  afterEach(() => {
+    document.body.innerHTML = ''
+  })
+
+  it('marca o iframe real da instância editável com o atributo de identificação da ponte', async () => {
+    document.body.innerHTML = '<iframe title="Corpo do Texto"></iframe>'
+    const frame = document.querySelector('iframe') as HTMLIFrameElement
+    const janela = criarJanelaFalsa()
+    definirCkeditor(janela, {
+      cabecalho: criarInstanciaFalsa('cabecalho', false),
+      corpo: criarInstanciaFalsa('corpo', true, frame),
+    })
+
+    const pronto = new Promise<DetalhePronto>((resolve) => {
+      janela.addEventListener(
+        EVENTO_PRONTO,
+        (evento) => resolve((evento as CustomEvent<DetalhePronto>).detail),
+        { once: true }
+      )
+    })
+
+    const ponte = criarPonteMainWorld(janela, 10, 5)
+    await pronto
+    expect(frame.getAttribute(ATRIBUTO_EDITOR_ALVO)).toBe('corpo')
+    ponte.destruir()
+  })
+
   it('anuncia a instância editável quando há mais de uma instância CKEditor', async () => {
     const janela = criarJanelaFalsa()
     definirCkeditor(janela, {

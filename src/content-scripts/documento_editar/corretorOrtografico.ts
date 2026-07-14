@@ -145,8 +145,8 @@ function encontrarErroNoPonto(x: number, y: number): ErroComRange | null {
   return null
 }
 
-function fecharMenuSugestoes(documentoEditor: Document): void {
-  documentoEditor.getElementById('seirmg-menu-corretor')?.remove()
+function fecharMenuSugestoes(): void {
+  document.getElementById('seirmg-menu-corretor')?.remove()
 }
 
 function removerErroDoMapa(erro: ErroComRange): void {
@@ -200,75 +200,98 @@ async function adicionarAoDicionario(palavra: string, editor: EditorSEI): Promis
   atualizarIndicador()
 }
 
-function abrirMenuSugestoes(
-  erro: ErroComRange,
-  x: number,
-  y: number,
-  editor: EditorSEI,
-  documentoEditor: Document
-): void {
-  fecharMenuSugestoes(documentoEditor)
+// O clique que abre o menu acontece dentro do iframe do CKEditor, então x/y chegam
+// relativos ao viewport DELE — que costuma ser bem menor que a página (às vezes só
+// uns 100-200px de altura visível). Um menu com `position: fixed` desenhado dentro
+// desse documento fica preso e cortado pela borda do iframe, sem espaço pra abrir
+// pra cima nem pra baixo. Por isso o menu é montado no documento de fora (igual o
+// painel de Ferramentas de IA já faz) e as coordenadas são convertidas pra "página
+// inteira" somando a posição do próprio iframe na página.
+function converterParaCoordenadaDaPagina(iframe: HTMLIFrameElement, x: number, y: number): { x: number; y: number } {
+  const retanguloIframe = iframe.getBoundingClientRect()
+  return { x: retanguloIframe.left + x, y: retanguloIframe.top + y }
+}
 
-  const menu = documentoEditor.createElement('div')
+function posicionarMenuDentroDoViewport(menu: HTMLElement, x: number, y: number): void {
+  const margem = 4
+  const largura = menu.offsetWidth
+  const altura = menu.offsetHeight
+
+  const cabeNaBaixo = y + altura + margem <= window.innerHeight
+  const top = cabeNaBaixo ? y : Math.max(margem, y - altura)
+  const left = Math.min(x, window.innerWidth - largura - margem)
+
+  menu.style.top = `${top}px`
+  menu.style.left = `${Math.max(margem, left)}px`
+}
+
+function abrirMenuSugestoes(erro: ErroComRange, xIframe: number, yIframe: number, editor: EditorSEI): void {
+  fecharMenuSugestoes()
+
+  const { x, y } = converterParaCoordenadaDaPagina(editor.iframe, xIframe, yIframe)
+
+  const menu = document.createElement('div')
   menu.id = 'seirmg-menu-corretor'
-  menu.style.cssText = `position: fixed; left: ${x}px; top: ${y}px;`
+  menu.style.cssText = 'position: fixed;'
 
-  const tag = documentoEditor.createElement('div')
+  const tag = document.createElement('div')
   tag.className = 'seirmg-menu-corretor-tag'
   tag.textContent = 'SEIRMG · corretor'
   menu.appendChild(tag)
 
   erro.sugestoes.forEach((sugestao) => {
-    const item = documentoEditor.createElement('div')
+    const item = document.createElement('div')
     item.className = 'seirmg-menu-corretor-item'
     item.textContent = sugestao
     item.addEventListener('click', () => {
       aplicarSugestao(erro, sugestao, editor).catch((error) => {
         console.error('[SEIRMG] Falha ao aplicar sugestão do corretor ortográfico:', error)
       })
-      fecharMenuSugestoes(documentoEditor)
+      fecharMenuSugestoes()
     })
     menu.appendChild(item)
   })
 
-  menu.appendChild(documentoEditor.createElement('hr'))
+  menu.appendChild(document.createElement('hr'))
 
-  const itemIgnorar = documentoEditor.createElement('div')
+  const itemIgnorar = document.createElement('div')
   itemIgnorar.className = 'seirmg-menu-corretor-item'
   itemIgnorar.textContent = 'Ignorar'
   itemIgnorar.addEventListener('click', () => {
     ignorarOcorrencia(erro, editor)
-    fecharMenuSugestoes(documentoEditor)
+    fecharMenuSugestoes()
   })
   menu.appendChild(itemIgnorar)
 
-  const itemAdicionar = documentoEditor.createElement('div')
+  const itemAdicionar = document.createElement('div')
   itemAdicionar.className = 'seirmg-menu-corretor-item'
   itemAdicionar.textContent = 'Adicionar ao dicionário'
   itemAdicionar.addEventListener('click', () => {
     adicionarAoDicionario(erro.palavra, editor).catch((error) => {
       console.error('[SEIRMG] Falha ao adicionar palavra ao dicionário:', error)
     })
-    fecharMenuSugestoes(documentoEditor)
+    fecharMenuSugestoes()
   })
   menu.appendChild(itemAdicionar)
 
-  documentoEditor.body.appendChild(menu)
-  documentoEditor.addEventListener('click', () => fecharMenuSugestoes(documentoEditor), { once: true })
+  document.body.appendChild(menu)
+  posicionarMenuDentroDoViewport(menu, x, y)
+
+  // Clique dentro do iframe (voltando a digitar) não borbulha pro document de fora,
+  // então precisa fechar em ambos: fora do iframe (document) e dentro dele (documento
+  // do editor).
+  document.addEventListener('click', fecharMenuSugestoes, { once: true })
+  editor.documento.addEventListener('click', fecharMenuSugestoes, { once: true })
 }
 
 let ultimoMousedownInterceptado = false
 
-function tentarInterceptarCliqueDireito(
-  evento: MouseEvent,
-  editor: EditorSEI,
-  documentoEditor: Document
-): boolean {
+function tentarInterceptarCliqueDireito(evento: MouseEvent, editor: EditorSEI): boolean {
   const erro = encontrarErroNoPonto(evento.clientX, evento.clientY)
   if (!erro) return false
   evento.preventDefault()
   evento.stopPropagation()
-  abrirMenuSugestoes(erro, evento.clientX, evento.clientY, editor, documentoEditor)
+  abrirMenuSugestoes(erro, evento.clientX, evento.clientY, editor)
   return true
 }
 
@@ -276,16 +299,16 @@ function tentarInterceptarCliqueDireito(
 // 'contextmenu' de sequer disparar), então tratamos os dois eventos: o mousedown intercepta
 // primeiro na maioria dos casos; o contextmenu fica como reforço para quando o mousedown não
 // for suficiente.
-function tratarMousedown(evento: MouseEvent, editor: EditorSEI, documentoEditor: Document): void {
+function tratarMousedown(evento: MouseEvent, editor: EditorSEI): void {
   try {
     if (evento.button !== 2) return
-    ultimoMousedownInterceptado = tentarInterceptarCliqueDireito(evento, editor, documentoEditor)
+    ultimoMousedownInterceptado = tentarInterceptarCliqueDireito(evento, editor)
   } catch (error) {
     console.error('[SEIRMG] Falha ao tratar mousedown do corretor ortográfico:', error)
   }
 }
 
-function tratarContextMenu(evento: MouseEvent, editor: EditorSEI, documentoEditor: Document): void {
+function tratarContextMenu(evento: MouseEvent, editor: EditorSEI): void {
   try {
     if (ultimoMousedownInterceptado) {
       ultimoMousedownInterceptado = false
@@ -293,7 +316,7 @@ function tratarContextMenu(evento: MouseEvent, editor: EditorSEI, documentoEdito
       evento.stopPropagation()
       return
     }
-    tentarInterceptarCliqueDireito(evento, editor, documentoEditor)
+    tentarInterceptarCliqueDireito(evento, editor)
   } catch (error) {
     console.error('[SEIRMG] Falha ao tratar clique direito do corretor ortográfico:', error)
   }
@@ -370,8 +393,15 @@ export async function iniciarCorretorOrtografico(
   const corpo = editor.corpo
   const janelaEditor = editor.janela
 
+  // Evita o sublinhado duplicado (o nativo do navegador + o nosso, via
+  // CSS.highlights): como o corretor ortográfico próprio está ativo, o do
+  // navegador só atrapalha.
+  corpo.spellcheck = false
+
   injetarEstiloSeAusente(documentoEditor, 'seirmg-estilo-destaque-corretor', ESTILO_DESTAQUE)
-  injetarEstiloSeAusente(documentoEditor, 'seirmg-estilo-menu-corretor', ESTILO_MENU)
+  // O menu (ver abrirMenuSugestoes) é montado no documento de fora, não no do editor —
+  // seu estilo precisa ir junto, no mesmo documento onde ele de fato é inserido.
+  injetarEstiloSeAusente(document, 'seirmg-estilo-menu-corretor', ESTILO_MENU)
   injetarEstiloSeAusente(document, 'seirmg-estilo-indicador-corretor', ESTILO_INDICADOR)
 
   corpo.addEventListener('input', () => agendarReescaneamento(editor))
@@ -380,8 +410,8 @@ export async function iniciarCorretorOrtografico(
   // 'mousedown' do botão direito, antes do 'contextmenu' sequer existir. Por isso escutamos os
   // dois: 'mousedown' intercepta primeiro (cobre esse caso); 'contextmenu' fica como reforço,
   // e evita abrir os dois menus quando o mousedown já resolveu.
-  janelaEditor.addEventListener('mousedown', (evento) => tratarMousedown(evento, editor, documentoEditor), true)
-  janelaEditor.addEventListener('contextmenu', (evento) => tratarContextMenu(evento, editor, documentoEditor), true)
+  janelaEditor.addEventListener('mousedown', (evento) => tratarMousedown(evento, editor), true)
+  janelaEditor.addEventListener('contextmenu', (evento) => tratarContextMenu(evento, editor), true)
 
   reescanearAlterados(editor)
 }

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { criarClienteEditor } from './ponteEditor'
-import { EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
+import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
 import type { DetalheComando, DetalheResposta } from './protocolo'
 
 function responderComando(
@@ -30,7 +30,7 @@ describe('criarClienteEditor', () => {
   })
 
   it('monta o EditorSEI a partir do evento de pronto e localiza o iframe pelo nome', async () => {
-    document.body.innerHTML = '<iframe title="txaEditor_123"></iframe>'
+    document.body.innerHTML = `<iframe title="Corpo do Texto" ${ATRIBUTO_EDITOR_ALVO}="123"></iframe>`
     cliente = criarClienteEditor(window)
 
     const promessa = cliente.aguardarEditorPronto(document)
@@ -40,10 +40,11 @@ describe('criarClienteEditor', () => {
     const iframe = document.querySelector('iframe') as HTMLIFrameElement
     expect(editor.documento).toBe(iframe.contentDocument)
     expect(editor.corpo).toBe(iframe.contentDocument?.body)
+    expect(editor.iframe).toBe(iframe)
   })
 
   it('resolve imediatamente se o evento de pronto já tinha disparado antes de aguardar', async () => {
-    document.body.innerHTML = '<iframe title="txaEditor_456"></iframe>'
+    document.body.innerHTML = `<iframe title="Corpo do Texto" ${ATRIBUTO_EDITOR_ALVO}="456"></iframe>`
     cliente = criarClienteEditor(window)
     window.dispatchEvent(new CustomEvent(EVENTO_PRONTO, { detail: { nome: '456' } }))
 
@@ -52,7 +53,7 @@ describe('criarClienteEditor', () => {
   })
 
   it('obterTextoSelecionado envia comando getSelectedText e resolve com o resultado', async () => {
-    document.body.innerHTML = '<iframe title="txaEditor_789"></iframe>'
+    document.body.innerHTML = `<iframe title="Corpo do Texto" ${ATRIBUTO_EDITOR_ALVO}="789"></iframe>`
     cliente = criarClienteEditor(window)
     pararDeResponder = responderComando(window, (detalhe) => {
       expect(detalhe.tipo).toBe('getSelectedText')
@@ -66,7 +67,7 @@ describe('criarClienteEditor', () => {
   })
 
   it('inserirHtml rejeita quando o comando responde com erro', async () => {
-    document.body.innerHTML = '<iframe title="txaEditor_err"></iframe>'
+    document.body.innerHTML = `<iframe title="Corpo do Texto" ${ATRIBUTO_EDITOR_ALVO}="err"></iframe>`
     cliente = criarClienteEditor(window)
     pararDeResponder = responderComando(window, () => ({ resultado: null, erro: 'falhou' }))
 
@@ -84,7 +85,7 @@ describe('criarClienteEditor', () => {
   })
 
   it('rejeita com timeout se nenhuma resposta ao comando chegar', async () => {
-    document.body.innerHTML = '<iframe title="txaEditor_to"></iframe>'
+    document.body.innerHTML = `<iframe title="Corpo do Texto" ${ATRIBUTO_EDITOR_ALVO}="to"></iframe>`
     cliente = criarClienteEditor(window, 20)
     window.dispatchEvent(new CustomEvent(EVENTO_PRONTO, { detail: { nome: 'to' } }))
     const editor = await cliente.aguardarEditorPronto(document)
