@@ -143,4 +143,19 @@ describe('iniciarFormatacaoBasica', () => {
 
     expect(editor.inserirHtml).toHaveBeenCalledWith('<div class="Quebra_Pagina" style="page-break-after:always">&nbsp;</div>')
   })
+
+  it('sumário: lê os parágrafos numerados do corpo, atribui id, e insere a lista', async () => {
+    const { iframe, toolbox } = montarToolboxFalsa()
+    const editor = criarEditorFalso(iframe)
+    editor.corpo.innerHTML =
+      '<p class="Paragrafo_Numerado_Nivel1">Introdução</p><p>texto comum</p>'
+
+    await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
+    const botao = toolbox.querySelector('#seirmg-cke-sumario') as HTMLElement
+    botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    const paragrafoNumerado = editor.corpo.querySelector('.Paragrafo_Numerado_Nivel1') as HTMLElement
+    expect(paragrafoNumerado.id).not.toBe('')
+    expect(editor.inserirHtml).toHaveBeenCalledWith(expect.stringContaining(`href="#${paragrafoNumerado.id}"`))
+  })
 })

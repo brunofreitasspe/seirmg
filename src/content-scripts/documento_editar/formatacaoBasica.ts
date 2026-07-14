@@ -8,6 +8,7 @@ import paintbrushIconSvg from 'lucide-static/icons/paintbrush.svg?raw'
 import caseSensitiveIconSvg from 'lucide-static/icons/case-sensitive.svg?raw'
 import tableIconSvg from 'lucide-static/icons/table.svg?raw'
 import separatorHorizontalIconSvg from 'lucide-static/icons/separator-horizontal.svg?raw'
+import listOrderedIconSvg from 'lucide-static/icons/list-ordered.svg?raw'
 import { injetarEstiloSeAusente } from './dom'
 import { CLASSES_ALINHAMENTO, proximoTamanhoFontePx } from '../../features/formatacao-basica/paragrafoEstilos'
 import type { AlinhamentoTexto } from '../../features/formatacao-basica/paragrafoEstilos'
@@ -15,6 +16,8 @@ import { lerEstiloElemento } from '../../features/formatacao-basica/estiloTexto'
 import { primeiraLetraMaiuscula } from '../../features/formatacao-basica/maiuscula'
 import { CATALOGO_ESTILOS_TABELA, aplicarEstiloTabelaHtml, montarTabelaHtml } from '../../features/formatacao-basica/tabelaRapida'
 import { montarQuebraPaginaHtml } from '../../features/formatacao-basica/quebraPagina'
+import { CLASSES_PARAGRAFO_NUMERADO } from '../../features/formatacao-basica/numeracaoParagrafos'
+import { extrairItensSumario, montarSumarioHtml } from '../../features/formatacao-basica/sumario'
 import type { DescritorEstiloTexto } from './protocolo'
 import type { EditorSEI } from './ponteEditor'
 import type { AtalhoParagrafo, FormatacaoBasicaConfig } from '../../lib/storage'
@@ -172,6 +175,27 @@ function montarBotaoQuebraPagina(editor: EditorSEI): HTMLElement {
   })
 }
 
+function montarBotaoSumario(editor: EditorSEI): HTMLElement {
+  return criarBotaoToolbar('seirmg-cke-sumario', 'Inserir sumário', listOrderedIconSvg, () => {
+    const paragrafos = Array.from(
+      editor.corpo.querySelectorAll<HTMLElement>(CLASSES_PARAGRAFO_NUMERADO.map((c) => `.${c}`).join(','))
+    )
+    if (paragrafos.length === 0) return
+
+    const itens = extrairItensSumario(
+      paragrafos.map((p) => ({ classe: p.className, texto: p.textContent ?? '' }))
+    )
+    // Atribuição de id é metadado estrutural invisível (âncora), não conteúdo novo do
+    // usuário — mutação direta do DOM, mesma exceção documentada na spec pra nota de
+    // rodapé, em vez de passar pela ponte.
+    paragrafos.forEach((p, indice) => {
+      p.id = itens[indice].id
+    })
+
+    editor.inserirHtml(montarSumarioHtml(itens)).catch(tratarErro('Falha ao inserir sumário'))
+  })
+}
+
 function registrarAtalhos(editor: EditorSEI, atalhos: AtalhoParagrafo[]): void {
   if (atalhos.length === 0) return
   const porTecla = new Map(atalhos.map((atalho) => [atalho.tecla.toLowerCase(), atalho]))
@@ -200,6 +224,7 @@ export async function iniciarFormatacaoBasica(
     montarBotaoMaiuscula(editor),
     montarBotaoTabelaRapida(editor),
     montarBotaoQuebraPagina(editor),
+    montarBotaoSumario(editor),
   ]
   botoes.forEach((botao) => toolbox.appendChild(botao))
 
