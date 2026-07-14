@@ -40,6 +40,33 @@ function localizarToolbox(iframe: HTMLIFrameElement): HTMLElement | null {
   return container?.querySelector<HTMLElement>('.cke_toolbox') ?? null
 }
 
+// DIAGNÓSTICO TEMPORÁRIO (Lote I) — a suposição de que o iframe do CKEditor tem um
+// ancestral `.cke` contendo `.cke_toolbox` nunca foi validada contra o DOM real do
+// SEI, só contra um fixture sintético nos testes. Se `localizarToolbox` falhar,
+// descrever a cadeia de ancestrais do iframe e qualquer elemento com "cke"/"toolbox"
+// no nome da classe em todo o documento, direto na mensagem de erro (que já aparece
+// no console de erros da extensão), pra descobrir a estrutura real sem DevTools.
+function descreverEstruturaReal(iframe: HTMLIFrameElement): string {
+  const ancestrais: string[] = []
+  let no: Element | null = iframe
+  for (let nivel = 0; no && nivel < 8; nivel++) {
+    const classe = no.className ? ` class="${String(no.className).slice(0, 80)}"` : ''
+    const id = no.id ? ` id="${no.id}"` : ''
+    ancestrais.push(`[${nivel}] <${no.tagName.toLowerCase()}${id}${classe}>`)
+    no = no.parentElement
+  }
+
+  const documentoTopo = iframe.ownerDocument
+  const candidatos = Array.from(documentoTopo.querySelectorAll<HTMLElement>('[class*="cke" i], [class*="toolbox" i]'))
+    .slice(0, 15)
+    .map((el) => `<${el.tagName.toLowerCase()} id="${el.id}" class="${el.className}">`)
+
+  return (
+    `Ancestrais do iframe: ${ancestrais.join(' > ')}. ` +
+    `Elementos com "cke"/"toolbox" na classe em todo o documento (até 15): ${candidatos.join(' | ') || 'nenhum'}`
+  )
+}
+
 function aguardarToolbox(iframe: HTMLIFrameElement, intervaloMs: number, tentativasMax: number): Promise<HTMLElement> {
   return new Promise((resolve, reject) => {
     function tentar(restantes: number): void {
@@ -49,7 +76,7 @@ function aguardarToolbox(iframe: HTMLIFrameElement, intervaloMs: number, tentati
         return
       }
       if (restantes <= 0) {
-        reject(new Error('Barra de ferramentas do CKEditor não apareceu a tempo'))
+        reject(new Error(`Barra de ferramentas do CKEditor não apareceu a tempo. ${descreverEstruturaReal(iframe)}`))
         return
       }
       setTimeout(() => tentar(restantes - 1), intervaloMs)
