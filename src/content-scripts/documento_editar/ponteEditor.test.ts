@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { criarClienteEditor } from './ponteEditor'
-import { EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
+import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
 import type { DetalheComando, DetalheResposta } from './protocolo'
 
 function responderComando(
@@ -30,7 +30,7 @@ describe('criarClienteEditor', () => {
   })
 
   it('monta o EditorSEI a partir do evento de pronto e localiza o iframe pelo nome', async () => {
-    document.body.innerHTML = '<iframe title="txaEditor_123"></iframe>'
+    document.body.innerHTML = `<iframe title="txaEditor_123" ${ATRIBUTO_EDITOR_ALVO}="123"></iframe>`
     cliente = criarClienteEditor(window)
 
     const promessa = cliente.aguardarEditorPronto(document)
@@ -43,7 +43,7 @@ describe('criarClienteEditor', () => {
   })
 
   it('resolve imediatamente se o evento de pronto já tinha disparado antes de aguardar', async () => {
-    document.body.innerHTML = '<iframe title="txaEditor_456"></iframe>'
+    document.body.innerHTML = `<iframe title="txaEditor_456" ${ATRIBUTO_EDITOR_ALVO}="456"></iframe>`
     cliente = criarClienteEditor(window)
     window.dispatchEvent(new CustomEvent(EVENTO_PRONTO, { detail: { nome: '456' } }))
 
@@ -52,7 +52,7 @@ describe('criarClienteEditor', () => {
   })
 
   it('obterTextoSelecionado envia comando getSelectedText e resolve com o resultado', async () => {
-    document.body.innerHTML = '<iframe title="txaEditor_789"></iframe>'
+    document.body.innerHTML = `<iframe title="txaEditor_789" ${ATRIBUTO_EDITOR_ALVO}="789"></iframe>`
     cliente = criarClienteEditor(window)
     pararDeResponder = responderComando(window, (detalhe) => {
       expect(detalhe.tipo).toBe('getSelectedText')
@@ -66,7 +66,7 @@ describe('criarClienteEditor', () => {
   })
 
   it('inserirHtml rejeita quando o comando responde com erro', async () => {
-    document.body.innerHTML = '<iframe title="txaEditor_err"></iframe>'
+    document.body.innerHTML = `<iframe title="txaEditor_err" ${ATRIBUTO_EDITOR_ALVO}="err"></iframe>`
     cliente = criarClienteEditor(window)
     pararDeResponder = responderComando(window, () => ({ resultado: null, erro: 'falhou' }))
 
@@ -84,11 +84,41 @@ describe('criarClienteEditor', () => {
   })
 
   it('rejeita com timeout se nenhuma resposta ao comando chegar', async () => {
-    document.body.innerHTML = '<iframe title="txaEditor_to"></iframe>'
+    document.body.innerHTML = `<iframe title="txaEditor_to" ${ATRIBUTO_EDITOR_ALVO}="to"></iframe>`
     cliente = criarClienteEditor(window, 20)
     window.dispatchEvent(new CustomEvent(EVENTO_PRONTO, { detail: { nome: 'to' } }))
     const editor = await cliente.aguardarEditorPronto(document)
 
     await expect(editor.obterTextoCompleto()).rejects.toThrow('Timeout')
+  })
+
+  it('aplicarClasseParagrafo envia comando com a classe e resolve quando não há erro', async () => {
+    document.body.innerHTML = `<iframe title="Corpo do Texto" ${ATRIBUTO_EDITOR_ALVO}="classe"></iframe>`
+    cliente = criarClienteEditor(window)
+    pararDeResponder = responderComando(window, (detalhe) => {
+      expect(detalhe.tipo).toBe('aplicarClasseParagrafo')
+      expect(detalhe.args).toEqual(['Texto_Alinhado_Centro'])
+      return { resultado: null, erro: null }
+    })
+
+    window.dispatchEvent(new CustomEvent(EVENTO_PRONTO, { detail: { nome: 'classe' } }))
+    const editor = await cliente.aguardarEditorPronto(document)
+
+    await expect(editor.aplicarClasseParagrafo('Texto_Alinhado_Centro')).resolves.toBeUndefined()
+  })
+
+  it('aplicarEstiloTexto envia comando com o descritor e resolve quando não há erro', async () => {
+    document.body.innerHTML = `<iframe title="Corpo do Texto" ${ATRIBUTO_EDITOR_ALVO}="estilo"></iframe>`
+    cliente = criarClienteEditor(window)
+    pararDeResponder = responderComando(window, (detalhe) => {
+      expect(detalhe.tipo).toBe('aplicarEstiloTexto')
+      expect(detalhe.args).toEqual([{ fontSizePx: 16 }])
+      return { resultado: null, erro: null }
+    })
+
+    window.dispatchEvent(new CustomEvent(EVENTO_PRONTO, { detail: { nome: 'estilo' } }))
+    const editor = await cliente.aguardarEditorPronto(document)
+
+    await expect(editor.aplicarEstiloTexto({ fontSizePx: 16 })).resolves.toBeUndefined()
   })
 })

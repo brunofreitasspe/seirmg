@@ -1,14 +1,17 @@
-import { EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
-import type { DetalheComando, DetalhePronto, DetalheResposta, TipoComando } from './protocolo'
+import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
+import type { DescritorEstiloTexto, DetalheComando, DetalhePronto, DetalheResposta, TipoComando } from './protocolo'
 
 export interface EditorSEI {
   obterTextoSelecionado: () => Promise<string>
   obterTextoCompleto: () => Promise<string>
   inserirHtml: (html: string) => Promise<void>
   inserirTexto: (texto: string) => Promise<void>
+  aplicarClasseParagrafo: (classe: string) => Promise<void>
+  aplicarEstiloTexto: (estilo: DescritorEstiloTexto) => Promise<void>
   corpo: HTMLElement
   documento: Document
   janela: Window
+  iframe: HTMLIFrameElement
 }
 
 export interface ClienteEditor {
@@ -69,19 +72,24 @@ export function criarClienteEditor(janelaGlobal: Window, timeoutComandoMs = TIME
   }
 
   function montarEditor(nome: string, documentoGlobal: Document): EditorSEI | null {
-    const iframe = documentoGlobal.querySelector<HTMLIFrameElement>(`iframe[title*="${nome}"]`)
+    const iframe = documentoGlobal.querySelector<HTMLIFrameElement>(`iframe[${ATRIBUTO_EDITOR_ALVO}="${nome}"]`)
     const documentoEditor = iframe?.contentDocument
     const janelaEditor = iframe?.contentWindow
-    if (!documentoEditor || !janelaEditor) return null
+    if (!documentoEditor || !janelaEditor || !iframe) return null
 
     return {
       corpo: documentoEditor.body,
       documento: documentoEditor,
       janela: janelaEditor,
+      iframe,
       obterTextoSelecionado: () => enviarComando('getSelectedText', []).then(String),
       obterTextoCompleto: () => enviarComando('getTextoCompleto', []).then(String),
       inserirHtml: (html: string) => enviarComando('insertHtml', [html]).then(() => undefined),
       inserirTexto: (texto: string) => enviarComando('insertText', [texto]).then(() => undefined),
+      aplicarClasseParagrafo: (classe: string) =>
+        enviarComando('aplicarClasseParagrafo', [classe]).then(() => undefined),
+      aplicarEstiloTexto: (estilo: DescritorEstiloTexto) =>
+        enviarComando('aplicarEstiloTexto', [estilo]).then(() => undefined),
     }
   }
 

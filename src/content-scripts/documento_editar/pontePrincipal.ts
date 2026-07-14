@@ -1,18 +1,41 @@
-import { EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
-import type { DetalheComando, DetalheResposta, DetalhePronto, TipoComando } from './protocolo'
+import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
+import type { DescritorEstiloTexto, DetalheComando, DetalheResposta, DetalhePronto, TipoComando } from './protocolo'
+
+interface ElementoCKEditor {
+  setAttribute: (nome: string, valor: string) => void
+  getAscendant: (nomes: string[], incluirAtual: boolean) => ElementoCKEditor | null
+}
+
+interface SelecaoCKEditor {
+  getSelectedText: () => string
+  getStartElement: () => ElementoCKEditor | null
+}
+
+interface DefinicaoEstiloCKEditor {
+  element: string
+  styles: Record<string, string>
+}
 
 interface InstanciaCKEditor {
   name: string
-  getSelection: () => { getSelectedText: () => string } | null
+  getSelection: () => SelecaoCKEditor | null
   insertHtml: (html: string) => void
   insertText: (texto: string) => void
   editable?: () => { getText: () => string } | undefined
-  document: { getBody: () => { $: HTMLElement } }
+  document: { getBody: () => { $: HTMLElement }; getWindow: () => { $: Window } }
+  fire: (evento: string) => void
+  applyStyle: (estilo: unknown) => void
+  execCommand: (nome: string) => void
 }
 
 interface JanelaComCKEditor {
-  CKEDITOR?: { instances: Record<string, InstanciaCKEditor> }
+  CKEDITOR?: {
+    instances: Record<string, InstanciaCKEditor>
+    style: new (definicao: DefinicaoEstiloCKEditor) => unknown
+  }
 }
+
+const NOMES_BLOCO = ['p', 'li', 'td', 'th', 'div', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6']
 
 // A tela de edição de documento do SEI tem várias instâncias de CKEditor na mesma
 // página (cabeçalho/despacho/data/corpo/rodapé), e só uma é de fato editável
@@ -31,7 +54,60 @@ function obterInstanciaEditavel(janelaGlobal: Window): InstanciaCKEditor | null 
   return editavel ?? editores[0] ?? null
 }
 
-function executarComando(instancia: InstanciaCKEditor, tipo: TipoComando, args: unknown[]): unknown {
+// Isolated e main world enxergam o mesmo DOM (só a execução JS é isolada), então
+// marcar aqui o iframe que o CKEditor realmente usa é confiável — ao contrário de
+// tentar re-descobrir esse iframe no isolated world a partir de texto visível
+// (title/label), que não tem nenhuma relação garantida com o nome da instância.
+function marcarIframeDaInstancia(instancia: InstanciaCKEditor): void {
+  try {
+    const frame = instancia.document.getWindow().$.frameElement
+    if (frame instanceof HTMLIFrameElement) {
+      frame.setAttribute(ATRIBUTO_EDITOR_ALVO, instancia.name)
+    }
+  } catch {
+    // Instância sem iframe acessível (ex.: editor inline, fora do escopo do Lote R)
+    // — ponteEditor.ts reporta isso na mensagem de erro em vez de travar aqui.
+  }
+}
+
+function aplicarClasseParagrafo(instancia: InstanciaCKEditor, classe: string): void {
+  const elemento = instancia.getSelection?.()?.getStartElement()
+  const paragrafo = elemento?.getAscendant(NOMES_BLOCO, true)
+  if (!paragrafo) throw new Error('Nenhum parágrafo encontrado na seleção atual')
+  instancia.fire('saveSnapshot')
+  paragrafo.setAttribute('class', classe)
+  instancia.fire('saveSnapshot')
+}
+
+function montarDefinicaoEstilo(estilo: DescritorEstiloTexto): DefinicaoEstiloCKEditor {
+  const styles: Record<string, string> = {}
+  if (estilo.fontSizePx !== undefined) styles['font-size'] = `${estilo.fontSizePx}px`
+  if (estilo.color !== undefined) styles.color = estilo.color
+  return { element: 'span', styles }
+}
+
+function aplicarEstiloTexto(
+  janelaGlobal: Window,
+  instancia: InstanciaCKEditor,
+  estilo: DescritorEstiloTexto
+): void {
+  const ClasseEstilo = (janelaGlobal as unknown as JanelaComCKEditor).CKEDITOR?.style
+  instancia.fire('saveSnapshot')
+  if (estilo.bold) instancia.execCommand('bold')
+  if (estilo.italic) instancia.execCommand('italic')
+  if (estilo.underline) instancia.execCommand('underline')
+  if (ClasseEstilo && (estilo.fontSizePx !== undefined || estilo.color !== undefined)) {
+    instancia.applyStyle(new ClasseEstilo(montarDefinicaoEstilo(estilo)))
+  }
+  instancia.fire('saveSnapshot')
+}
+
+function executarComando(
+  janelaGlobal: Window,
+  instancia: InstanciaCKEditor,
+  tipo: TipoComando,
+  args: unknown[]
+): unknown {
   switch (tipo) {
     case 'getSelectedText':
       return instancia.getSelection?.()?.getSelectedText() ?? ''
@@ -43,6 +119,12 @@ function executarComando(instancia: InstanciaCKEditor, tipo: TipoComando, args: 
       return null
     case 'getTextoCompleto':
       return instancia.editable?.()?.getText() ?? ''
+    case 'aplicarClasseParagrafo':
+      aplicarClasseParagrafo(instancia, String(args[0] ?? ''))
+      return null
+    case 'aplicarEstiloTexto':
+      aplicarEstiloTexto(janelaGlobal, instancia, args[0] as DescritorEstiloTexto)
+      return null
     default:
       return null
   }
@@ -87,6 +169,7 @@ export function criarPonteMainWorld(
     const instancia = obterInstanciaEditavel(janelaGlobal)
     if (instancia) {
       instanciaAtual = instancia
+      marcarIframeDaInstancia(instancia)
       reanunciarPeriodicamente(reanunciosMax)
       return
     }
@@ -100,7 +183,7 @@ export function criarPonteMainWorld(
     let erro: string | null = null
     try {
       if (!instanciaAtual) throw new Error('Nenhuma instância de CKEditor disponível')
-      resultado = executarComando(instanciaAtual, tipo, args)
+      resultado = executarComando(janelaGlobal, instanciaAtual, tipo, args)
     } catch (e) {
       erro = e instanceof Error ? e.message : String(e)
     }

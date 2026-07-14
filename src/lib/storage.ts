@@ -124,6 +124,17 @@ export interface CorretorOrtograficoConfig {
   palavrasIgnoradas: string[]
 }
 
+export interface AtalhoParagrafo {
+  tecla: string
+  classe: string
+  rotulo: string
+}
+
+export interface FormatacaoBasicaConfig {
+  ativo: boolean
+  atalhos: AtalhoParagrafo[]
+}
+
 export interface SyncConfig {
   schemaVersion: 1
   featureFlags: FeatureFlags
@@ -134,6 +145,7 @@ export interface SyncConfig {
   documentoExterno: DocumentoExternoConfig
   ferramentasIA: FerramentasIAConfig
   corretorOrtografico: CorretorOrtograficoConfig
+  formatacaoBasica: FormatacaoBasicaConfig
 }
 
 export interface NotificadoState {
@@ -232,6 +244,10 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
   corretorOrtografico: {
     ativo: false,
     palavrasIgnoradas: [],
+  },
+  formatacaoBasica: {
+    ativo: false,
+    atalhos: [],
   },
 }
 
