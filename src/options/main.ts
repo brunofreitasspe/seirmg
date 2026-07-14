@@ -85,6 +85,7 @@ async function carregarAbaAssinatura(): Promise<void> {
         const atualizado = {
           ...config,
           blocoAssinatura: {
+            ...config.blocoAssinatura,
             ativo: inputAtivo?.checked ?? true,
             tocarSom: inputSom?.checked ?? true,
             lembreteIntervaloMinutos: Math.max(0, Math.round(Number(inputLembreteIntervalo?.value) || 0)),
@@ -117,6 +118,9 @@ async function carregarAbaGeral(): Promise<void> {
     const inputDesabilitarAssinados = document.getElementById(
       'geral-desabilitar-assinados-ativo'
     ) as HTMLInputElement | null
+    const inputCargosAdicionais = document.getElementById(
+      'geral-cargos-adicionais'
+    ) as HTMLInputElement | null
     const status = document.getElementById('geral-status')
 
     if (inputSelecaoMassa) {
@@ -125,15 +129,27 @@ async function carregarAbaGeral(): Promise<void> {
     if (inputDesabilitarAssinados) {
       inputDesabilitarAssinados.checked = config.featureFlags.desabilitarDocumentosAssinados
     }
+    if (inputCargosAdicionais) {
+      inputCargosAdicionais.value = (config.blocoAssinatura.cargosAdicionais ?? []).join(', ')
+    }
 
     document.getElementById('geral-salvar')?.addEventListener('click', async () => {
       try {
+        const cargosAdicionais = (inputCargosAdicionais?.value ?? '')
+          .split(',')
+          .map((cargo) => cargo.trim())
+          .filter((cargo) => cargo !== '')
+
         const atualizado = {
           ...config,
           featureFlags: {
             ...config.featureFlags,
             selecaoEmMassaBlocoAssinatura: inputSelecaoMassa?.checked ?? true,
             desabilitarDocumentosAssinados: inputDesabilitarAssinados?.checked ?? true,
+          },
+          blocoAssinatura: {
+            ...config.blocoAssinatura,
+            cargosAdicionais,
           },
         }
         await store.set(atualizado)

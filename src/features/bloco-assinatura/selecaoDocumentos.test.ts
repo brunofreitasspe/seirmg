@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import {
+  contemTermoNasAssinaturas,
   deveSelecionar,
   encontrarIndiceColunaAssinaturas,
   extrairNomeUsuario,
   marcarCheckboxComoJaAssinado,
+  tituloCheckboxJaAssinadoPorCargo,
 } from './selecaoDocumentos'
 
 describe('extrairNomeUsuario', () => {
@@ -112,5 +114,34 @@ describe('marcarCheckboxComoJaAssinado', () => {
 
     expect(() => marcarCheckboxComoJaAssinado(checkbox)).not.toThrow()
     expect(checkbox.disabled).toBe(true)
+  })
+
+  it('aceita um título customizado (ex.: já assinado por um cargo, não pelo usuário)', () => {
+    document.body.innerHTML = '<input type="checkbox" id="chkInfraItem0">'
+    const checkbox = document.getElementById('chkInfraItem0') as HTMLInputElement
+
+    marcarCheckboxComoJaAssinado(checkbox, tituloCheckboxJaAssinadoPorCargo('Diretor'))
+
+    expect(checkbox.title).toBe('Documento já assinado por alguém do cargo "Diretor"')
+  })
+})
+
+describe('contemTermoNasAssinaturas', () => {
+  it('encontra o termo de forma case-insensitive e tolerante a espaços', () => {
+    expect(contemTermoNasAssinaturas('Assinado por João (Diretor)', 'diretor')).toBe(true)
+    expect(contemTermoNasAssinaturas('Assinado   por\nJoão  (Diretor)', 'Diretor')).toBe(true)
+  })
+
+  it('retorna false quando o termo não aparece', () => {
+    expect(contemTermoNasAssinaturas('Assinado por Maria', 'Diretor')).toBe(false)
+  })
+
+  it('ignora termo vazio (não casa tudo por engano)', () => {
+    expect(contemTermoNasAssinaturas('Assinado por Maria', '')).toBe(false)
+    expect(contemTermoNasAssinaturas('Assinado por Maria', '   ')).toBe(false)
+  })
+
+  it('retorna false quando não há assinaturas', () => {
+    expect(contemTermoNasAssinaturas('', 'Diretor')).toBe(false)
   })
 })

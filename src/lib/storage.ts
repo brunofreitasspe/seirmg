@@ -15,6 +15,10 @@ export interface BlocoAssinaturaConfig {
   ativo: boolean
   tocarSom: boolean
   lembreteIntervaloMinutos: number
+  // Cargos que, se já aparecerem na coluna "Assinaturas" de um documento, também
+  // contam como "já assinado" pra fins de desabilitar o checkbox — além da
+  // assinatura do próprio usuário logado (featureFlags.desabilitarDocumentosAssinados).
+  cargosAdicionais: string[]
 }
 
 export interface ConfiguracaoCor {
@@ -177,6 +181,7 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     ativo: true,
     tocarSom: true,
     lembreteIntervaloMinutos: 0,
+    cargosAdicionais: [],
   },
   controleProcessos: {
     prazos: {

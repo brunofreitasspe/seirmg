@@ -26,12 +26,16 @@ function normalizar(texto: string): string {
   return texto.trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
-function contemAssinaturaDoUsuario(textoAssinaturas: string, usuario: string): boolean {
+export function contemTermoNasAssinaturas(textoAssinaturas: string, termo: string): boolean {
   const assinaturas = normalizar(textoAssinaturas)
   if (assinaturas.length === 0) return false
 
-  const usuarioNormalizado = normalizar(usuario)
-  return usuarioNormalizado !== '' && assinaturas.includes(usuarioNormalizado)
+  const termoNormalizado = normalizar(termo)
+  return termoNormalizado !== '' && assinaturas.includes(termoNormalizado)
+}
+
+function contemAssinaturaDoUsuario(textoAssinaturas: string, usuario: string): boolean {
+  return contemTermoNasAssinaturas(textoAssinaturas, usuario)
 }
 
 export function deveSelecionar(
@@ -55,20 +59,27 @@ export function deveSelecionar(
   }
 }
 
-const TITULO_CHECKBOX_JA_ASSINADO = 'Documento já assinado por você'
+export const TITULO_CHECKBOX_JA_ASSINADO_USUARIO = 'Documento já assinado por você'
 const CLASSE_CHECKBOX_JA_ASSINADO = 'seirmg-checkbox-ja-assinado'
+
+export function tituloCheckboxJaAssinadoPorCargo(cargo: string): string {
+  return `Documento já assinado por alguém do cargo "${cargo}"`
+}
 
 // O checkbox real do SEI fica visualmente oculto atrás de um <label class="infraCheckboxLabel">
 // associado via "for" (não aninhado) — estilizar só o <input> não muda nada na tela, por isso
 // o label associado (via checkbox.labels, que resolve a relação "for" nativamente) também recebe
 // a mesma marcação.
-export function marcarCheckboxComoJaAssinado(checkbox: HTMLInputElement): void {
+export function marcarCheckboxComoJaAssinado(
+  checkbox: HTMLInputElement,
+  titulo: string = TITULO_CHECKBOX_JA_ASSINADO_USUARIO
+): void {
   checkbox.disabled = true
-  checkbox.title = TITULO_CHECKBOX_JA_ASSINADO
+  checkbox.title = titulo
   checkbox.classList.add(CLASSE_CHECKBOX_JA_ASSINADO)
 
   Array.from(checkbox.labels ?? []).forEach((label) => {
-    label.title = TITULO_CHECKBOX_JA_ASSINADO
+    label.title = titulo
     label.classList.add(CLASSE_CHECKBOX_JA_ASSINADO)
   })
 }

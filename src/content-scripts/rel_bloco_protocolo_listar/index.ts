@@ -1,9 +1,11 @@
 import { parseBlocoAssinaturaTable } from '../../features/bloco-assinatura/parser'
 import {
+  contemTermoNasAssinaturas,
   deveSelecionar,
   encontrarIndiceColunaAssinaturas,
   extrairNomeUsuario,
   marcarCheckboxComoJaAssinado,
+  tituloCheckboxJaAssinadoPorCargo,
   type TipoSelecaoDocumentos,
 } from '../../features/bloco-assinatura/selecaoDocumentos'
 import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
@@ -124,11 +126,19 @@ async function aplicarDesabilitacaoAssinados(): Promise<void> {
     if (!estaNaTelaDoBloco()) return
 
     const usuario = obterNomeUsuarioLogado()
-    if (!usuario) return
+    // Config pode ter sido salva antes deste campo existir — trata como "nenhum cargo".
+    const cargos = (syncConfig.blocoAssinatura.cargosAdicionais ?? []).filter((cargo) => cargo.trim() !== '')
+    if (!usuario && cargos.length === 0) return
 
     paraCadaLinhaDeDocumento((checkbox, textoAssinaturas) => {
-      if (deveSelecionar('com-minha-assinatura', textoAssinaturas, usuario)) {
+      if (usuario && deveSelecionar('com-minha-assinatura', textoAssinaturas, usuario)) {
         marcarCheckboxComoJaAssinado(checkbox)
+        return
+      }
+
+      const cargoAssinante = cargos.find((cargo) => contemTermoNasAssinaturas(textoAssinaturas, cargo))
+      if (cargoAssinante) {
+        marcarCheckboxComoJaAssinado(checkbox, tituloCheckboxJaAssinadoPorCargo(cargoAssinante))
       }
     })
   } catch (error) {
