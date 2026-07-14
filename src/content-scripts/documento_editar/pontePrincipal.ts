@@ -55,17 +55,39 @@ export interface PonteMainWorld {
 export function criarPonteMainWorld(
   janelaGlobal: Window,
   intervaloMs = 200,
-  tentativasMax = 50
+  tentativasMax = 50,
+  intervaloReanuncioMs = 1000,
+  reanunciosMax = 30
 ): PonteMainWorld {
   let instanciaAtual: InstanciaCKEditor | null = null
   let temporizador: ReturnType<typeof setTimeout> | undefined
+  let temporizadorReanuncio: ReturnType<typeof setTimeout> | undefined
+
+  function anunciar(): void {
+    if (!instanciaAtual) return
+    const detalhe: DetalhePronto = { nome: instanciaAtual.name }
+    janelaGlobal.dispatchEvent(new CustomEvent(EVENTO_PRONTO, { detail: detalhe }))
+  }
+
+  // Confirmado ao vivo numa instância SEI real: um evento disparado repetidamente
+  // (tipo "batimento cardíaco") sempre atravessa isolated↔main world, mas um disparo
+  // único do EVENTO_PRONTO real às vezes se perde (o listener do isolated world já
+  // está registrado antes, mas mesmo assim não recebe). Causa exata não confirmada —
+  // pode ser um período de "aquecimento" da ponte de eventos cross-world do Chrome
+  // logo após a injeção dos content scripts. Reanunciar por um tempo em vez de
+  // disparar uma vez só é a mitigação robusta: ponteEditor.ts já trata receber o
+  // mesmo EVENTO_PRONTO várias vezes como algo inofensivo (idempotente).
+  function reanunciarPeriodicamente(reanunciosRestantes: number): void {
+    anunciar()
+    if (reanunciosRestantes <= 0) return
+    temporizadorReanuncio = setTimeout(() => reanunciarPeriodicamente(reanunciosRestantes - 1), intervaloReanuncioMs)
+  }
 
   function tentarAnunciar(tentativasRestantes: number): void {
     const instancia = obterInstanciaEditavel(janelaGlobal)
     if (instancia) {
       instanciaAtual = instancia
-      const detalhe: DetalhePronto = { nome: instancia.name }
-      janelaGlobal.dispatchEvent(new CustomEvent(EVENTO_PRONTO, { detail: detalhe }))
+      reanunciarPeriodicamente(reanunciosMax)
       return
     }
     if (tentativasRestantes <= 0) return
@@ -93,6 +115,7 @@ export function criarPonteMainWorld(
     destruir(): void {
       janelaGlobal.removeEventListener(EVENTO_COMANDO, tratarComando)
       if (temporizador) clearTimeout(temporizador)
+      if (temporizadorReanuncio) clearTimeout(temporizadorReanuncio)
     },
   }
 }
