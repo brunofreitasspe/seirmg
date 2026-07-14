@@ -8,8 +8,6 @@ import geminiIconSvg from '@lobehub/icons-static-svg/icons/gemini-color.svg?raw'
 import claudeIconSvg from '@lobehub/icons-static-svg/icons/claude-color.svg?raw'
 import sparklesIconSvg from 'lucide-static/icons/sparkles.svg?raw'
 import { criarClienteEditor, type EditorSEI } from './ponteEditor'
-import { EVENTO_PRONTO as EVENTO_PRONTO_DIAGNOSTICO } from './protocolo'
-import type { DetalhePronto as DetalheProntoDiagnostico } from './protocolo'
 
 const ESTILO_PAINEL_IA = `
   #seirmg-botao-ia {
@@ -602,57 +600,6 @@ function montarBotaoFlutuante(editor: EditorSEI, config: FerramentasIAConfig): v
   document.body.appendChild(botao)
 }
 
-// DIAGNÓSTICO TEMPORÁRIO (Lote R) — remover depois de descobrir por que a ponte
-// não está ativando nada em produção. Banner visível na página em vez de console,
-// porque o usuário não usa DevTools.
-function atualizarBannerDiagnosticoIsolado(texto: string): void {
-  let banner = document.getElementById('seirmg-diag-isolado')
-  if (!banner) {
-    banner = document.createElement('div')
-    banner.id = 'seirmg-diag-isolado'
-    banner.style.cssText =
-      'position:fixed;top:64px;right:8px;z-index:2147483647;background:#003;color:#0ff;' +
-      'font:12px monospace;padding:4px 8px;border-radius:4px;max-width:40vw;white-space:pre-wrap;pointer-events:none;'
-    document.documentElement.appendChild(banner)
-  }
-  banner.textContent = `[SEIRMG isolado] ${texto}`
-}
-
-function criarLinhaDiagnosticoIsolado(id: string, topoPx: number, corTexto: string): (texto: string) => void {
-  return (texto: string) => {
-    let banner = document.getElementById(id)
-    if (!banner) {
-      banner = document.createElement('div')
-      banner.id = id
-      banner.style.cssText =
-        `position:fixed;top:${topoPx}px;right:8px;z-index:2147483647;background:#000;color:${corTexto};` +
-        'font:12px monospace;padding:4px 8px;border-radius:4px;max-width:40vw;white-space:pre-wrap;pointer-events:none;'
-      document.documentElement.appendChild(banner)
-    }
-    banner.textContent = texto
-  }
-}
-
-const linhaFrameIsolado = criarLinhaDiagnosticoIsolado('seirmg-diag-isolado-frame', 104, '#ff0')
-const linhaBatimentoIsolado = criarLinhaDiagnosticoIsolado('seirmg-diag-isolado-batimento', 124, '#f0f')
-const linhaEventoProntoDireto = criarLinhaDiagnosticoIsolado('seirmg-diag-isolado-evento-direto', 144, '#0f0')
-
-linhaFrameIsolado(`[frame-isolado] topo=${window === window.top} url=${window.location.href.slice(0, 60)}`)
-linhaBatimentoIsolado('[batimento-isolado] aguardando primeiro batimento do main world...')
-linhaEventoProntoDireto('[evento-pronto-direto] aguardando EVENTO_PRONTO real (listener cru, sem ponteEditor)...')
-
-window.addEventListener('seirmg:diag-batimento', (evento) => {
-  const { n } = (evento as CustomEvent<{ n: number }>).detail
-  linhaBatimentoIsolado(`[batimento-isolado] recebido #${n}`)
-})
-
-// Listener CRU, direto no window, sem passar pela lógica de criarClienteEditor —
-// pra isolar se o problema é no evento em si ou na lógica interna do ponteEditor.ts.
-window.addEventListener(EVENTO_PRONTO_DIAGNOSTICO, (evento) => {
-  const { nome } = (evento as CustomEvent<DetalheProntoDiagnostico>).detail
-  linhaEventoProntoDireto(`[evento-pronto-direto] RECEBIDO! nome="${nome}"`)
-})
-
 // Precisa ser criado de forma síncrona, assim que o script carrega — não dentro do
 // bootstrap() depois de um await. O main world pode disparar EVENTO_PRONTO a qualquer
 // momento (assim que achar o CKEditor), e CustomEvent não fica "guardado" pra quem
@@ -662,40 +609,27 @@ window.addEventListener(EVENTO_PRONTO_DIAGNOSTICO, (evento) => {
 const clienteEditorGlobal = criarClienteEditor(window)
 
 async function bootstrap(): Promise<void> {
-  atualizarBannerDiagnosticoIsolado('bootstrap iniciado')
   try {
     const config = await createSyncConfigStore().get()
-    atualizarBannerDiagnosticoIsolado(
-      `config carregada — IA ativo=${config.ferramentasIA.ativo} corretor ativo=${config.corretorOrtografico.ativo} formatação básica ativo=${config.formatacaoBasica.ativo}`
-    )
-    if (!config.ferramentasIA.ativo && !config.corretorOrtografico.ativo && !config.formatacaoBasica.ativo) {
-      atualizarBannerDiagnosticoIsolado('todos desativados nas Opções, parando aqui')
-      return
-    }
+    if (!config.ferramentasIA.ativo && !config.corretorOrtografico.ativo && !config.formatacaoBasica.ativo) return
 
-    atualizarBannerDiagnosticoIsolado('aguardando "editor pronto" vindo do main world...')
     const editor = await clienteEditorGlobal.aguardarEditorPronto()
-    atualizarBannerDiagnosticoIsolado('editor pronto recebido! montando features...')
 
     if (config.ferramentasIA.ativo) {
       injetarEstilos()
       montarBotaoFlutuante(editor, config.ferramentasIA)
-      atualizarBannerDiagnosticoIsolado('botão de Ferramentas de IA montado')
     }
 
     if (config.corretorOrtografico.ativo) {
       const { iniciarCorretorOrtografico } = await import('./corretorOrtografico')
       await iniciarCorretorOrtografico(editor, config.corretorOrtografico)
-      atualizarBannerDiagnosticoIsolado('corretor ortográfico iniciado')
     }
 
     if (config.formatacaoBasica.ativo) {
       const { iniciarFormatacaoBasica } = await import('./formatacaoBasica')
       await iniciarFormatacaoBasica(editor, config.formatacaoBasica)
-      atualizarBannerDiagnosticoIsolado('formatação básica iniciada')
     }
   } catch (error) {
-    atualizarBannerDiagnosticoIsolado(`ERRO: ${error instanceof Error ? error.message : String(error)}`)
     console.error('[SEIRMG] Falha ao inicializar recursos do editor de documentos:', error)
   }
 }
