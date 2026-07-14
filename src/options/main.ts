@@ -11,6 +11,7 @@ import { ativarAba } from './tabs'
 import {
   createLocalConfigStore,
   createSyncConfigStore,
+  DEFAULT_SYNC_CONFIG,
   type ConfiguracaoCor,
   type ConfiguracaoPontoControle,
   type FormatoDocumento,
@@ -376,6 +377,10 @@ async function carregarAbaEditor(): Promise<void> {
       'editor-formatacao-basica-atalhos'
     ) as HTMLTextAreaElement | null
 
+    // Configs salvas antes do Lote I não têm esse campo — createSyncConfigStore().get()
+    // não faz merge profundo com o default, só retorna o objeto salvo como está.
+    const formatacaoBasica = config.formatacaoBasica ?? DEFAULT_SYNC_CONFIG.formatacaoBasica
+
     if (inputAtivo) inputAtivo.checked = config.documentoExterno.ativo
     if (selectFormato) selectFormato.value = config.documentoExterno.formato
     if (inputTipoConferencia) inputTipoConferencia.value = config.documentoExterno.tipoConferencia
@@ -386,10 +391,10 @@ async function carregarAbaEditor(): Promise<void> {
     }
 
     if (inputFormatacaoBasicaAtivo) {
-      inputFormatacaoBasicaAtivo.checked = config.formatacaoBasica.ativo
+      inputFormatacaoBasicaAtivo.checked = formatacaoBasica.ativo
     }
     if (inputFormatacaoBasicaAtalhos) {
-      inputFormatacaoBasicaAtalhos.value = formatarAtalhos(config.formatacaoBasica.atalhos)
+      inputFormatacaoBasicaAtalhos.value = formatarAtalhos(formatacaoBasica.atalhos)
     }
 
     document.getElementById('editor-salvar')?.addEventListener('click', async () => {
@@ -405,7 +410,7 @@ async function carregarAbaEditor(): Promise<void> {
             tipoDocumentoPadraoArrastar: inputTipoPadraoArrastar?.value.trim() || 'Anexo',
           },
           formatacaoBasica: {
-            ...config.formatacaoBasica,
+            ...formatacaoBasica,
             ativo: inputFormatacaoBasicaAtivo?.checked ?? false,
             atalhos: parsearAtalhos(inputFormatacaoBasicaAtalhos?.value ?? ''),
           },

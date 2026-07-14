@@ -1,7 +1,7 @@
 import { montarPromptComContexto, montarPromptPronto, type TipoPromptPronto } from '../../features/ferramentas-ia/prompts'
 import { montarRequisicao, extrairResposta } from '../../features/ferramentas-ia/adaptadores'
 import { fetchIA } from '../../lib/fetchIaViaBackground'
-import { createSyncConfigStore } from '../../lib/storage'
+import { createSyncConfigStore, DEFAULT_SYNC_CONFIG } from '../../lib/storage'
 import type { ProvedorIA, FerramentasIAConfig } from '../../lib/storage'
 import openaiIconSvg from '@lobehub/icons-static-svg/icons/openai.svg?raw'
 import geminiIconSvg from '@lobehub/icons-static-svg/icons/gemini-color.svg?raw'
@@ -611,7 +611,10 @@ const clienteEditorGlobal = criarClienteEditor(window)
 async function bootstrap(): Promise<void> {
   try {
     const config = await createSyncConfigStore().get()
-    if (!config.ferramentasIA.ativo && !config.corretorOrtografico.ativo && !config.formatacaoBasica.ativo) return
+    // Configs salvas antes do Lote I não têm esse campo — createSyncConfigStore().get()
+    // não faz merge profundo com o default, só retorna o objeto salvo como está.
+    const formatacaoBasica = config.formatacaoBasica ?? DEFAULT_SYNC_CONFIG.formatacaoBasica
+    if (!config.ferramentasIA.ativo && !config.corretorOrtografico.ativo && !formatacaoBasica.ativo) return
 
     const editor = await clienteEditorGlobal.aguardarEditorPronto()
 
@@ -625,9 +628,9 @@ async function bootstrap(): Promise<void> {
       await iniciarCorretorOrtografico(editor, config.corretorOrtografico)
     }
 
-    if (config.formatacaoBasica.ativo) {
+    if (formatacaoBasica.ativo) {
       const { iniciarFormatacaoBasica } = await import('./formatacaoBasica')
-      await iniciarFormatacaoBasica(editor, config.formatacaoBasica)
+      await iniciarFormatacaoBasica(editor, formatacaoBasica)
     }
   } catch (error) {
     console.error('[SEIRMG] Falha ao inicializar recursos do editor de documentos:', error)
