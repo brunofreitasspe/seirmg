@@ -62,4 +62,29 @@ describe('iniciarFormatacaoBasica', () => {
       'Barra de ferramentas do CKEditor não apareceu a tempo'
     )
   })
+
+  it('copiar formatação: primeiro clique lê o estilo, segundo aplica e limpa', async () => {
+    const { iframe, toolbox } = montarToolboxFalsa()
+    const editor = criarEditorFalso(iframe)
+    document.body.innerHTML +=
+      '<span id="origem" style="font-size:20px;font-weight:bold">origem</span>' +
+      '<span id="destino">destino</span>'
+
+    await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
+
+    const range = document.createRange()
+    range.selectNodeContents(document.getElementById('origem') as HTMLElement)
+    window.getSelection()?.removeAllRanges()
+    window.getSelection()?.addRange(range)
+
+    const botao = toolbox.querySelector('#seirmg-cke-copiar-formatacao') as HTMLElement
+    botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    expect(botao.title).toBe('Colar formatação copiada')
+
+    botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    expect(editor.aplicarEstiloTexto).toHaveBeenCalledWith(
+      expect.objectContaining({ fontSizePx: 20, bold: true })
+    )
+    expect(botao.title).toBe('Copiar formatação')
+  })
 })

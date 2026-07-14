@@ -4,9 +4,12 @@ import alignRightIconSvg from 'lucide-static/icons/align-right.svg?raw'
 import alignJustifyIconSvg from 'lucide-static/icons/align-justify.svg?raw'
 import zoomInIconSvg from 'lucide-static/icons/zoom-in.svg?raw'
 import zoomOutIconSvg from 'lucide-static/icons/zoom-out.svg?raw'
+import paintbrushIconSvg from 'lucide-static/icons/paintbrush.svg?raw'
 import { injetarEstiloSeAusente } from './dom'
 import { CLASSES_ALINHAMENTO, proximoTamanhoFontePx } from '../../features/formatacao-basica/paragrafoEstilos'
 import type { AlinhamentoTexto } from '../../features/formatacao-basica/paragrafoEstilos'
+import { lerEstiloElemento } from '../../features/formatacao-basica/estiloTexto'
+import type { DescritorEstiloTexto } from './protocolo'
 import type { EditorSEI } from './ponteEditor'
 import type { AtalhoParagrafo, FormatacaoBasicaConfig } from '../../lib/storage'
 
@@ -104,6 +107,34 @@ function montarBotoesFonte(editor: EditorSEI): HTMLElement[] {
   ]
 }
 
+function elementoDaSelecao(editor: EditorSEI): Element | null {
+  const selecao = editor.janela.getSelection()
+  const no = selecao?.anchorNode
+  if (!no) return null
+  return no instanceof Element ? no : no.parentElement
+}
+
+function montarBotaoCopiarFormatacao(editor: EditorSEI): HTMLElement {
+  let estiloCopiado: DescritorEstiloTexto | null = null
+
+  const botao = criarBotaoToolbar('seirmg-cke-copiar-formatacao', 'Copiar formatação', paintbrushIconSvg, () => {
+    if (estiloCopiado) {
+      const paraAplicar = estiloCopiado
+      estiloCopiado = null
+      botao.title = 'Copiar formatação'
+      editor.aplicarEstiloTexto(paraAplicar).catch(tratarErro('Falha ao aplicar formatação copiada'))
+      return
+    }
+
+    const elemento = elementoDaSelecao(editor)
+    if (!elemento) return
+    estiloCopiado = lerEstiloElemento(elemento)
+    botao.title = 'Colar formatação copiada'
+  })
+
+  return botao
+}
+
 function registrarAtalhos(editor: EditorSEI, atalhos: AtalhoParagrafo[]): void {
   if (atalhos.length === 0) return
   const porTecla = new Map(atalhos.map((atalho) => [atalho.tecla.toLowerCase(), atalho]))
@@ -125,7 +156,7 @@ export async function iniciarFormatacaoBasica(
   const toolbox = await aguardarToolbox(editor.iframe, intervaloMs, tentativasMax)
   injetarEstiloSeAusente(document, 'seirmg-estilo-botoes-formatacao', ESTILO_BOTOES)
 
-  const botoes = [...montarBotoesAlinhamento(editor), ...montarBotoesFonte(editor)]
+  const botoes = [...montarBotoesAlinhamento(editor), ...montarBotoesFonte(editor), montarBotaoCopiarFormatacao(editor)]
   botoes.forEach((botao) => toolbox.appendChild(botao))
 
   registrarAtalhos(editor, config.atalhos)
