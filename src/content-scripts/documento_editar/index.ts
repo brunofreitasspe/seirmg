@@ -642,6 +642,14 @@ window.addEventListener('seirmg:diag-batimento', (evento) => {
   linhaBatimentoIsolado(`[batimento-isolado] recebido #${n}`)
 })
 
+// Precisa ser criado de forma síncrona, assim que o script carrega — não dentro do
+// bootstrap() depois de um await. O main world pode disparar EVENTO_PRONTO a qualquer
+// momento (assim que achar o CKEditor), e CustomEvent não fica "guardado" pra quem
+// registra o listener depois: se o cliente só for criado após o await no
+// createSyncConfigStore().get(), existe uma janela real onde o evento se perde pra
+// sempre. Criar aqui garante que o listener já está no ar antes de qualquer await.
+const clienteEditorGlobal = criarClienteEditor(window)
+
 async function bootstrap(): Promise<void> {
   atualizarBannerDiagnosticoIsolado('bootstrap iniciado')
   try {
@@ -654,9 +662,8 @@ async function bootstrap(): Promise<void> {
       return
     }
 
-    const clienteEditor = criarClienteEditor(window)
     atualizarBannerDiagnosticoIsolado('aguardando "editor pronto" vindo do main world...')
-    const editor = await clienteEditor.aguardarEditorPronto()
+    const editor = await clienteEditorGlobal.aguardarEditorPronto()
     atualizarBannerDiagnosticoIsolado('editor pronto recebido! montando features...')
 
     if (config.ferramentasIA.ativo) {
