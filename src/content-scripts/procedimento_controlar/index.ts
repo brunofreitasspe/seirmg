@@ -1,8 +1,7 @@
 import {
-  calcularDiasDoMarcador,
+  calcularDiasAteVencimento,
   classificarPrazo,
   extrairTextoMarcador,
-  type TipoCalculoPrazo,
 } from '../../features/controle-processos/prazos'
 import { escolherCorProcesso, extrairEspecificacaoParaCor } from '../../features/controle-processos/corProcesso'
 import {
@@ -368,61 +367,36 @@ function linhasDaTabela(idTabela: string): Element[] {
   return Array.from(tabela.querySelectorAll('tbody > tr:not(.seirmg-cabecalho-grupo)'))
 }
 
-function definirTiposPrazo(
-  config: ControleProcessosConfig['prazos']
-): Array<{ tipo: TipoCalculoPrazo; exibir: boolean; rotulo: string; limites: { alerta: number; critico: number } }> {
-  return [
-    {
-      tipo: 'qtddias',
-      exibir: config.exibirDias,
-      rotulo: 'Dias',
-      limites: { alerta: config.alertaDias, critico: config.criticoDias },
-    },
-    {
-      tipo: 'prazo',
-      exibir: config.exibirPrazo,
-      rotulo: 'Prazo',
-      limites: { alerta: config.alertaPrazo, critico: config.criticoPrazo },
-    },
-  ]
-}
+function aplicarPrazoNaLinha(linha: Element, config: ControleProcessosConfig['prazos']): void {
+  const prazo = obterControleDePrazoDaLinha(linha)
+  const dias = prazo ? calcularDiasAteVencimento(prazo.dataTexto, new Date()) : null
 
-function aplicarUmTipoDePrazo(
-  linhas: Element[],
-  tipo: TipoCalculoPrazo,
-  limites: { alerta: number; critico: number }
-): void {
-  linhas.forEach((linha) => {
-    const marcadores = Array.from(
-      linha.querySelectorAll<HTMLAnchorElement>("td > a[href*='acao=andamento_marcador_gerenciar']")
-    )
-    const textos = marcadores
-      .map((marcador) => marcador.getAttribute('onmouseover'))
-      .filter((texto): texto is string => texto !== null)
-      .map(extrairTextoMarcador)
-
-    const valor = calcularDiasDoMarcador(textos, tipo, new Date())
-
+  if (config.exibirDias) {
     const td = document.createElement('td')
     td.setAttribute('valign', 'top')
     td.setAttribute('align', 'center')
-    td.textContent = valor === null ? '' : String(valor)
+    td.textContent = dias === null ? '' : String(dias)
     linha.appendChild(td)
+  }
 
-    if (valor !== null) {
-      const classificacao = classificarPrazo(valor, tipo, limites)
-      if (classificacao === 'alerta') linha.classList.add('infraTrseippalerta')
-      if (classificacao === 'critico') linha.classList.add('infraTrseippcritico')
-    }
-  })
+  if (config.exibirPrazo) {
+    const td = document.createElement('td')
+    td.setAttribute('valign', 'top')
+    td.setAttribute('align', 'center')
+    td.textContent = prazo?.dataTexto ?? ''
+    linha.appendChild(td)
+  }
+
+  if (dias !== null) {
+    const classificacao = classificarPrazo(dias, { alerta: config.alerta, critico: config.critico })
+    if (classificacao === 'alerta') linha.classList.add('infraTrseippalerta')
+    if (classificacao === 'critico') linha.classList.add('infraTrseippcritico')
+  }
 }
 
 function aplicarPrazosEmLinhas(config: ControleProcessosConfig['prazos'], linhas: Element[]): void {
   if (!config.ativo) return
-  definirTiposPrazo(config).forEach(({ tipo, exibir, limites }) => {
-    if (!exibir) return
-    aplicarUmTipoDePrazo(linhas, tipo, limites)
-  })
+  linhas.forEach((linha) => aplicarPrazoNaLinha(linha, config))
 }
 
 function aplicarPrazos(config: ControleProcessosConfig['prazos']): void {
@@ -432,19 +406,23 @@ function aplicarPrazos(config: ControleProcessosConfig['prazos']): void {
     const tabela = document.querySelector(idTabela)
     if (!tabela) return
 
-    definirTiposPrazo(config).forEach(({ tipo, exibir, rotulo, limites }) => {
-      if (!exibir) return
-
-      const theadRow = tabela.querySelector('thead > tr')
-      if (theadRow) {
+    const theadRow = tabela.querySelector('thead > tr')
+    if (theadRow) {
+      if (config.exibirDias) {
         const th = document.createElement('th')
         th.className = 'infraTh'
-        th.textContent = rotulo
+        th.textContent = 'Dias'
         theadRow.appendChild(th)
       }
+      if (config.exibirPrazo) {
+        const th = document.createElement('th')
+        th.className = 'infraTh'
+        th.textContent = 'Prazo'
+        theadRow.appendChild(th)
+      }
+    }
 
-      aplicarUmTipoDePrazo(linhasDaTabela(idTabela), tipo, limites)
-    })
+    aplicarPrazosEmLinhas(config, linhasDaTabela(idTabela))
   })
 }
 
@@ -1641,6 +1619,10 @@ async function bootstrap(): Promise<void> {
   try {
     injetarEstilos()
     corrigirTabelasNativas()
+
+    const config = await createSyncConfigStore().get()
+    aplicarPrazos(config.controleProcessos.prazos)
+
     montarBuscaRapida()
     montarSelecaoMultipla()
     montarConfirmarAntesDeConcluir()
@@ -1648,8 +1630,6 @@ async function bootstrap(): Promise<void> {
     montarOrdenacaoTabelas()
     await montarFiltroAtribuicao()
 
-    const config = await createSyncConfigStore().get()
-    aplicarPrazos(config.controleProcessos.prazos)
     aplicarCorProcesso(config.controleProcessos.coresProcesso)
     aplicarEspecificacao(config.controleProcessos.especificacao)
     montarAgrupamento(config)
