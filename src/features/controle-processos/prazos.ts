@@ -1,5 +1,3 @@
-export type TipoCalculoPrazo = 'prazo' | 'qtddias'
-
 export function extrairTextoMarcador(onmouseover: string): string {
   const primeiraAspas = onmouseover.indexOf("'")
   const segundaAspas = onmouseover.indexOf("'", primeiraAspas + 1)
@@ -25,42 +23,11 @@ function parseDataBr(dataStr: string): Date {
   return new Date(ano, mes - 1, dia)
 }
 
-function calcularDiferencaDias(data: Date, tipo: TipoCalculoPrazo, agora: Date): number {
+export function calcularDiasAteVencimento(dataTexto: string, agora: Date): number | null {
+  if (!isValidDate(dataTexto)) return null
   const msPorDia = 1000 * 60 * 60 * 24
-
-  if (tipo === 'qtddias') {
-    return Math.floor((agora.getTime() - data.getTime()) / msPorDia)
-  }
+  const data = parseDataBr(dataTexto)
   return Math.floor((data.getTime() - agora.getTime()) / msPorDia) + 1
-}
-
-export function extrairDataDoMarcador(textosMarcadores: string[], tipo: TipoCalculoPrazo): Date | null {
-  for (const textoOriginal of textosMarcadores) {
-    const texto = textoOriginal.toLowerCase().replace('é', 'e')
-    let dataStr: string
-
-    if (tipo === 'prazo') {
-      if (texto.indexOf('ate ') !== 0) continue
-      dataStr = texto.substr(4, 10)
-    } else {
-      dataStr = texto.substr(0, 10)
-    }
-
-    if (isValidDate(dataStr)) {
-      return parseDataBr(dataStr)
-    }
-  }
-  return null
-}
-
-export function calcularDiasDoMarcador(
-  textosMarcadores: string[],
-  tipo: TipoCalculoPrazo,
-  agora: Date
-): number | null {
-  const data = extrairDataDoMarcador(textosMarcadores, tipo)
-  if (!data) return null
-  return calcularDiferencaDias(data, tipo, agora)
 }
 
 export function formatarDataBr(data: Date): string {
@@ -75,17 +42,8 @@ export interface ConfiguracaoLimites {
   critico: number
 }
 
-export function classificarPrazo(
-  valor: number,
-  tipo: TipoCalculoPrazo,
-  config: ConfiguracaoLimites
-): 'alerta' | 'critico' | null {
-  if (tipo === 'qtddias') {
-    if (valor > config.alerta && valor <= config.critico) return 'alerta'
-    if (valor > config.critico) return 'critico'
-  } else {
-    if (valor >= config.critico && valor < config.alerta) return 'alerta'
-    if (valor < config.critico) return 'critico'
-  }
+export function classificarPrazo(valor: number, config: ConfiguracaoLimites): 'alerta' | 'critico' | null {
+  if (valor >= config.critico && valor < config.alerta) return 'alerta'
+  if (valor < config.critico) return 'critico'
   return null
 }

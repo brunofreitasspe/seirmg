@@ -1,12 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import {
-  calcularDiasDoMarcador,
-  classificarPrazo,
-  extrairDataDoMarcador,
-  extrairTextoMarcador,
-  formatarDataBr,
-  isValidDate,
-} from './prazos'
+import { calcularDiasAteVencimento, classificarPrazo, extrairTextoMarcador, formatarDataBr, isValidDate } from './prazos'
 
 describe('extrairTextoMarcador', () => {
   it('extrai o texto entre as duas primeiras aspas simples', () => {
@@ -38,80 +31,48 @@ describe('isValidDate', () => {
   })
 })
 
-describe('calcularDiasDoMarcador', () => {
+describe('calcularDiasAteVencimento', () => {
   const agora = new Date(2026, 0, 10)
 
-  it('calcula dias corridos (qtddias) desde a data do marcador', () => {
-    expect(calcularDiasDoMarcador(['01/01/2026 - aberto'], 'qtddias', agora)).toBe(9)
+  it('calcula dias restantes até uma data futura', () => {
+    expect(calcularDiasAteVencimento('20/01/2026', agora)).toBe(11)
   })
 
-  it('calcula dias restantes (prazo) até a data do marcador, exigindo prefixo "ate "', () => {
-    expect(calcularDiasDoMarcador(['ate 20/01/2026'], 'prazo', agora)).toBe(11)
+  it('calcula dias já vencidos (negativo) para uma data passada', () => {
+    expect(calcularDiasAteVencimento('01/01/2026', agora)).toBe(-8)
   })
 
-  it('ignora marcador de prazo sem o prefixo "ate "', () => {
-    expect(calcularDiasDoMarcador(['aberto em 20/01/2026'], 'prazo', agora)).toBeNull()
+  it('retorna 1 quando a data de vencimento é hoje', () => {
+    expect(calcularDiasAteVencimento('10/01/2026', agora)).toBe(1)
   })
 
-  it('usa o primeiro marcador válido e ignora os inválidos anteriores', () => {
-    expect(calcularDiasDoMarcador(['texto sem data', 'ate 20/01/2026'], 'prazo', agora)).toBe(11)
+  it('retorna null para texto de data inválido', () => {
+    expect(calcularDiasAteVencimento('31/02/2026', agora)).toBeNull()
   })
 
-  it('retorna null quando nenhum marcador tem data válida', () => {
-    expect(calcularDiasDoMarcador(['sem data aqui'], 'qtddias', agora)).toBeNull()
-  })
-
-  it('normaliza acento e caixa antes de interpretar o prefixo', () => {
-    expect(calcularDiasDoMarcador(['ATÉ 20/01/2026'], 'prazo', agora)).toBe(11)
+  it('retorna null para texto fora do formato dd/mm/yyyy', () => {
+    expect(calcularDiasAteVencimento('2026-01-20', agora)).toBeNull()
   })
 })
 
 describe('classificarPrazo', () => {
-  const configDias = { alerta: 30, critico: 60 }
-  const configPrazo = { alerta: 10, critico: 5 }
+  const config = { alerta: 10, critico: 5 }
 
-  it('qtddias: classifica alerta quando entre alerta (exclusive) e crítico (inclusive)', () => {
-    expect(classificarPrazo(31, 'qtddias', configDias)).toBe('alerta')
-    expect(classificarPrazo(60, 'qtddias', configDias)).toBe('alerta')
+  it('classifica alerta quando entre crítico (inclusive) e alerta (exclusive)', () => {
+    expect(classificarPrazo(5, config)).toBe('alerta')
+    expect(classificarPrazo(9, config)).toBe('alerta')
   })
 
-  it('qtddias: classifica crítico quando acima do crítico', () => {
-    expect(classificarPrazo(61, 'qtddias', configDias)).toBe('critico')
+  it('classifica crítico quando abaixo do crítico', () => {
+    expect(classificarPrazo(4, config)).toBe('critico')
   })
 
-  it('qtddias: não classifica quando dentro do normal', () => {
-    expect(classificarPrazo(30, 'qtddias', configDias)).toBeNull()
+  it('classifica crítico para valores bem negativos (vencido há dias)', () => {
+    expect(classificarPrazo(-10, config)).toBe('critico')
   })
 
-  it('prazo: classifica alerta quando entre crítico (inclusive) e alerta (exclusive)', () => {
-    expect(classificarPrazo(5, 'prazo', configPrazo)).toBe('alerta')
-    expect(classificarPrazo(9, 'prazo', configPrazo)).toBe('alerta')
-  })
-
-  it('prazo: classifica crítico quando abaixo do crítico', () => {
-    expect(classificarPrazo(4, 'prazo', configPrazo)).toBe('critico')
-  })
-
-  it('prazo: não classifica quando dentro do normal', () => {
-    expect(classificarPrazo(10, 'prazo', configPrazo)).toBeNull()
-  })
-})
-
-describe('extrairDataDoMarcador', () => {
-  it('retorna a Date correspondente ao marcador de qtddias', () => {
-    expect(extrairDataDoMarcador(['01/01/2026 - aberto'], 'qtddias')).toEqual(new Date(2026, 0, 1))
-  })
-
-  it('retorna a Date correspondente ao marcador de prazo com prefixo "ate "', () => {
-    expect(extrairDataDoMarcador(['ate 20/01/2026'], 'prazo')).toEqual(new Date(2026, 0, 20))
-  })
-
-  it('ignora marcador de prazo sem o prefixo "ate "', () => {
-    expect(extrairDataDoMarcador(['aberto em 20/01/2026'], 'prazo')).toBeNull()
-  })
-
-  it('retorna null quando nenhum marcador tem data válida', () => {
-    expect(extrairDataDoMarcador(['sem data aqui'], 'qtddias')).toBeNull()
+  it('não classifica quando dentro do normal (>= alerta)', () => {
+    expect(classificarPrazo(10, config)).toBeNull()
   })
 })
 
