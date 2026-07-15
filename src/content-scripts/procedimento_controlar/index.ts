@@ -938,14 +938,19 @@ function aplicarOrdenacaoNaTabela(idTabela: string, indiceColuna: number, direca
   }
 }
 
-function ordenarTabelaPelaColuna(idTabela: string, indiceColuna: number, headers: HTMLTableCellElement[]): void {
+function ordenarTabelaPelaColuna(
+  idTabela: string,
+  indiceColuna: number,
+  th: HTMLTableCellElement,
+  headers: HTMLTableCellElement[]
+): void {
   try {
     const estadoAtual = estadoOrdenacaoPorTabela.get(idTabela)
     const direcao: 'asc' | 'desc' =
       estadoAtual?.indiceColuna === indiceColuna && estadoAtual.direcao === 'asc' ? 'desc' : 'asc'
     estadoOrdenacaoPorTabela.set(idTabela, { indiceColuna, direcao })
     limparIndicadoresOrdenacao(headers)
-    aplicarIndicadorOrdenacao(headers[indiceColuna], direcao)
+    aplicarIndicadorOrdenacao(th, direcao)
     reaplicarOrdemDaTabela(idTabela)
   } catch (error) {
     console.error('[SEIRMG] Falha ao ordenar tabela pela coluna:', error)
@@ -1092,13 +1097,17 @@ function montarOrdenacaoTabelas(): void {
       if (!tabela) return
 
       const headers = Array.from(tabela.querySelectorAll<HTMLTableCellElement>('thead > tr > th'))
-      headers.forEach((th, indiceColuna) => {
+      let indiceCorpo = 0
+      headers.forEach((th) => {
+        const indiceColuna = indiceCorpo
+        indiceCorpo += th.colSpan || 1
+
         if (!th.textContent?.trim()) return
 
         th.style.cursor = 'pointer'
         th.style.whiteSpace = 'nowrap'
         th.addEventListener('click', () => {
-          ordenarTabelaPelaColuna(idTabela, indiceColuna, headers)
+          ordenarTabelaPelaColuna(idTabela, indiceColuna, th, headers)
         })
       })
     })
