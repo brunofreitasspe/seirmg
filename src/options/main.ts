@@ -214,11 +214,9 @@ async function carregarAbaProcessos(): Promise<void> {
 
     const inputPrazosAtivo = document.getElementById('processos-prazos-ativo') as HTMLInputElement | null
     const inputExibirDias = document.getElementById('processos-prazos-exibir-dias') as HTMLInputElement | null
-    const inputAlertaDias = document.getElementById('processos-prazos-alerta-dias') as HTMLInputElement | null
-    const inputCriticoDias = document.getElementById('processos-prazos-critico-dias') as HTMLInputElement | null
     const inputExibirPrazo = document.getElementById('processos-prazos-exibir-prazo') as HTMLInputElement | null
-    const inputAlertaPrazo = document.getElementById('processos-prazos-alerta-prazo') as HTMLInputElement | null
-    const inputCriticoPrazo = document.getElementById('processos-prazos-critico-prazo') as HTMLInputElement | null
+    const inputAlerta = document.getElementById('processos-prazos-alerta') as HTMLInputElement | null
+    const inputCritico = document.getElementById('processos-prazos-critico') as HTMLInputElement | null
     const inputCoresAtivo = document.getElementById('processos-cores-ativo') as HTMLInputElement | null
     const inputEspecificacaoAtivo = document.getElementById(
       'processos-especificacao-ativo'
@@ -238,11 +236,9 @@ async function carregarAbaProcessos(): Promise<void> {
 
     if (inputPrazosAtivo) inputPrazosAtivo.checked = config.controleProcessos.prazos.ativo
     if (inputExibirDias) inputExibirDias.checked = config.controleProcessos.prazos.exibirDias
-    if (inputAlertaDias) inputAlertaDias.value = String(config.controleProcessos.prazos.alertaDias)
-    if (inputCriticoDias) inputCriticoDias.value = String(config.controleProcessos.prazos.criticoDias)
     if (inputExibirPrazo) inputExibirPrazo.checked = config.controleProcessos.prazos.exibirPrazo
-    if (inputAlertaPrazo) inputAlertaPrazo.value = String(config.controleProcessos.prazos.alertaPrazo)
-    if (inputCriticoPrazo) inputCriticoPrazo.value = String(config.controleProcessos.prazos.criticoPrazo)
+    if (inputAlerta) inputAlerta.value = String(config.controleProcessos.prazos.alerta)
+    if (inputCritico) inputCritico.value = String(config.controleProcessos.prazos.critico)
     if (inputCoresAtivo) inputCoresAtivo.checked = config.controleProcessos.coresProcesso.ativo
     if (inputEspecificacaoAtivo) {
       inputEspecificacaoAtivo.checked = config.controleProcessos.especificacao.ativo
@@ -303,10 +299,8 @@ async function carregarAbaProcessos(): Promise<void> {
               ativo: inputPrazosAtivo?.checked ?? true,
               exibirDias: inputExibirDias?.checked ?? true,
               exibirPrazo: inputExibirPrazo?.checked ?? true,
-              alertaDias: Number(inputAlertaDias?.value ?? 30),
-              criticoDias: Number(inputCriticoDias?.value ?? 60),
-              alertaPrazo: Number(inputAlertaPrazo?.value ?? 10),
-              criticoPrazo: Number(inputCriticoPrazo?.value ?? 5),
+              alerta: Number(inputAlerta?.value ?? 10),
+              critico: Number(inputCritico?.value ?? 5),
             },
             coresProcesso: {
               ativo: inputCoresAtivo?.checked ?? true,
