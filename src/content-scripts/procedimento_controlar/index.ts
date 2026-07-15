@@ -891,6 +891,7 @@ async function alternarFavorito(favorito: FavoritoProcesso): Promise<void> {
 
 interface EstadoOrdenacao {
   indiceColuna: number
+  larguraColuna: number
   direcao: 'asc' | 'desc'
 }
 
@@ -910,10 +911,24 @@ function aplicarIndicadorOrdenacao(th: HTMLTableCellElement, direcao: 'asc' | 'd
   th.appendChild(span)
 }
 
-function calcularOrdemIds(linhas: Element[], indiceColuna: number, direcao: 'asc' | 'desc'): string[] {
+function extrairValorColuna(linha: Element, indiceColuna: number, larguraColuna: number): string {
+  const partes: string[] = []
+  for (let i = 0; i < larguraColuna; i++) {
+    const texto = linha.children[indiceColuna + i]?.textContent?.trim()
+    if (texto) partes.push(texto)
+  }
+  return partes.join(' ')
+}
+
+function calcularOrdemIds(
+  linhas: Element[],
+  indiceColuna: number,
+  larguraColuna: number,
+  direcao: 'asc' | 'desc'
+): string[] {
   const valores = linhas.map((linha, index) => ({
     id: linha.id || String(index),
-    valor: linha.children[indiceColuna]?.textContent?.trim() ?? '',
+    valor: extrairValorColuna(linha, indiceColuna, larguraColuna),
   }))
 
   const tipo: TipoColuna = detectarTipoColuna(valores.map((item) => item.valor))
@@ -933,9 +948,14 @@ function reordenarLinhasPorId(idTabela: string, ordemIds: string[]): void {
   })
 }
 
-function aplicarOrdenacaoNaTabela(idTabela: string, indiceColuna: number, direcao: 'asc' | 'desc'): void {
+function aplicarOrdenacaoNaTabela(
+  idTabela: string,
+  indiceColuna: number,
+  larguraColuna: number,
+  direcao: 'asc' | 'desc'
+): void {
   try {
-    const ordemIds = calcularOrdemIds(linhasDaTabela(idTabela), indiceColuna, direcao)
+    const ordemIds = calcularOrdemIds(linhasDaTabela(idTabela), indiceColuna, larguraColuna, direcao)
     reordenarLinhasPorId(idTabela, ordemIds)
   } catch (error) {
     console.error('[SEIRMG] Falha ao ordenar tabela:', error)
@@ -955,6 +975,7 @@ function restaurarOrdemOriginal(idTabela: string): void {
 function ordenarTabelaPelaColuna(
   idTabela: string,
   indiceColuna: number,
+  larguraColuna: number,
   th: HTMLTableCellElement,
   headers: HTMLTableCellElement[]
 ): void {
@@ -970,7 +991,7 @@ function ordenarTabelaPelaColuna(
     }
 
     const direcao: 'asc' | 'desc' = mesmaColuna && estadoAtual?.direcao === 'asc' ? 'desc' : 'asc'
-    estadoOrdenacaoPorTabela.set(idTabela, { indiceColuna, direcao })
+    estadoOrdenacaoPorTabela.set(idTabela, { indiceColuna, larguraColuna, direcao })
     limparIndicadoresOrdenacao(headers)
     aplicarIndicadorOrdenacao(th, direcao)
     reaplicarOrdemDaTabela(idTabela)
@@ -982,7 +1003,7 @@ function ordenarTabelaPelaColuna(
 function reaplicarOrdenacaoAtual(idTabela: string): void {
   const estadoAtual = estadoOrdenacaoPorTabela.get(idTabela)
   if (estadoAtual) {
-    aplicarOrdenacaoNaTabela(idTabela, estadoAtual.indiceColuna, estadoAtual.direcao)
+    aplicarOrdenacaoNaTabela(idTabela, estadoAtual.indiceColuna, estadoAtual.larguraColuna, estadoAtual.direcao)
     return
   }
   restaurarOrdemOriginal(idTabela)
@@ -1012,7 +1033,12 @@ function calcularOrdemDentroDoGrupo(idTabela: string, linhas: Element[]): Map<st
   const estadoOrdenacao = estadoOrdenacaoPorTabela.get(idTabela)
   if (!estadoOrdenacao) return undefined
 
-  const ordemIds = calcularOrdemIds(linhas, estadoOrdenacao.indiceColuna, estadoOrdenacao.direcao)
+  const ordemIds = calcularOrdemIds(
+    linhas,
+    estadoOrdenacao.indiceColuna,
+    estadoOrdenacao.larguraColuna,
+    estadoOrdenacao.direcao
+  )
   return new Map(ordemIds.map((id, posicao) => [id, posicao]))
 }
 
@@ -1131,14 +1157,15 @@ function montarOrdenacaoTabelas(): void {
       let indiceCorpo = 0
       headers.forEach((th) => {
         const indiceColuna = indiceCorpo
-        indiceCorpo += th.colSpan || 1
+        const larguraColuna = th.colSpan || 1
+        indiceCorpo += larguraColuna
 
         if (!th.textContent?.trim()) return
 
         th.style.cursor = 'pointer'
         th.style.whiteSpace = 'nowrap'
         th.addEventListener('click', () => {
-          ordenarTabelaPelaColuna(idTabela, indiceColuna, th, headers)
+          ordenarTabelaPelaColuna(idTabela, indiceColuna, larguraColuna, th, headers)
         })
       })
     })
