@@ -286,6 +286,12 @@ body.seirmg-theme-black {
   filter: brightness(50%);
 }
 
+.infraTrseippalerta {
+  background-color: #fff3cd !important;
+}
+.infraTrseippcritico {
+  background-color: #f8d7da !important;
+}
 .seirmg-theme-black .infraTrseippalerta {
   background-color: #330 !important;
 }
@@ -352,6 +358,13 @@ body.seirmg-theme-super-black,
 
 .seirmg-theme-super-black tr.infraTrClara, .seirmg-theme-super-black td.infraTdClara {
   background-color: black;
+}
+
+.seirmg-theme-super-black tr.infraTrseippalerta {
+  background-color: #554400 !important;
+}
+.seirmg-theme-super-black tr.infraTrseippcritico {
+  background-color: #4d0000 !important;
 }
 
 .seirmg-theme-super-black a.processoVisualizado, .seirmg-theme-super-black table.infraTable, .seirmg-theme-super-black a {
