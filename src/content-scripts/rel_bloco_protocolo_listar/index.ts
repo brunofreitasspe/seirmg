@@ -1,7 +1,7 @@
 import { parseBlocoAssinaturaTable } from '../../features/bloco-assinatura/parser'
 import {
-  contemTermoNasAssinaturas,
   deveSelecionar,
+  encontrarCargoAssinante,
   encontrarIndiceColunaAssinaturas,
   extrairNomeUsuario,
   marcarCheckboxComoJaAssinado,
@@ -41,7 +41,7 @@ function estaNaTelaDoBloco(): boolean {
 }
 
 function paraCadaLinhaDeDocumento(
-  callback: (checkbox: HTMLInputElement, textoAssinaturas: string) => void
+  callback: (linha: Element, checkbox: HTMLInputElement, textoAssinaturas: string) => void
 ): void {
   const tabela = document.querySelector('#divInfraAreaTabela')
   if (!tabela) return
@@ -58,12 +58,12 @@ function paraCadaLinhaDeDocumento(
 
     const celulaAssinaturas = linha.querySelectorAll('td')[indiceAssinaturas]
     const textoAssinaturas = celulaAssinaturas?.textContent?.trim() ?? ''
-    callback(checkbox, textoAssinaturas)
+    callback(linha, checkbox, textoAssinaturas)
   })
 }
 
 function aplicarSelecao(tipo: TipoSelecaoDocumentos, usuario: string): void {
-  paraCadaLinhaDeDocumento((checkbox, textoAssinaturas) => {
+  paraCadaLinhaDeDocumento((_linha, checkbox, textoAssinaturas) => {
     const selecionado = deveSelecionar(tipo, textoAssinaturas, usuario)
     if (selecionado !== checkbox.checked) checkbox.click()
   })
@@ -130,13 +130,13 @@ async function aplicarDesabilitacaoAssinados(): Promise<void> {
     const cargos = (syncConfig.blocoAssinatura.cargosAdicionais ?? []).filter((cargo) => cargo.trim() !== '')
     if (!usuario && cargos.length === 0) return
 
-    paraCadaLinhaDeDocumento((checkbox, textoAssinaturas) => {
+    paraCadaLinhaDeDocumento((_linha, checkbox, textoAssinaturas) => {
       if (usuario && deveSelecionar('com-minha-assinatura', textoAssinaturas, usuario)) {
         marcarCheckboxComoJaAssinado(checkbox)
         return
       }
 
-      const cargoAssinante = cargos.find((cargo) => contemTermoNasAssinaturas(textoAssinaturas, cargo))
+      const cargoAssinante = encontrarCargoAssinante(textoAssinaturas, cargos)
       if (cargoAssinante) {
         marcarCheckboxComoJaAssinado(checkbox, tituloCheckboxJaAssinadoPorCargo(cargoAssinante))
       }
@@ -146,15 +146,41 @@ async function aplicarDesabilitacaoAssinados(): Promise<void> {
   }
 }
 
+async function aplicarOcultacaoAssinados(): Promise<void> {
+  try {
+    const syncConfig = await createSyncConfigStore().get()
+    if (!syncConfig.featureFlags.ocultarDocumentosAssinados) return
+
+    if (!estaNaTelaDoBloco()) return
+
+    const usuario = obterNomeUsuarioLogado()
+    const cargos = (syncConfig.blocoAssinatura.cargosAdicionais ?? []).filter((cargo) => cargo.trim() !== '')
+    if (!usuario && cargos.length === 0) return
+
+    paraCadaLinhaDeDocumento((linha, _checkbox, textoAssinaturas) => {
+      const assinadoPorMim = usuario ? deveSelecionar('com-minha-assinatura', textoAssinaturas, usuario) : false
+      const cargoAssinante = encontrarCargoAssinante(textoAssinaturas, cargos)
+
+      if (assinadoPorMim || cargoAssinante) {
+        ;(linha as HTMLElement).style.display = 'none'
+      }
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao ocultar documentos já assinados:', error)
+  }
+}
+
 processarPagina()
 montarSelecaoDocumentos()
 aplicarDesabilitacaoAssinados()
+aplicarOcultacaoAssinados()
 
 const areaTabela = document.querySelector('#divInfraAreaTabela')
 if (areaTabela) {
   const observer = new MutationObserver(() => {
     processarPagina()
     aplicarDesabilitacaoAssinados()
+    aplicarOcultacaoAssinados()
   })
   observer.observe(areaTabela, { childList: true, subtree: true })
 }
