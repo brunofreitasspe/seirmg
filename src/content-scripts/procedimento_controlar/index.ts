@@ -1096,6 +1096,7 @@ function montarOrdenacaoTabelas(): void {
         if (!th.textContent?.trim()) return
 
         th.style.cursor = 'pointer'
+        th.style.whiteSpace = 'nowrap'
         th.addEventListener('click', () => {
           ordenarTabelaPelaColuna(idTabela, indiceColuna, headers)
         })
