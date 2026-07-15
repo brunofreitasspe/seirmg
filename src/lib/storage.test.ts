@@ -43,6 +43,11 @@ describe('createSyncConfigStore', () => {
     expect((await store.get()).featureFlags.selecaoEmMassaBlocoAssinatura).toBe(true)
   })
 
+  it('inclui ocultarDocumentosAssinados desativado por padrão', async () => {
+    const store = createSyncConfigStore(criarAreaFalsa())
+    expect((await store.get()).featureFlags.ocultarDocumentosAssinados).toBe(false)
+  })
+
   it('persiste alteração de featureFlags.selecaoEmMassaBlocoAssinatura', async () => {
     const area = criarAreaFalsa()
     const store = createSyncConfigStore(area)

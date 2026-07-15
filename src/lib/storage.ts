@@ -2,6 +2,7 @@ export interface FeatureFlags {
   blocoAssinaturaNotificacoes: boolean
   selecaoEmMassaBlocoAssinatura: boolean
   desabilitarDocumentosAssinados: boolean
+  ocultarDocumentosAssinados: boolean
 }
 
 export type ThemePreset = 'claro' | 'black' | 'super-black' | 'custom'
@@ -185,6 +186,7 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     blocoAssinaturaNotificacoes: true,
     selecaoEmMassaBlocoAssinatura: true,
     desabilitarDocumentosAssinados: true,
+    ocultarDocumentosAssinados: false,
   },
   tema: { preset: 'claro' },
   blocoAssinatura: {
