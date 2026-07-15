@@ -895,6 +895,7 @@ interface EstadoOrdenacao {
 }
 
 const estadoOrdenacaoPorTabela = new Map<string, EstadoOrdenacao>()
+const ordemOriginalPorTabela = new Map<string, string[]>()
 
 function limparIndicadoresOrdenacao(headers: HTMLTableCellElement[]): void {
   headers.forEach((th) => {
@@ -919,22 +920,35 @@ function calcularOrdemIds(linhas: Element[], indiceColuna: number, direcao: 'asc
   return ordenarIds(valores, tipo, direcao)
 }
 
+function reordenarLinhasPorId(idTabela: string, ordemIds: string[]): void {
+  const linhas = linhasDaTabela(idTabela)
+  const tabela = document.querySelector(idTabela)
+  const tbody = tabela?.querySelector('tbody')
+  if (!tbody) return
+
+  const linhaPorId = new Map(linhas.map((linha, index) => [linha.id || String(index), linha]))
+  ordemIds.forEach((id) => {
+    const linha = linhaPorId.get(id)
+    if (linha) tbody.appendChild(linha)
+  })
+}
+
 function aplicarOrdenacaoNaTabela(idTabela: string, indiceColuna: number, direcao: 'asc' | 'desc'): void {
   try {
-    const linhas = linhasDaTabela(idTabela)
-    const ordemIds = calcularOrdemIds(linhas, indiceColuna, direcao)
-
-    const tabela = document.querySelector(idTabela)
-    const tbody = tabela?.querySelector('tbody')
-    if (!tbody) return
-
-    const linhaPorId = new Map(linhas.map((linha, index) => [linha.id || String(index), linha]))
-    ordemIds.forEach((id) => {
-      const linha = linhaPorId.get(id)
-      if (linha) tbody.appendChild(linha)
-    })
+    const ordemIds = calcularOrdemIds(linhasDaTabela(idTabela), indiceColuna, direcao)
+    reordenarLinhasPorId(idTabela, ordemIds)
   } catch (error) {
     console.error('[SEIRMG] Falha ao ordenar tabela:', error)
+  }
+}
+
+function restaurarOrdemOriginal(idTabela: string): void {
+  try {
+    const ordemOriginal = ordemOriginalPorTabela.get(idTabela)
+    if (!ordemOriginal) return
+    reordenarLinhasPorId(idTabela, ordemOriginal)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao restaurar ordem original da tabela:', error)
   }
 }
 
@@ -946,8 +960,16 @@ function ordenarTabelaPelaColuna(
 ): void {
   try {
     const estadoAtual = estadoOrdenacaoPorTabela.get(idTabela)
-    const direcao: 'asc' | 'desc' =
-      estadoAtual?.indiceColuna === indiceColuna && estadoAtual.direcao === 'asc' ? 'desc' : 'asc'
+    const mesmaColuna = estadoAtual?.indiceColuna === indiceColuna
+
+    if (mesmaColuna && estadoAtual?.direcao === 'desc') {
+      estadoOrdenacaoPorTabela.delete(idTabela)
+      limparIndicadoresOrdenacao(headers)
+      reaplicarOrdemDaTabela(idTabela)
+      return
+    }
+
+    const direcao: 'asc' | 'desc' = mesmaColuna && estadoAtual?.direcao === 'asc' ? 'desc' : 'asc'
     estadoOrdenacaoPorTabela.set(idTabela, { indiceColuna, direcao })
     limparIndicadoresOrdenacao(headers)
     aplicarIndicadorOrdenacao(th, direcao)
@@ -959,8 +981,11 @@ function ordenarTabelaPelaColuna(
 
 function reaplicarOrdenacaoAtual(idTabela: string): void {
   const estadoAtual = estadoOrdenacaoPorTabela.get(idTabela)
-  if (!estadoAtual) return
-  aplicarOrdenacaoNaTabela(idTabela, estadoAtual.indiceColuna, estadoAtual.direcao)
+  if (estadoAtual) {
+    aplicarOrdenacaoNaTabela(idTabela, estadoAtual.indiceColuna, estadoAtual.direcao)
+    return
+  }
+  restaurarOrdemOriginal(idTabela)
 }
 
 let criterioAgrupamentoAtivo: CriterioAgrupamento = 'nenhum'
@@ -1095,6 +1120,12 @@ function montarOrdenacaoTabelas(): void {
     IDS_TABELAS.forEach((idTabela) => {
       const tabela = document.querySelector(idTabela)
       if (!tabela) return
+
+      const linhas = linhasDaTabela(idTabela)
+      ordemOriginalPorTabela.set(
+        idTabela,
+        linhas.map((linha, index) => linha.id || String(index))
+      )
 
       const headers = Array.from(tabela.querySelectorAll<HTMLTableCellElement>('thead > tr > th'))
       let indiceCorpo = 0
@@ -1463,6 +1494,10 @@ function desabilitarSelecaoNaLinha(linha: Element): void {
 }
 
 function reaplicarTratamentosNasLinhasNovas(idTabela: string, config: SyncConfig, linhas: Element[]): void {
+  const ordemOriginal = ordemOriginalPorTabela.get(idTabela) ?? []
+  const novosIds = linhas.map((linha, index) => linha.id || String(ordemOriginal.length + index))
+  ordemOriginalPorTabela.set(idTabela, [...ordemOriginal, ...novosIds])
+
   aplicarPrazosEmLinhas(config.controleProcessos.prazos, linhas)
   aplicarCorProcessoEmLinhas(config.controleProcessos.coresProcesso, linhas)
   aplicarEspecificacaoEmLinhas(config.controleProcessos.especificacao, linhas)
