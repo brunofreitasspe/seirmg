@@ -292,6 +292,16 @@ body.seirmg-theme-black {
 .infraTrseippcritico {
   background-color: #f8d7da !important;
 }
+.infraTrseippalerta:hover,
+tr.infraTrClara.infraTrseippalerta:hover,
+tr.infraTrEscura.infraTrseippalerta:hover {
+  background-color: #fff3cd !important;
+}
+.infraTrseippcritico:hover,
+tr.infraTrClara.infraTrseippcritico:hover,
+tr.infraTrEscura.infraTrseippcritico:hover {
+  background-color: #f8d7da !important;
+}
 .seirmg-theme-black .infraTrseippalerta {
   background-color: #330 !important;
 }
@@ -364,6 +374,12 @@ body.seirmg-theme-super-black,
   background-color: #554400 !important;
 }
 .seirmg-theme-super-black tr.infraTrseippcritico {
+  background-color: #4d0000 !important;
+}
+.seirmg-theme-super-black tr.infraTrseippalerta:hover {
+  background-color: #554400 !important;
+}
+.seirmg-theme-super-black tr.infraTrseippcritico:hover {
   background-color: #4d0000 !important;
 }
 
