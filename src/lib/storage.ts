@@ -31,10 +31,8 @@ export interface PrazosConfig {
   ativo: boolean
   exibirDias: boolean
   exibirPrazo: boolean
-  alertaDias: number
-  criticoDias: number
-  alertaPrazo: number
-  criticoPrazo: number
+  alerta: number
+  critico: number
 }
 
 export interface CoresProcessoConfig {
@@ -200,10 +198,8 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
       ativo: true,
       exibirDias: true,
       exibirPrazo: true,
-      alertaDias: 30,
-      criticoDias: 60,
-      alertaPrazo: 10,
-      criticoPrazo: 5,
+      alerta: 10,
+      critico: 5,
     },
     coresProcesso: {
       ativo: true,
