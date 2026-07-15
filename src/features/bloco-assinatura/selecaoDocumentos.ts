@@ -34,6 +34,10 @@ export function contemTermoNasAssinaturas(textoAssinaturas: string, termo: strin
   return termoNormalizado !== '' && assinaturas.includes(termoNormalizado)
 }
 
+export function encontrarCargoAssinante(textoAssinaturas: string, cargos: string[]): string | null {
+  return cargos.find((cargo) => contemTermoNasAssinaturas(textoAssinaturas, cargo)) ?? null
+}
+
 function contemAssinaturaDoUsuario(textoAssinaturas: string, usuario: string): boolean {
   return contemTermoNasAssinaturas(textoAssinaturas, usuario)
 }

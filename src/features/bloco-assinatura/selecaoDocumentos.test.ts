@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   contemTermoNasAssinaturas,
   deveSelecionar,
+  encontrarCargoAssinante,
   encontrarIndiceColunaAssinaturas,
   extrairNomeUsuario,
   marcarCheckboxComoJaAssinado,
@@ -143,5 +144,25 @@ describe('contemTermoNasAssinaturas', () => {
 
   it('retorna false quando não há assinaturas', () => {
     expect(contemTermoNasAssinaturas('', 'Diretor')).toBe(false)
+  })
+})
+
+describe('encontrarCargoAssinante', () => {
+  it('retorna o primeiro cargo da lista cujo termo aparece nas assinaturas', () => {
+    expect(
+      encontrarCargoAssinante('Assinado por João (Diretor)', ['Vice-Diretor', 'Diretor'])
+    ).toBe('Diretor')
+  })
+
+  it('retorna null quando nenhum cargo da lista aparece', () => {
+    expect(encontrarCargoAssinante('Assinado por Maria', ['Diretor', 'Vice-Diretor'])).toBeNull()
+  })
+
+  it('retorna null para lista de cargos vazia', () => {
+    expect(encontrarCargoAssinante('Assinado por Maria (Diretor)', [])).toBeNull()
+  })
+
+  it('retorna null quando não há assinaturas', () => {
+    expect(encontrarCargoAssinante('', ['Diretor'])).toBeNull()
   })
 })
