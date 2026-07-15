@@ -120,6 +120,9 @@ async function carregarAbaGeral(): Promise<void> {
     const inputDesabilitarAssinados = document.getElementById(
       'geral-desabilitar-assinados-ativo'
     ) as HTMLInputElement | null
+    const inputOcultarAssinados = document.getElementById(
+      'geral-ocultar-assinados-ativo'
+    ) as HTMLInputElement | null
     const inputCargosAdicionais = document.getElementById(
       'geral-cargos-adicionais'
     ) as HTMLInputElement | null
@@ -130,6 +133,9 @@ async function carregarAbaGeral(): Promise<void> {
     }
     if (inputDesabilitarAssinados) {
       inputDesabilitarAssinados.checked = config.featureFlags.desabilitarDocumentosAssinados
+    }
+    if (inputOcultarAssinados) {
+      inputOcultarAssinados.checked = config.featureFlags.ocultarDocumentosAssinados
     }
     if (inputCargosAdicionais) {
       inputCargosAdicionais.value = (config.blocoAssinatura.cargosAdicionais ?? []).join(', ')
@@ -148,6 +154,7 @@ async function carregarAbaGeral(): Promise<void> {
             ...config.featureFlags,
             selecaoEmMassaBlocoAssinatura: inputSelecaoMassa?.checked ?? true,
             desabilitarDocumentosAssinados: inputDesabilitarAssinados?.checked ?? true,
+            ocultarDocumentosAssinados: inputOcultarAssinados?.checked ?? false,
           },
           blocoAssinatura: {
             ...config.blocoAssinatura,
