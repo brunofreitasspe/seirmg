@@ -1670,7 +1670,13 @@ function montarFiltroBloco(): void {
         return
       }
 
-      fetchText(selectBloco.value)
+      // selectBloco.value vem de bloco.href (parseListaBlocos), extraído via getAttribute('href')
+      // de um documento do DOMParser -- string crua, relativa. O fetch de verdade roda no service
+      // worker de fundo, que não tem "página atual" pra resolver isso sozinho (mesmo motivo do bug
+      // corrigido no marcador rápido: sem isso, resolveria contra chrome-extension:// e falharia
+      // com "Failed to fetch").
+      const urlProcessosDoBloco = new URL(selectBloco.value, window.location.href).href
+      fetchText(urlProcessosDoBloco)
         .then((resultado) => {
           if (!resultado.ok) {
             console.error('[SEIRMG] Falha ao buscar processos do bloco:', resultado.error)
