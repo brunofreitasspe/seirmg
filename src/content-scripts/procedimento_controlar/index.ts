@@ -537,6 +537,18 @@ function linhasDaTabela(idTabela: string): Element[] {
   return Array.from(tabela.querySelectorAll('tbody > tr:not(.seirmg-cabecalho-grupo)'))
 }
 
+// infraEfeitoTabelas() (JS nativo do SEI, chamado em todo carregamento via onload="inicializar()")
+// registra um onmouseout na linha que reseta this.className pra só 'infraTrClara'/'infraTrEscura'
+// (+ 'infraTrAcessada'/'infraTrMarcada' se já estavam lá antes) -- qualquer classe que o SEI não
+// conhece, como a nossa de alerta/crítico, é descartada assim que o mouse SAI da linha (não durante
+// o hover, confirmado ao vivo). setTimeout(0) garante que isso roda depois de qualquer handler
+// síncrono de mouseout (inclusive o do SEI, independente da ordem de registro dos dois).
+function manterClasseDePrazoAposMouseOut(linha: Element, classe: string): void {
+  linha.addEventListener('mouseout', () => {
+    setTimeout(() => linha.classList.add(classe), 0)
+  })
+}
+
 function aplicarPrazoNaLinha(linha: Element, config: ControleProcessosConfig['prazos']): void {
   const prazo = obterControleDePrazoDaLinha(linha)
   const dias = prazo ? calcularDiasAteVencimento(prazo.dataTexto, new Date()) : null
@@ -559,8 +571,14 @@ function aplicarPrazoNaLinha(linha: Element, config: ControleProcessosConfig['pr
 
   if (dias !== null) {
     const classificacao = classificarPrazo(dias, { alerta: config.alerta, critico: config.critico })
-    if (classificacao === 'alerta') linha.classList.add('infraTrseippalerta')
-    if (classificacao === 'critico') linha.classList.add('infraTrseippcritico')
+    if (classificacao === 'alerta') {
+      linha.classList.add('infraTrseippalerta')
+      manterClasseDePrazoAposMouseOut(linha, 'infraTrseippalerta')
+    }
+    if (classificacao === 'critico') {
+      linha.classList.add('infraTrseippcritico')
+      manterClasseDePrazoAposMouseOut(linha, 'infraTrseippcritico')
+    }
   }
 }
 
