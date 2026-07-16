@@ -59,7 +59,7 @@ describe('criarPonteMarcadorRapidoMainWorld', () => {
     const resultado = clicarLink('Adicionar Marcador')
 
     expect(resultado.defaultPrevented).toBe(true)
-    expect(detalheRecebido).toEqual({ chave: 'adicionar', idProcedimento: '100', idTabela: '#tblProcessosRecebidos' })
+    expect(detalheRecebido).toEqual({ chave: 'adicionar' })
   })
 
   it('não intercepta (deixa o comportamento nativo) quando 0 checkboxes estão marcados', () => {
@@ -101,7 +101,7 @@ describe('criarPonteMarcadorRapidoMainWorld', () => {
     const resultado = clicarLink('Remover Marcador')
 
     expect(resultado.defaultPrevented).toBe(true)
-    expect(detalheRecebido).toEqual({ chave: 'remover', idProcedimento: '100', idTabela: '#tblProcessosRecebidos' })
+    expect(detalheRecebido).toEqual({ chave: 'remover' })
   })
 
   it('destruir() remove o listener, voltando ao comportamento nativo', () => {

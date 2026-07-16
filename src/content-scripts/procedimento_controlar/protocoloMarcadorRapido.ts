@@ -4,6 +4,4 @@ export type ChaveAcaoMarcadorRapido = 'adicionar' | 'remover'
 
 export interface DetalheCliqueMarcadorRapido {
   chave: ChaveAcaoMarcadorRapido
-  idProcedimento: string
-  idTabela: string
 }

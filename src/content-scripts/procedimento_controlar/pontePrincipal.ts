@@ -10,17 +10,6 @@ function contarCheckboxesMarcados(documentoGlobal: Document): number {
   }, 0)
 }
 
-function localizarUnicoCheckboxMarcado(
-  documentoGlobal: Document
-): { checkbox: HTMLInputElement; idTabela: string } | null {
-  for (const idTabela of IDS_TABELAS) {
-    const tabela = documentoGlobal.querySelector(idTabela)
-    const checkbox = tabela?.querySelector<HTMLInputElement>('tbody input[type="checkbox"]:checked')
-    if (checkbox) return { checkbox, idTabela }
-  }
-  return null
-}
-
 export interface PonteMarcadorRapidoMainWorld {
   destruir: () => void
 }
@@ -50,20 +39,13 @@ export function criarPonteMarcadorRapidoMainWorld(
 
     if (contarCheckboxesMarcados(documentoGlobal) !== 1) return
 
-    const selecionado = localizarUnicoCheckboxMarcado(documentoGlobal)
-    if (!selecionado) return
-
     evento.preventDefault()
     evento.stopImmediatePropagation()
 
     const onclick = link.getAttribute('onclick') ?? ''
     const chave: ChaveAcaoMarcadorRapido = onclick.includes('andamento_marcador_cadastrar') ? 'adicionar' : 'remover'
 
-    const detalhe: DetalheCliqueMarcadorRapido = {
-      chave,
-      idProcedimento: selecionado.checkbox.value,
-      idTabela: selecionado.idTabela,
-    }
+    const detalhe: DetalheCliqueMarcadorRapido = { chave }
     janelaGlobal.dispatchEvent(new CustomEvent(EVENTO_CLIQUE_MARCADOR_RAPIDO, { detail: detalhe }))
   }
 

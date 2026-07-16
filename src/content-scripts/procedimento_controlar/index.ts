@@ -277,18 +277,6 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     justify-content: flex-end;
     gap: 8px;
   }
-  .seirmg-marcador-rapido-mensagem {
-    position: fixed;
-    z-index: 2002;
-    background: #2ecc71;
-    color: #fff;
-    padding: 8px 14px;
-    border-radius: 4px;
-    font-size: 13px;
-    top: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-  }
 `
 
 function injetarEstilos(): void {
@@ -1832,54 +1820,9 @@ function fecharPopupMarcadorRapido(): void {
   popupMarcadorRapidoAtual = null
 }
 
-function mostrarMensagemTransitoriaMarcador(texto: string): void {
-  const mensagem = document.createElement('div')
-  mensagem.className = 'seirmg-marcador-rapido-mensagem'
-  mensagem.textContent = texto
-  document.body.appendChild(mensagem)
-  setTimeout(() => mensagem.remove(), 2500)
-}
-
-function substituirLinhaAtualizada(
-  idProcedimento: string,
-  idTabela: string,
-  html: string,
-  config: SyncConfig
-): void {
-  try {
-    const idLinha = `P${idProcedimento}`
-    const linhaAntiga = document.getElementById(idLinha)
-    if (!linhaAntiga) return
-
-    const docResposta = new DOMParser().parseFromString(html, 'text/html')
-    const linhaNova = docResposta.getElementById(idLinha)
-    if (!linhaNova) return
-
-    // document.adoptNode() num nó vindo de um documento inerte do DOMParser (nunca chegou a
-    // ser renderizado de verdade) deixa controles de formulário com um bug visual real no
-    // Chromium -- o valor (.checked) alterna certinho, mas o quadradinho/check do checkbox
-    // nunca aparece na tela (confirmado ao vivo). Reconstruir via innerHTML no documento AO
-    // VIVO (mesmo parser usado pro resto da página) evita o bug -- precisa envolver num
-    // <table><tbody> porque um <tr> sozinho fora desse contexto é descartado pelo parser HTML
-    // (foster parenting, o mesmo motivo documentado nos testes de pontePrincipal.test.ts).
-    const wrapper = document.createElement('table')
-    wrapper.innerHTML = `<tbody>${linhaNova.outerHTML}</tbody>`
-    const linhaReconstruida = wrapper.querySelector('tr')
-    if (!linhaReconstruida) return
-
-    linhaAntiga.replaceWith(linhaReconstruida)
-    reaplicarTratamentosNasLinhasNovas(idTabela, config, [linhaReconstruida])
-  } catch (error) {
-    console.error('[SEIRMG] Falha ao atualizar a linha do processo após marcador:', error)
-  }
-}
-
 async function confirmarMarcador(
   acao: AcaoMarcadorRapido,
   formularioMarcador: { actionUrl: string; campos: Record<string, string> },
-  idProcedimento: string,
-  idTabela: string,
-  config: SyncConfig,
   marcadorEscolhido: string,
   texto: string,
   erro: HTMLElement
@@ -1903,9 +1846,15 @@ async function confirmarMarcador(
       return
     }
 
-    substituirLinhaAtualizada(idProcedimento, idTabela, resultado.data, config)
-    fecharPopupMarcadorRapido()
-    mostrarMensagemTransitoriaMarcador(acao.mensagemSucesso)
+    // Tentativas de atualizar só a linha ao vivo (adoptNode e depois reconstrução via
+    // innerHTML) deixavam o checkbox funcional mas invisível (opacity:0 que nem forçar
+    // inline resolvia) -- confirmado ao vivo numa instância SEI real. O SEI provavelmente
+    // depende de algum JS de inicialização de página (visto em inicializar(), ex.
+    // infraEfeitoTabelas()) que não temos como replicar de forma confiável fora de uma
+    // navegação de verdade. Recarregar a página inteira garante que tudo renderiza
+    // exatamente como um carregamento normal (decisão do usuário, ver conversa) -- o popup em
+    // si, que já evita a tela cheia nativa de escolher o marcador, continua funcionando.
+    window.location.reload()
   } catch (error) {
     console.error('[SEIRMG] Falha ao confirmar marcador:', error)
     erro.textContent = 'Falha ao salvar o marcador. Tente novamente.'
@@ -2008,10 +1957,7 @@ function criarSeletorMarcador(
 function abrirPopupMarcador(
   acao: AcaoMarcadorRapido,
   opcoes: OpcaoMarcador[],
-  formularioMarcador: { actionUrl: string; campos: Record<string, string> },
-  idProcedimento: string,
-  idTabela: string,
-  config: SyncConfig
+  formularioMarcador: { actionUrl: string; campos: Record<string, string> }
 ): void {
   fecharPopupMarcadorRapido()
 
@@ -2062,16 +2008,7 @@ function abrirPopupMarcador(
   botaoConfirmar.textContent = acao.botao.valor
   botaoConfirmar.addEventListener('click', () => {
     botaoConfirmar.disabled = true
-    confirmarMarcador(
-      acao,
-      formularioMarcador,
-      idProcedimento,
-      idTabela,
-      config,
-      seletor.obterValor(),
-      textarea?.value ?? '',
-      erro
-    ).finally(() => {
+    confirmarMarcador(acao, formularioMarcador, seletor.obterValor(), textarea?.value ?? '', erro).finally(() => {
       botaoConfirmar.disabled = false
     })
   })
@@ -2086,10 +2023,7 @@ function abrirPopupMarcador(
 
 async function processarClickMarcador(
   acao: AcaoMarcadorRapido,
-  link: HTMLAnchorElement,
-  idProcedimento: string,
-  idTabela: string,
-  config: SyncConfig
+  link: HTMLAnchorElement
 ): Promise<void> {
   const urlRelativa = extrairUrlDeOnclick(link.getAttribute('onclick') ?? '')
   if (!urlRelativa) {
@@ -2123,7 +2057,7 @@ async function processarClickMarcador(
     return
   }
 
-  abrirPopupMarcador(acao, opcoes, formularioMarcador, idProcedimento, idTabela, config)
+  abrirPopupMarcador(acao, opcoes, formularioMarcador)
 }
 
 // A decisão de interceptar (contagem de selecionados) e o preventDefault/
@@ -2134,10 +2068,10 @@ async function processarClickMarcador(
 // documento_editar/pontePrincipal.ts). Aqui só se recebe o aviso via CustomEvent e se faz o
 // trabalho de verdade (fetch/popup), que precisa das APIs da extensão e por isso não pode
 // rodar no main world.
-function montarMarcadorRapido(config: SyncConfig): void {
+function montarMarcadorRapido(): void {
   try {
     window.addEventListener(EVENTO_CLIQUE_MARCADOR_RAPIDO, (evento) => {
-      const { chave, idProcedimento, idTabela } = (evento as CustomEvent<DetalheCliqueMarcadorRapido>).detail
+      const { chave } = (evento as CustomEvent<DetalheCliqueMarcadorRapido>).detail
 
       const seletor =
         chave === 'adicionar'
@@ -2148,7 +2082,7 @@ function montarMarcadorRapido(config: SyncConfig): void {
 
       const acao = chave === 'adicionar' ? ACAO_ADICIONAR_MARCADOR : ACAO_REMOVER_MARCADOR
 
-      processarClickMarcador(acao, link, idProcedimento, idTabela, config).catch((error) => {
+      processarClickMarcador(acao, link).catch((error) => {
         console.error('[SEIRMG] Falha ao processar clique de marcador rápido:', error)
       })
     })
@@ -2168,7 +2102,7 @@ async function bootstrap(): Promise<void> {
     montarBuscaRapida()
     montarSelecaoMultipla()
     montarConfirmarAntesDeConcluir()
-    montarMarcadorRapido(config)
+    montarMarcadorRapido()
     montarFiltroBloco()
     montarOrdenacaoTabelas()
     await montarFiltroAtribuicao()
