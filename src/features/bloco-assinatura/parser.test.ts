@@ -1,5 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { parseBlocoAssinaturaTable, parseListaBlocosAssinatura, resumirBlocos } from './parser'
+import {
+  detectarTransicoesParaDisponibilizado,
+  parseBlocoAssinaturaTable,
+  parseListaBlocosAssinatura,
+  resumirBlocos,
+  type BlocoListaItem,
+} from './parser'
 
 function montarLinha(celulas: string[]): string {
   return `<tr>${celulas.map((c) => `<td>${c}</td>`).join('')}</tr>`
@@ -148,5 +154,37 @@ describe('parseListaBlocosAssinatura', () => {
   it('retorna lista vazia quando #tblBlocos não existe no documento', () => {
     document.body.innerHTML = '<div></div>'
     expect(parseListaBlocosAssinatura(document.body)).toEqual([])
+  })
+})
+
+describe('detectarTransicoesParaDisponibilizado', () => {
+  const blocoDisponibilizado: BlocoListaItem = {
+    numero: '1',
+    descricao: 'Desc',
+    href: '/bloco/1',
+    estado: 'disponibilizado_para_area',
+  }
+
+  it('detecta bloco novo já disponibilizado (nunca visto antes)', () => {
+    expect(detectarTransicoesParaDisponibilizado([blocoDisponibilizado], {})).toEqual([
+      blocoDisponibilizado,
+    ])
+  })
+
+  it('detecta transição de outro estado pra disponibilizado', () => {
+    const conhecidos = { '1': 'retornado' }
+    expect(detectarTransicoesParaDisponibilizado([blocoDisponibilizado], conhecidos)).toEqual([
+      blocoDisponibilizado,
+    ])
+  })
+
+  it('não repete notificação se o bloco já era conhecido como disponibilizado', () => {
+    const conhecidos = { '1': 'disponibilizado_para_area' }
+    expect(detectarTransicoesParaDisponibilizado([blocoDisponibilizado], conhecidos)).toEqual([])
+  })
+
+  it('ignora blocos que não estão disponibilizados', () => {
+    const blocoRetornado: BlocoListaItem = { numero: '2', descricao: 'D2', href: '/bloco/2', estado: 'retornado' }
+    expect(detectarTransicoesParaDisponibilizado([blocoRetornado], {})).toEqual([])
   })
 })

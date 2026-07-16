@@ -125,3 +125,14 @@ export function parseListaBlocosAssinatura(root: ParentNode): BlocoListaItem[] {
     }
   })
 }
+
+export function detectarTransicoesParaDisponibilizado(
+  atuais: BlocoListaItem[],
+  conhecidos: Record<string, string>
+): BlocoListaItem[] {
+  return atuais.filter(
+    (bloco) =>
+      bloco.estado === 'disponibilizado_para_area' &&
+      conhecidos[bloco.numero] !== 'disponibilizado_para_area'
+  )
+}
