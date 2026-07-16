@@ -59,6 +59,11 @@ describe('createSyncConfigStore', () => {
     expect(await store.get()).toEqual(atualizado)
   })
 
+  it('inclui checagemOportunistaIntervaloMinutos desativado (0) por padrão', async () => {
+    const store = createSyncConfigStore(criarAreaFalsa())
+    expect((await store.get()).blocoAssinatura.checagemOportunistaIntervaloMinutos).toBe(0)
+  })
+
   it('inclui controleProcessos padrão quando vazio', async () => {
     const store = createSyncConfigStore(criarAreaFalsa())
     expect((await store.get()).controleProcessos).toEqual({
@@ -272,6 +277,26 @@ describe('createLocalConfigStore', () => {
     expect(await store.get()).toEqual(atualizado)
   })
 
+  it('inclui blocoAssinaturaEstadosConhecidos vazio por padrão', async () => {
+    const store = createLocalConfigStore(criarAreaFalsa())
+    expect((await store.get()).blocoAssinaturaEstadosConhecidos).toEqual({})
+  })
+
+  it('persiste blocoAssinaturaEstadosConhecidos', async () => {
+    const area = criarAreaFalsa()
+    const store = createLocalConfigStore(area)
+    const atualizado = {
+      ...DEFAULT_LOCAL_CONFIG,
+      blocoAssinaturaEstadosConhecidos: { '123': 'disponibilizado_para_area' },
+    }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
+
+  it('inclui blocoAssinaturaUltimaChecagemOportunista vazia por padrão', async () => {
+    const store = createLocalConfigStore(criarAreaFalsa())
+    expect((await store.get()).blocoAssinaturaUltimaChecagemOportunista).toBe('')
+  })
 
   it('persiste mostrarIndicadorConfiguracao e linkNeutroControleProcessos', async () => {
     const area = criarAreaFalsa()

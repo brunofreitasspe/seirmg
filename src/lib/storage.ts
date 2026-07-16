@@ -20,6 +20,11 @@ export interface BlocoAssinaturaConfig {
   // contam como "já assinado" pra fins de desabilitar o checkbox — além da
   // assinatura do próprio usuário logado (featureFlags.desabilitarDocumentosAssinados).
   cargosAdicionais: string[]
+  // Checagem oportunista (0 = desativado): dispara no máximo 1x a cada N minutos, como efeito
+  // colateral de uma navegação real do usuário (não um alarme autônomo) -- ver spec
+  // 2026-07-16-seirmg-bloco-assinatura-checagem-oportunista-design.md pro histórico de por que
+  // um alarme autônomo não é uma opção aqui (2 tentativas anteriores causaram deslogamento real).
+  checagemOportunistaIntervaloMinutos: number
 }
 
 export interface ConfiguracaoCor {
@@ -169,6 +174,11 @@ export interface LocalConfig {
   schemaVersion: 1
   blocoAssinaturaNotificado: NotificadoState
   blocoAssinaturaPendenteAtual: string[]
+  // Último Estado conhecido de cada bloco (chave = número do bloco), usado só pela checagem
+  // oportunista pra detectar transição pra "disponibilizado_para_area". Guardado como string crua
+  // (não o tipo EstadoBloco) porque lib/storage.ts não importa de features/.
+  blocoAssinaturaEstadosConhecidos: Record<string, string>
+  blocoAssinaturaUltimaChecagemOportunista: string
   baseUrlSei?: string
   seiVersionAtLeast4?: boolean
   atribuicaoSelecionada?: string
@@ -194,6 +204,7 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     tocarSom: true,
     lembreteIntervaloMinutos: 0,
     cargosAdicionais: [],
+    checagemOportunistaIntervaloMinutos: 0,
   },
   controleProcessos: {
     prazos: {
@@ -258,6 +269,8 @@ export const DEFAULT_LOCAL_CONFIG: LocalConfig = {
   schemaVersion: 1,
   blocoAssinaturaNotificado: {},
   blocoAssinaturaPendenteAtual: [],
+  blocoAssinaturaEstadosConhecidos: {},
+  blocoAssinaturaUltimaChecagemOportunista: '',
 }
 
 export interface StorageArea {
