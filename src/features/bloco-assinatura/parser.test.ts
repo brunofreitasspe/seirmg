@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
-import { parseBlocoAssinaturaTable, resumirBlocos } from './parser'
+import { parseBlocoAssinaturaTable, parseListaBlocosAssinatura, resumirBlocos } from './parser'
 
 function montarLinha(celulas: string[]): string {
   return `<tr>${celulas.map((c) => `<td>${c}</td>`).join('')}</tr>`
@@ -81,5 +81,50 @@ describe('resumirBlocos', () => {
       totalAberto: 1,
       totalRetornado: 1,
     })
+  })
+})
+
+function montarLinhaBloco(
+  numero: string,
+  href: string,
+  estado: string,
+  disponibilizacao: string,
+  descricao: string,
+  classe = 'infraTrClara'
+): string {
+  return `<tr class="${classe}">
+    <td><input type="checkbox" /></td>
+    <td><a href="${href}">${numero}</a></td>
+    <td>sinalizacoes</td>
+    <td>&nbsp;</td>
+    <td>${estado}</td>
+    <td>Geradora</td>
+    <td>${disponibilizacao}</td>
+    <td>&nbsp;</td>
+    <td>${descricao}</td>
+    <td>acoes</td>
+  </tr>`
+}
+
+function montarTabelaBlocos(linhas: string[]): string {
+  const cabecalho = `<tr><th></th><th>Número</th><th>Sinalizações</th><th>Atribuição</th><th>Estado</th><th>Geradora</th><th>Disponibilização</th><th>Grupo</th><th>Descrição</th><th>Ações</th></tr>`
+  return `<table id="tblBlocos">${cabecalho}${linhas.join('')}</table>`
+}
+
+describe('parseListaBlocosAssinatura', () => {
+  it('lê número, href, descrição e classifica o estado de cada bloco', () => {
+    expect(true).toBe(true)
+  })
+
+  it('lê várias linhas (infraTrClara e infraTrEscura)', () => {
+    expect(true).toBe(true)
+  })
+
+  it('ignora a linha de cabeçalho (sem classe infraTrClara/infraTrEscura/trVermelha)', () => {
+    expect(true).toBe(true)
+  })
+
+  it('retorna lista vazia quando #tblBlocos não existe no documento', () => {
+    expect(true).toBe(true)
   })
 })

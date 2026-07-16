@@ -4,6 +4,13 @@ export interface ParseBlocoAssinaturaOptions {
   seiVersionAtLeast4: boolean
 }
 
+export interface BlocoListaItem {
+  numero: string
+  descricao: string
+  href: string
+  estado: EstadoBloco | undefined
+}
+
 function classificarEstado(
   textoEstado: string,
   textoDisponibilizacao: string
@@ -88,4 +95,33 @@ export function resumirBlocos(itens: BlocoAssinaturaItem[]): BlocoAssinaturaResu
       totalRetornado: 0,
     }
   )
+}
+
+const CLASSES_LINHA_VALIDA_BLOCOS = ['infraTrClara', 'infraTrEscura', 'trVermelha']
+
+// Tela "Blocos de Assinatura" (acao=bloco_assinatura_listar) -- diferente da tela de conteúdo de UM
+// bloco (#divInfraAreaTabela, que parseBlocoAssinaturaTable já lê). Índices de coluna confirmados com
+// HTML real (Ver Código-Fonte) de uma instância SEI real, 2026-07-16: td[1]=número (link),
+// td[4]=Estado, td[6]=Disponibilização, td[8]=Descrição.
+export function parseListaBlocosAssinatura(root: ParentNode): BlocoListaItem[] {
+  const tabela = root.querySelector('#tblBlocos')
+  if (!tabela) return []
+
+  const linhas = Array.from(tabela.querySelectorAll('tr')).filter((linha) =>
+    CLASSES_LINHA_VALIDA_BLOCOS.some((classe) => linha.classList.contains(classe))
+  )
+
+  return linhas.map((linha) => {
+    const celulas = linha.children
+    const link = celulas.item(1)?.querySelector('a')
+    const textoEstado = celulas.item(4)?.textContent?.trim() ?? ''
+    const textoDisponibilizacao = celulas.item(6)?.textContent?.trim() ?? ''
+
+    return {
+      numero: link?.textContent?.trim() ?? '',
+      descricao: celulas.item(8)?.textContent?.trim() ?? '',
+      href: link?.getAttribute('href') ?? '',
+      estado: classificarEstado(textoEstado, textoDisponibilizacao),
+    }
+  })
 }
