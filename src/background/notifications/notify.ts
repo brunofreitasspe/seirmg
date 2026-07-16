@@ -41,3 +41,17 @@ export function notificarSessaoInvalida(): void {
     priority: 1,
   })
 }
+
+export const NOTIFICATION_ID_BLOCO_DISPONIBILIZADO_PREFIX = 'seirmg-bloco-disponibilizado-'
+
+// Sem `href` de propósito -- ver "Desvio deliberado da spec" no cabeçalho do plano: o clique reaproveita
+// a mesma navegação genérica pra tela de Blocos de Assinatura que as outras notificações de bloco já usam.
+export function notificarBlocoDisponibilizado(bloco: { numero: string; descricao: string }): void {
+  chrome.notifications.create(`${NOTIFICATION_ID_BLOCO_DISPONIBILIZADO_PREFIX}${bloco.numero}`, {
+    type: 'basic',
+    iconUrl: chrome.runtime.getURL('src/assets/icons/icon-128.png'),
+    title: 'SEIRMG — Bloco de Assinatura disponibilizado',
+    message: `Bloco ${bloco.numero}${bloco.descricao ? ` (${bloco.descricao})` : ''} está disponível para sua área assinar.`,
+    priority: 2,
+  })
+}
