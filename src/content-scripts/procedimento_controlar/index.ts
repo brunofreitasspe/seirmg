@@ -1773,17 +1773,6 @@ const ACAO_REMOVER_MARCADOR: AcaoMarcadorRapido = {
   mensagemSucesso: 'Marcador removido.',
 }
 
-interface PonteMarcadorRapido {
-  deveInterceptar: () => boolean
-  processar: (chave: 'adicionar' | 'remover') => void
-}
-
-declare global {
-  interface Window {
-    __seirmgMarcadorRapido?: PonteMarcadorRapido
-  }
-}
-
 function contarCheckboxesMarcados(): number {
   return IDS_TABELAS.reduce((total, idTabela) => {
     const tabela = document.querySelector(idTabela)
@@ -1991,34 +1980,31 @@ async function processarClickMarcador(
   abrirPopupMarcador(acao, opcoes, formularioMarcador, idProcedimento, idTabela, config)
 }
 
-function interceptarClickNativoMarcador(link: HTMLAnchorElement | null, chave: 'adicionar' | 'remover'): void {
-  if (!link) return
-  const acaoOriginal = link.getAttribute('onclick')
-  if (!acaoOriginal) return
-
-  link.setAttribute(
-    'onclick',
-    `if (window.__seirmgMarcadorRapido && window.__seirmgMarcadorRapido.deveInterceptar()) { window.__seirmgMarcadorRapido.processar('${chave}'); return false; } else { ${acaoOriginal} }`
-  )
-}
-
 function montarMarcadorRapido(config: SyncConfig): void {
   try {
-    const linkAdicionar = document.querySelector<HTMLAnchorElement>(
-      '#divComandos a[onclick*="andamento_marcador_cadastrar"]'
-    )
-    const linkRemover = document.querySelector<HTMLAnchorElement>(
-      '#divComandos a[onclick*="andamento_marcador_remover"]'
-    )
-    if (!linkAdicionar && !linkRemover) return
+    document.addEventListener(
+      'click',
+      (evento) => {
+        const alvo = evento.target
+        if (!(alvo instanceof Element)) return
 
-    window.__seirmgMarcadorRapido = {
-      deveInterceptar: () => contarCheckboxesMarcados() === 1,
-      processar: (chave: 'adicionar' | 'remover') => {
-        const link = chave === 'adicionar' ? linkAdicionar : linkRemover
-        const acao = chave === 'adicionar' ? ACAO_ADICIONAR_MARCADOR : ACAO_REMOVER_MARCADOR
+        const link = alvo.closest<HTMLAnchorElement>(
+          '#divComandos a[onclick*="andamento_marcador_cadastrar"], #divComandos a[onclick*="andamento_marcador_remover"]'
+        )
+        if (!link) return
+
+        if (contarCheckboxesMarcados() !== 1) return
+
         const selecionado = localizarUnicoCheckboxMarcado()
-        if (!link || !selecionado) return
+        if (!selecionado) return
+
+        evento.preventDefault()
+        evento.stopImmediatePropagation()
+
+        const onclick = link.getAttribute('onclick') ?? ''
+        const acao = onclick.includes('andamento_marcador_cadastrar')
+          ? ACAO_ADICIONAR_MARCADOR
+          : ACAO_REMOVER_MARCADOR
 
         processarClickMarcador(acao, link, selecionado.checkbox.value, selecionado.idTabela, config).catch(
           (error) => {
@@ -2026,10 +2012,8 @@ function montarMarcadorRapido(config: SyncConfig): void {
           }
         )
       },
-    }
-
-    interceptarClickNativoMarcador(linkAdicionar, 'adicionar')
-    interceptarClickNativoMarcador(linkRemover, 'remover')
+      true
+    )
   } catch (error) {
     console.error('[SEIRMG] Falha ao montar marcador rápido:', error)
   }
