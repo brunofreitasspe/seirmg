@@ -23,6 +23,10 @@ import {
   parseProcessosDoBloco,
 } from '../../features/controle-processos/filtroBloco'
 import {
+  detectarTransicoesParaDisponibilizado,
+  parseListaBlocosAssinatura,
+} from '../../features/bloco-assinatura/parser'
+import {
   agruparLinhas,
   extrairNomeMarcador,
   extrairTextoPontoControle,
@@ -1699,6 +1703,62 @@ function montarFiltroBloco(): void {
   }
 }
 
+// Checagem oportunista de bloco de assinatura -- NENHUM alarme/timer novo. Dispara só como efeito
+// colateral do bootstrap() já existente de Controle de Processos (a tela mais visitada), no máximo 1x
+// a cada checagemOportunistaIntervaloMinutos. Ver spec
+// docs/superpowers/specs/2026-07-16-seirmg-bloco-assinatura-checagem-oportunista-design.md pro
+// histórico de por que um alarme autônomo não é uma opção aqui (2 tentativas anteriores causaram
+// deslogamento real da sessão do SEI).
+async function verificarBlocoAssinaturaOportunisticamente(): Promise<void> {
+  const syncConfig = await createSyncConfigStore().get()
+  const intervaloMinutos = syncConfig.blocoAssinatura.checagemOportunistaIntervaloMinutos
+  if (intervaloMinutos <= 0) return
+
+  const localConfig = await createLocalConfigStore().get()
+  const agoraMs = Date.now()
+  const ultimaChecagemMs = localConfig.blocoAssinaturaUltimaChecagemOportunista
+    ? new Date(localConfig.blocoAssinaturaUltimaChecagemOportunista).getTime()
+    : 0
+  if (agoraMs - ultimaChecagemMs < intervaloMinutos * 60 * 1000) return
+
+  const link = document.querySelector<HTMLAnchorElement>(
+    `a[href^="controlador.php?acao=${PREFIXOS_BLOCO.ASSINATURA}"]`
+  )
+  if (!link) return
+
+  const resultado = await fetchText(link.href)
+  if (!resultado.ok) {
+    console.error('[SEIRMG] Falha ao checar bloco de assinatura oportunisticamente:', resultado.error)
+    return
+  }
+
+  const doc = new DOMParser().parseFromString(resultado.data, 'text/html')
+  const blocosAtuais = parseListaBlocosAssinatura(doc)
+  const transicoes = detectarTransicoesParaDisponibilizado(
+    blocosAtuais,
+    localConfig.blocoAssinaturaEstadosConhecidos
+  )
+
+  transicoes.forEach((bloco) => {
+    chrome.runtime
+      .sendMessage({
+        type: 'seirmg:bloco-disponibilizado',
+        bloco: { numero: bloco.numero, descricao: bloco.descricao },
+      })
+      .catch((error) => {
+        console.error('[SEIRMG] Falha ao notificar bloco disponibilizado:', error)
+      })
+  })
+
+  await createLocalConfigStore().set({
+    ...localConfig,
+    blocoAssinaturaEstadosConhecidos: Object.fromEntries(
+      blocosAtuais.map((bloco) => [bloco.numero, bloco.estado ?? ''])
+    ),
+    blocoAssinaturaUltimaChecagemOportunista: new Date(agoraMs).toISOString(),
+  })
+}
+
 function desabilitarSelecaoNaLinha(linha: Element): void {
   const checkbox = linha.querySelector<HTMLInputElement>('input.infraCheckbox, input[type="checkbox"]')
   if (!checkbox) return
@@ -2274,6 +2334,10 @@ async function bootstrap(): Promise<void> {
         })
       })
     }
+
+    verificarBlocoAssinaturaOportunisticamente().catch((error) => {
+      console.error('[SEIRMG] Falha ao checar bloco de assinatura oportunisticamente:', error)
+    })
   } catch (error) {
     console.error('[SEIRMG] Falha ao aplicar recursos de Controle de Processos:', error)
   }
