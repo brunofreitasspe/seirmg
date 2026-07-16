@@ -1831,7 +1831,11 @@ async function confirmarMarcador(
     }
 
     const corpo = montarCorpoConfirmacao(formularioMarcador.campos, marcadorEscolhido, texto, acao.botao)
-    const resultado = await fetchText(formularioMarcador.actionUrl, { method: 'POST', body: corpo })
+    // Mesmo motivo do fetch da tela intermediária: actionUrl vem de getAttribute('action') do
+    // formulário na tela retornada (string crua, relativa), não da propriedade .action do DOM
+    // (que resolveria sozinha) -- precisa ser resolvida contra a página atual antes do fetch.
+    const urlConfirmacao = new URL(formularioMarcador.actionUrl, window.location.href).href
+    const resultado = await fetchText(urlConfirmacao, { method: 'POST', body: corpo })
     if (!resultado.ok) {
       erro.textContent = 'Falha ao salvar o marcador. Tente novamente.'
       erro.style.display = ''
@@ -1937,11 +1941,17 @@ async function processarClickMarcador(
   idTabela: string,
   config: SyncConfig
 ): Promise<void> {
-  const url = extrairUrlDeOnclick(link.getAttribute('onclick') ?? '')
-  if (!url) {
+  const urlRelativa = extrairUrlDeOnclick(link.getAttribute('onclick') ?? '')
+  if (!urlRelativa) {
     console.error('[SEIRMG] Não foi possível extrair a URL do link de marcador.')
     return
   }
+  // A URL vem de dentro de um onclick (string crua, não um atributo href/action refletido
+  // pelo DOM) -- por isso precisa ser resolvida contra a página atual antes do fetch, mesmo
+  // padrão já usado em documento_externo_arraste/procedimento_visualizar (o fetch de verdade
+  // roda no service worker de fundo, que não tem "página atual" nenhuma pra resolver uma URL
+  // relativa como controlador.php?acao=... sozinho -- resolveria contra chrome-extension://).
+  const url = new URL(urlRelativa, window.location.href).href
 
   const formPagina = document.getElementById('frmProcedimentoControlar') as HTMLFormElement | null
   if (!formPagina) return
