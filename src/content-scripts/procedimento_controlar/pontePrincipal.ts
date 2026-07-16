@@ -37,7 +37,8 @@ export function criarPonteMarcadorRapidoMainWorld(
     )
     if (!link) return
 
-    if (contarCheckboxesMarcados(documentoGlobal) !== 1) return
+    const quantidade = contarCheckboxesMarcados(documentoGlobal)
+    if (quantidade < 1) return
 
     evento.preventDefault()
     evento.stopImmediatePropagation()
@@ -45,7 +46,7 @@ export function criarPonteMarcadorRapidoMainWorld(
     const onclick = link.getAttribute('onclick') ?? ''
     const chave: ChaveAcaoMarcadorRapido = onclick.includes('andamento_marcador_cadastrar') ? 'adicionar' : 'remover'
 
-    const detalhe: DetalheCliqueMarcadorRapido = { chave }
+    const detalhe: DetalheCliqueMarcadorRapido = { chave, quantidade }
     janelaGlobal.dispatchEvent(new CustomEvent(EVENTO_CLIQUE_MARCADOR_RAPIDO, { detail: detalhe }))
   }
 

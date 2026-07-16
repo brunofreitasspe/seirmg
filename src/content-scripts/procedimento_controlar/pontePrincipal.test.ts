@@ -59,7 +59,7 @@ describe('criarPonteMarcadorRapidoMainWorld', () => {
     const resultado = clicarLink('Adicionar Marcador')
 
     expect(resultado.defaultPrevented).toBe(true)
-    expect(detalheRecebido).toEqual({ chave: 'adicionar' })
+    expect(detalheRecebido).toEqual({ chave: 'adicionar', quantidade: 1 })
   })
 
   it('não intercepta (deixa o comportamento nativo) quando 0 checkboxes estão marcados', () => {
@@ -76,18 +76,18 @@ describe('criarPonteMarcadorRapidoMainWorld', () => {
     expect(disparou).toBe(false)
   })
 
-  it('não intercepta quando 2+ checkboxes estão marcados', () => {
+  it('intercepta também quando 2+ checkboxes estão marcados, com a quantidade certa', () => {
     montarPagina(2)
-    let disparou = false
-    window.addEventListener(EVENTO_CLIQUE_MARCADOR_RAPIDO, () => {
-      disparou = true
+    let detalheRecebido: DetalheCliqueMarcadorRapido | null = null
+    window.addEventListener(EVENTO_CLIQUE_MARCADOR_RAPIDO, (evento) => {
+      detalheRecebido = (evento as CustomEvent<DetalheCliqueMarcadorRapido>).detail
     })
 
     criarPonte()
     const resultado = clicarLink('Adicionar Marcador')
 
-    expect(resultado.defaultPrevented).toBe(false)
-    expect(disparou).toBe(false)
+    expect(resultado.defaultPrevented).toBe(true)
+    expect(detalheRecebido).toEqual({ chave: 'adicionar', quantidade: 2 })
   })
 
   it('identifica a chave "remover" ao clicar no link de remoção', () => {
@@ -101,7 +101,7 @@ describe('criarPonteMarcadorRapidoMainWorld', () => {
     const resultado = clicarLink('Remover Marcador')
 
     expect(resultado.defaultPrevented).toBe(true)
-    expect(detalheRecebido).toEqual({ chave: 'remover' })
+    expect(detalheRecebido).toEqual({ chave: 'remover', quantidade: 1 })
   })
 
   it('destruir() remove o listener, voltando ao comportamento nativo', () => {

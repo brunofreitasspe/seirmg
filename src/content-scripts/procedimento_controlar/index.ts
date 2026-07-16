@@ -62,6 +62,8 @@ import starIconSvg from 'lucide-static/icons/star.svg?raw'
 import starOffIconSvg from 'lucide-static/icons/star-off.svg?raw'
 import flagIconSvg from 'lucide-static/icons/flag.svg?raw'
 import userIconSvg from 'lucide-static/icons/user.svg?raw'
+import bookmarkPlusIconSvg from 'lucide-static/icons/bookmark-plus.svg?raw'
+import bookmarkMinusIconSvg from 'lucide-static/icons/bookmark-minus.svg?raw'
 
 const IDS_TABELAS = ['#tblProcessosDetalhado', '#tblProcessosGerados', '#tblProcessosRecebidos']
 
@@ -194,88 +196,162 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
   .seirmg-marcador-rapido-fundo {
     position: fixed;
     inset: 0;
-    background: rgba(0, 0, 0, .35);
+    background: rgba(0, 0, 0, .4);
     z-index: 2000;
     display: flex;
     align-items: center;
     justify-content: center;
   }
   .seirmg-marcador-rapido-popup {
-    background: #fff;
-    border: 1px solid #ccc;
-    border-radius: 6px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, .25);
-    padding: 16px;
     width: 360px;
     max-width: 90vw;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
+    overflow: hidden;
+    font-family: Arial, sans-serif;
+  }
+  .seirmg-marcador-rapido-header {
+    padding: 20px 22px 12px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .seirmg-marcador-rapido-icone {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #eaf4ff;
+    color: #017fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+  .seirmg-marcador-rapido-icone svg {
+    width: 18px;
+    height: 18px;
   }
   .seirmg-marcador-rapido-titulo {
+    font-size: 16px;
     font-weight: bold;
-    margin-bottom: 10px;
+  }
+  .seirmg-marcador-rapido-subtitulo {
+    margin: 4px 0 0;
+    font-size: 12.5px;
+    color: #777;
+  }
+  .seirmg-marcador-rapido-corpo {
+    padding: 4px 22px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
   }
   .seirmg-marcador-rapido-erro {
-    color: #c0392b;
-    font-size: 13px;
-    margin-bottom: 10px;
+    background: #fff1f0;
+    border: 1px solid #f0c9c9;
+    color: #a3232b;
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 12.5px;
   }
   .seirmg-marcador-rapido-select {
     position: relative;
-    margin-bottom: 10px;
   }
   .seirmg-marcador-rapido-select-atual {
     width: 100%;
     box-sizing: border-box;
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 8px;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    background: #fff;
+    gap: 8px;
+    padding: 8px 10px;
+    border: 1px solid #dbe9fb;
+    background: #f5faff;
+    border-radius: 8px;
     cursor: pointer;
     text-align: left;
     font: inherit;
+    font-size: 13.5px;
+  }
+  .seirmg-marcador-rapido-seta {
+    margin-left: auto;
+    color: #777;
+    font-size: 10px;
   }
   .seirmg-marcador-rapido-select-lista {
     position: absolute;
     z-index: 1;
-    top: 100%;
+    top: calc(100% + 4px);
     left: 0;
     right: 0;
-    max-height: 220px;
+    max-height: 230px;
     overflow-y: auto;
-    margin: 2px 0 0;
-    padding: 0;
+    margin: 0;
+    padding: 6px;
     list-style: none;
     background: #fff;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, .15);
+    border: 1px solid #dbe9fb;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, .18);
   }
   .seirmg-marcador-rapido-opcao {
     display: flex;
     align-items: center;
-    gap: 6px;
-    padding: 6px 8px;
+    gap: 8px;
+    padding: 7px 8px;
+    border-radius: 6px;
+    font-size: 13.5px;
     cursor: pointer;
   }
   .seirmg-marcador-rapido-opcao:hover {
-    background: #f0f4f8;
+    background: #eaf4ff;
   }
   .seirmg-marcador-rapido-opcao-icone {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
+    flex-shrink: 0;
   }
   .seirmg-marcador-rapido-textarea {
     width: 100%;
     box-sizing: border-box;
-    margin-bottom: 10px;
-    min-height: 60px;
+    min-height: 64px;
+    resize: vertical;
+    border: 1px solid #dbe9fb;
+    background: #f5faff;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font: inherit;
+    font-size: 13.5px;
   }
-  .seirmg-marcador-rapido-acoes {
+  .seirmg-marcador-rapido-rodape {
+    padding: 16px 22px 20px;
     display: flex;
     justify-content: flex-end;
-    gap: 8px;
+    gap: 10px;
+    border-top: 1px solid #e2e2e2;
+  }
+  .seirmg-marcador-rapido-btn {
+    border: none;
+    border-radius: 6px;
+    padding: 8px 16px;
+    font-size: 13.5px;
+    font-weight: bold;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .seirmg-marcador-rapido-btn-secundario {
+    background: transparent;
+    color: #777;
+  }
+  .seirmg-marcador-rapido-btn-secundario:hover {
+    color: #1a1a1a;
+  }
+  .seirmg-marcador-rapido-btn-primario {
+    background: #017fff;
+    color: #fff;
+  }
+  .seirmg-marcador-rapido-btn-primario:hover {
+    filter: brightness(1.08);
   }
 `
 
@@ -1795,6 +1871,7 @@ interface AcaoMarcadorRapido {
   botao: { nome: string; valor: string }
   tituloPopup: string
   mensagemSucesso: string
+  iconeSvg: string
 }
 
 const ACAO_ADICIONAR_MARCADOR: AcaoMarcadorRapido = {
@@ -1803,6 +1880,7 @@ const ACAO_ADICIONAR_MARCADOR: AcaoMarcadorRapido = {
   botao: { nome: 'sbmSalvar', valor: 'Salvar' },
   tituloPopup: 'Adicionar Marcador',
   mensagemSucesso: 'Marcador adicionado.',
+  iconeSvg: bookmarkPlusIconSvg,
 }
 
 const ACAO_REMOVER_MARCADOR: AcaoMarcadorRapido = {
@@ -1811,6 +1889,7 @@ const ACAO_REMOVER_MARCADOR: AcaoMarcadorRapido = {
   botao: { nome: 'sbmRemover', valor: 'Remover' },
   tituloPopup: 'Remoção de Marcador',
   mensagemSucesso: 'Marcador removido.',
+  iconeSvg: bookmarkMinusIconSvg,
 }
 
 let popupMarcadorRapidoAtual: HTMLElement | null = null
@@ -1910,11 +1989,21 @@ function criarSeletorMarcador(
   lista.className = 'seirmg-marcador-rapido-select-lista'
   lista.hidden = true
 
+  function criarSeta(): HTMLSpanElement {
+    const seta = document.createElement('span')
+    seta.className = 'seirmg-marcador-rapido-seta'
+    seta.textContent = '▾'
+    return seta
+  }
+
   function atualizarBotaoAtual(): void {
     botaoAtual.innerHTML = ''
     const opcaoAtual = opcoes.find((opcao) => opcao.id === valorAtual)
     if (!opcaoAtual) {
-      botaoAtual.textContent = rotuloPlaceholder ?? ''
+      const texto = document.createElement('span')
+      texto.textContent = rotuloPlaceholder ?? ''
+      botaoAtual.appendChild(texto)
+      botaoAtual.appendChild(criarSeta())
       return
     }
     if (opcaoAtual.icone) {
@@ -1926,6 +2015,7 @@ function criarSeletorMarcador(
     const texto = document.createElement('span')
     texto.textContent = opcaoAtual.nome
     botaoAtual.appendChild(texto)
+    botaoAtual.appendChild(criarSeta())
   }
 
   function escolher(opcao: OpcaoMarcador): void {
@@ -1954,10 +2044,15 @@ function criarSeletorMarcador(
   }
 }
 
+function textoQuantidadeProcessos(quantidade: number): string {
+  return `${quantidade} processo${quantidade === 1 ? '' : 's'} selecionado${quantidade === 1 ? '' : 's'}`
+}
+
 function abrirPopupMarcador(
   acao: AcaoMarcadorRapido,
   opcoes: OpcaoMarcador[],
-  formularioMarcador: { actionUrl: string; campos: Record<string, string> }
+  formularioMarcador: { actionUrl: string; campos: Record<string, string> },
+  quantidade: number
 ): void {
   fecharPopupMarcadorRapido()
 
@@ -1972,39 +2067,60 @@ function abrirPopupMarcador(
     seletor.fecharLista()
   })
 
-  const titulo = document.createElement('div')
+  const header = document.createElement('div')
+  header.className = 'seirmg-marcador-rapido-header'
+
+  const icone = document.createElement('div')
+  icone.className = 'seirmg-marcador-rapido-icone'
+  icone.innerHTML = acao.iconeSvg
+  header.appendChild(icone)
+
+  const titulos = document.createElement('div')
+  const titulo = document.createElement('strong')
   titulo.className = 'seirmg-marcador-rapido-titulo'
   titulo.textContent = acao.tituloPopup
-  popup.appendChild(titulo)
+  const subtitulo = document.createElement('p')
+  subtitulo.className = 'seirmg-marcador-rapido-subtitulo'
+  subtitulo.textContent = textoQuantidadeProcessos(quantidade)
+  titulos.append(titulo, subtitulo)
+  header.appendChild(titulos)
+  popup.appendChild(header)
+
+  const corpo = document.createElement('div')
+  corpo.className = 'seirmg-marcador-rapido-corpo'
 
   const erro = document.createElement('div')
   erro.className = 'seirmg-marcador-rapido-erro'
   erro.style.display = 'none'
-  popup.appendChild(erro)
+  corpo.appendChild(erro)
 
   const rotuloPlaceholder = acao.tipo === 'adicionar' ? 'Selecione um marcador' : null
   const seletor = criarSeletorMarcador(opcoes, formularioMarcador.campos.hdnIdMarcador, rotuloPlaceholder)
-  popup.appendChild(seletor.elemento)
+  corpo.appendChild(seletor.elemento)
 
   let textarea: HTMLTextAreaElement | null = null
   if (acao.tipo === 'adicionar') {
     textarea = document.createElement('textarea')
     textarea.className = 'seirmg-marcador-rapido-textarea'
     textarea.placeholder = 'Texto (opcional)'
-    popup.appendChild(textarea)
+    corpo.appendChild(textarea)
   }
 
-  const acoes = document.createElement('div')
-  acoes.className = 'seirmg-marcador-rapido-acoes'
+  popup.appendChild(corpo)
+
+  const rodape = document.createElement('div')
+  rodape.className = 'seirmg-marcador-rapido-rodape'
 
   const botaoCancelar = document.createElement('button')
   botaoCancelar.type = 'button'
+  botaoCancelar.className = 'seirmg-marcador-rapido-btn seirmg-marcador-rapido-btn-secundario'
   botaoCancelar.textContent = 'Cancelar'
   botaoCancelar.addEventListener('click', fecharPopupMarcadorRapido)
-  acoes.appendChild(botaoCancelar)
+  rodape.appendChild(botaoCancelar)
 
   const botaoConfirmar = document.createElement('button')
   botaoConfirmar.type = 'button'
+  botaoConfirmar.className = 'seirmg-marcador-rapido-btn seirmg-marcador-rapido-btn-primario'
   botaoConfirmar.textContent = acao.botao.valor
   botaoConfirmar.addEventListener('click', () => {
     botaoConfirmar.disabled = true
@@ -2012,9 +2128,9 @@ function abrirPopupMarcador(
       botaoConfirmar.disabled = false
     })
   })
-  acoes.appendChild(botaoConfirmar)
+  rodape.appendChild(botaoConfirmar)
 
-  popup.appendChild(acoes)
+  popup.appendChild(rodape)
   fundo.appendChild(popup)
   document.body.appendChild(fundo)
 
@@ -2023,7 +2139,8 @@ function abrirPopupMarcador(
 
 async function processarClickMarcador(
   acao: AcaoMarcadorRapido,
-  link: HTMLAnchorElement
+  link: HTMLAnchorElement,
+  quantidade: number
 ): Promise<void> {
   const urlRelativa = extrairUrlDeOnclick(link.getAttribute('onclick') ?? '')
   if (!urlRelativa) {
@@ -2057,7 +2174,7 @@ async function processarClickMarcador(
     return
   }
 
-  abrirPopupMarcador(acao, opcoes, formularioMarcador)
+  abrirPopupMarcador(acao, opcoes, formularioMarcador, quantidade)
 }
 
 // A decisão de interceptar (contagem de selecionados) e o preventDefault/
@@ -2071,7 +2188,7 @@ async function processarClickMarcador(
 function montarMarcadorRapido(): void {
   try {
     window.addEventListener(EVENTO_CLIQUE_MARCADOR_RAPIDO, (evento) => {
-      const { chave } = (evento as CustomEvent<DetalheCliqueMarcadorRapido>).detail
+      const { chave, quantidade } = (evento as CustomEvent<DetalheCliqueMarcadorRapido>).detail
 
       const seletor =
         chave === 'adicionar'
@@ -2082,7 +2199,7 @@ function montarMarcadorRapido(): void {
 
       const acao = chave === 'adicionar' ? ACAO_ADICIONAR_MARCADOR : ACAO_REMOVER_MARCADOR
 
-      processarClickMarcador(acao, link).catch((error) => {
+      processarClickMarcador(acao, link, quantidade).catch((error) => {
         console.error('[SEIRMG] Falha ao processar clique de marcador rápido:', error)
       })
     })
