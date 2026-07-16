@@ -208,7 +208,6 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     background: #fff;
     border-radius: 14px;
     box-shadow: 0 10px 30px rgba(0, 0, 0, .25);
-    overflow: hidden;
     font-family: Arial, sans-serif;
   }
   .seirmg-marcador-rapido-header {
