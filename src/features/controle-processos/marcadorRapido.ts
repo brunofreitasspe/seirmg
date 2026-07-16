@@ -34,3 +34,15 @@ export function parseFormularioMarcador(
 
   return { actionUrl: form.getAttribute('action') ?? '', campos }
 }
+
+export function montarCorpoConfirmacao(
+  campos: Record<string, string>,
+  marcadorEscolhido: string,
+  texto: string,
+  botao: { nome: string; valor: string }
+): URLSearchParams {
+  const corpo: Record<string, string> = { ...campos, hdnIdMarcador: marcadorEscolhido }
+  if (texto) corpo.txaTexto = texto
+  corpo[botao.nome] = botao.valor
+  return new URLSearchParams(corpo)
+}

@@ -102,3 +102,61 @@ describe('parseFormularioMarcador', () => {
     expect(parseFormularioMarcador(doc, 'frmAndamentoMarcadorCadastro')).toBeNull()
   })
 })
+
+import { montarCorpoConfirmacao } from './marcadorRapido'
+
+describe('montarCorpoConfirmacao', () => {
+  it('sobrescreve hdnIdMarcador com o valor escolhido e inclui o botão de confirmação', () => {
+    const corpo = montarCorpoConfirmacao(
+      { hdnIdMarcador: '', hdnIdProtocolo: '456' },
+      '3',
+      '',
+      { nome: 'sbmSalvar', valor: 'Salvar' }
+    )
+
+    expect(Object.fromEntries(corpo)).toEqual({
+      hdnIdMarcador: '3',
+      hdnIdProtocolo: '456',
+      sbmSalvar: 'Salvar',
+    })
+  })
+
+  it('inclui txaTexto quando há texto', () => {
+    const corpo = montarCorpoConfirmacao(
+      { hdnIdMarcador: '', hdnIdProtocolo: '456' },
+      '3',
+      'Observação qualquer',
+      { nome: 'sbmSalvar', valor: 'Salvar' }
+    )
+
+    expect(Object.fromEntries(corpo)).toEqual({
+      hdnIdMarcador: '3',
+      hdnIdProtocolo: '456',
+      txaTexto: 'Observação qualquer',
+      sbmSalvar: 'Salvar',
+    })
+  })
+
+  it('não inclui txaTexto quando o texto é vazio', () => {
+    const corpo = montarCorpoConfirmacao({ hdnIdMarcador: '' }, '3', '', {
+      nome: 'sbmSalvar',
+      valor: 'Salvar',
+    })
+    expect(corpo.has('txaTexto')).toBe(false)
+  })
+
+  it('sobrescreve um hdnIdMarcador já preenchido (fluxo de remoção)', () => {
+    const corpo = montarCorpoConfirmacao(
+      { hdnIdMarcador: '3', hdnIdProtocolo: '456' },
+      '7',
+      '',
+      { nome: 'sbmRemover', valor: 'Remover' }
+    )
+
+    expect(Object.fromEntries(corpo)).toEqual({
+      hdnIdMarcador: '7',
+      hdnIdProtocolo: '456',
+      sbmRemover: 'Remover',
+    })
+  })
+})
