@@ -36,6 +36,13 @@ import {
   extrairLinhasValidas,
   extrairNroItens,
 } from '../../features/controle-processos/rolagemInfinita'
+import {
+  extrairUrlDeOnclick,
+  montarCorpoConfirmacao,
+  parseFormularioMarcador,
+  parseOpcoesMarcador,
+  type OpcaoMarcador,
+} from '../../features/controle-processos/marcadorRapido'
 import { fetchText } from '../../lib/fetchViaBackground'
 import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
 import type { ControleProcessosConfig, SyncConfig } from '../../lib/storage'
@@ -181,6 +188,61 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
   .seirmg-favoritos-vazio {
     color: #aaa;
     font-style: italic;
+  }
+  .seirmg-marcador-rapido-fundo {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, .35);
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .seirmg-marcador-rapido-popup {
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .25);
+    padding: 16px;
+    width: 360px;
+    max-width: 90vw;
+  }
+  .seirmg-marcador-rapido-titulo {
+    font-weight: bold;
+    margin-bottom: 10px;
+  }
+  .seirmg-marcador-rapido-erro {
+    color: #c0392b;
+    font-size: 13px;
+    margin-bottom: 10px;
+  }
+  .seirmg-marcador-rapido-select {
+    width: 100%;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+  }
+  .seirmg-marcador-rapido-textarea {
+    width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 10px;
+    min-height: 60px;
+  }
+  .seirmg-marcador-rapido-acoes {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+  .seirmg-marcador-rapido-mensagem {
+    position: fixed;
+    z-index: 2002;
+    background: #2ecc71;
+    color: #fff;
+    padding: 8px 14px;
+    border-radius: 4px;
+    font-size: 13px;
+    top: 16px;
+    left: 50%;
+    transform: translateX(-50%);
   }
 `
 
@@ -1687,6 +1749,292 @@ function montarAgrupamento(config: SyncConfig): void {
   }
 }
 
+interface AcaoMarcadorRapido {
+  tipo: 'adicionar' | 'remover'
+  idFormulario: string
+  botao: { nome: string; valor: string }
+  tituloPopup: string
+  mensagemSucesso: string
+}
+
+const ACAO_ADICIONAR_MARCADOR: AcaoMarcadorRapido = {
+  tipo: 'adicionar',
+  idFormulario: 'frmAndamentoMarcadorCadastro',
+  botao: { nome: 'sbmSalvar', valor: 'Salvar' },
+  tituloPopup: 'Adicionar Marcador',
+  mensagemSucesso: 'Marcador adicionado.',
+}
+
+const ACAO_REMOVER_MARCADOR: AcaoMarcadorRapido = {
+  tipo: 'remover',
+  idFormulario: 'frmAndamentoMarcadorRemocao',
+  botao: { nome: 'sbmRemover', valor: 'Remover' },
+  tituloPopup: 'Remoção de Marcador',
+  mensagemSucesso: 'Marcador removido.',
+}
+
+interface PonteMarcadorRapido {
+  deveInterceptar: () => boolean
+  processar: (chave: 'adicionar' | 'remover') => void
+}
+
+declare global {
+  interface Window {
+    __seirmgMarcadorRapido?: PonteMarcadorRapido
+  }
+}
+
+function contarCheckboxesMarcados(): number {
+  return IDS_TABELAS.reduce((total, idTabela) => {
+    const tabela = document.querySelector(idTabela)
+    return total + (tabela ? tabela.querySelectorAll('tbody input[type="checkbox"]:checked').length : 0)
+  }, 0)
+}
+
+function localizarUnicoCheckboxMarcado(): { checkbox: HTMLInputElement; idTabela: string } | null {
+  for (const idTabela of IDS_TABELAS) {
+    const tabela = document.querySelector(idTabela)
+    const checkbox = tabela?.querySelector<HTMLInputElement>('tbody input[type="checkbox"]:checked')
+    if (checkbox) return { checkbox, idTabela }
+  }
+  return null
+}
+
+let popupMarcadorRapidoAtual: HTMLElement | null = null
+
+function fecharPopupMarcadorRapido(): void {
+  popupMarcadorRapidoAtual?.remove()
+  popupMarcadorRapidoAtual = null
+}
+
+function mostrarMensagemTransitoriaMarcador(texto: string): void {
+  const mensagem = document.createElement('div')
+  mensagem.className = 'seirmg-marcador-rapido-mensagem'
+  mensagem.textContent = texto
+  document.body.appendChild(mensagem)
+  setTimeout(() => mensagem.remove(), 2500)
+}
+
+function substituirLinhaAtualizada(
+  idProcedimento: string,
+  idTabela: string,
+  html: string,
+  config: SyncConfig
+): void {
+  try {
+    const idLinha = `P${idProcedimento}`
+    const linhaAntiga = document.getElementById(idLinha)
+    if (!linhaAntiga) return
+
+    const docResposta = new DOMParser().parseFromString(html, 'text/html')
+    const linhaNova = docResposta.getElementById(idLinha)
+    if (!linhaNova) return
+
+    const linhaAdotada = document.adoptNode(linhaNova)
+    linhaAntiga.replaceWith(linhaAdotada)
+    reaplicarTratamentosNasLinhasNovas(idTabela, config, [linhaAdotada])
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao atualizar a linha do processo após marcador:', error)
+  }
+}
+
+async function confirmarMarcador(
+  acao: AcaoMarcadorRapido,
+  formularioMarcador: { actionUrl: string; campos: Record<string, string> },
+  idProcedimento: string,
+  idTabela: string,
+  config: SyncConfig,
+  marcadorEscolhido: string,
+  texto: string,
+  erro: HTMLElement
+): Promise<void> {
+  try {
+    if (!marcadorEscolhido) {
+      erro.textContent = 'Selecione um marcador.'
+      erro.style.display = ''
+      return
+    }
+
+    const corpo = montarCorpoConfirmacao(formularioMarcador.campos, marcadorEscolhido, texto, acao.botao)
+    const resultado = await fetchText(formularioMarcador.actionUrl, { method: 'POST', body: corpo })
+    if (!resultado.ok) {
+      erro.textContent = 'Falha ao salvar o marcador. Tente novamente.'
+      erro.style.display = ''
+      return
+    }
+
+    substituirLinhaAtualizada(idProcedimento, idTabela, resultado.data, config)
+    fecharPopupMarcadorRapido()
+    mostrarMensagemTransitoriaMarcador(acao.mensagemSucesso)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao confirmar marcador:', error)
+    erro.textContent = 'Falha ao salvar o marcador. Tente novamente.'
+    erro.style.display = ''
+  }
+}
+
+function abrirPopupMarcador(
+  acao: AcaoMarcadorRapido,
+  opcoes: OpcaoMarcador[],
+  formularioMarcador: { actionUrl: string; campos: Record<string, string> },
+  idProcedimento: string,
+  idTabela: string,
+  config: SyncConfig
+): void {
+  fecharPopupMarcadorRapido()
+
+  const fundo = document.createElement('div')
+  fundo.className = 'seirmg-marcador-rapido-fundo'
+  fundo.addEventListener('click', fecharPopupMarcadorRapido)
+
+  const popup = document.createElement('div')
+  popup.className = 'seirmg-marcador-rapido-popup'
+  popup.addEventListener('click', (evento) => evento.stopPropagation())
+
+  const titulo = document.createElement('div')
+  titulo.className = 'seirmg-marcador-rapido-titulo'
+  titulo.textContent = acao.tituloPopup
+  popup.appendChild(titulo)
+
+  const erro = document.createElement('div')
+  erro.className = 'seirmg-marcador-rapido-erro'
+  erro.style.display = 'none'
+  popup.appendChild(erro)
+
+  const select = document.createElement('select')
+  select.className = 'seirmg-marcador-rapido-select'
+  if (acao.tipo === 'adicionar') {
+    select.appendChild(new Option('Selecione um marcador', ''))
+  }
+  opcoes.forEach((opcao) => select.appendChild(new Option(opcao.nome, opcao.id)))
+  const marcadorAtual = formularioMarcador.campos.hdnIdMarcador
+  if (marcadorAtual) select.value = marcadorAtual
+  popup.appendChild(select)
+
+  let textarea: HTMLTextAreaElement | null = null
+  if (acao.tipo === 'adicionar') {
+    textarea = document.createElement('textarea')
+    textarea.className = 'seirmg-marcador-rapido-textarea'
+    textarea.placeholder = 'Texto (opcional)'
+    popup.appendChild(textarea)
+  }
+
+  const acoes = document.createElement('div')
+  acoes.className = 'seirmg-marcador-rapido-acoes'
+
+  const botaoCancelar = document.createElement('button')
+  botaoCancelar.type = 'button'
+  botaoCancelar.textContent = 'Cancelar'
+  botaoCancelar.addEventListener('click', fecharPopupMarcadorRapido)
+  acoes.appendChild(botaoCancelar)
+
+  const botaoConfirmar = document.createElement('button')
+  botaoConfirmar.type = 'button'
+  botaoConfirmar.textContent = acao.botao.valor
+  botaoConfirmar.addEventListener('click', () => {
+    botaoConfirmar.disabled = true
+    confirmarMarcador(
+      acao,
+      formularioMarcador,
+      idProcedimento,
+      idTabela,
+      config,
+      select.value,
+      textarea?.value ?? '',
+      erro
+    ).finally(() => {
+      botaoConfirmar.disabled = false
+    })
+  })
+  acoes.appendChild(botaoConfirmar)
+
+  popup.appendChild(acoes)
+  fundo.appendChild(popup)
+  document.body.appendChild(fundo)
+
+  popupMarcadorRapidoAtual = fundo
+}
+
+async function processarClickMarcador(
+  acao: AcaoMarcadorRapido,
+  link: HTMLAnchorElement,
+  idProcedimento: string,
+  idTabela: string,
+  config: SyncConfig
+): Promise<void> {
+  const url = extrairUrlDeOnclick(link.getAttribute('onclick') ?? '')
+  if (!url) {
+    console.error('[SEIRMG] Não foi possível extrair a URL do link de marcador.')
+    return
+  }
+
+  const formPagina = document.getElementById('frmProcedimentoControlar') as HTMLFormElement | null
+  if (!formPagina) return
+
+  const resultadoTela = await fetchText(url, {
+    method: 'POST',
+    body: new URLSearchParams(extrairCamposOcultos(formPagina)),
+  })
+  if (!resultadoTela.ok) {
+    console.error('[SEIRMG] Falha ao buscar tela de marcador:', resultadoTela.error)
+    return
+  }
+
+  const docTela = new DOMParser().parseFromString(resultadoTela.data, 'text/html')
+  const opcoes = parseOpcoesMarcador(docTela)
+  const formularioMarcador = parseFormularioMarcador(docTela, acao.idFormulario)
+  if (!formularioMarcador) {
+    console.error('[SEIRMG] Formulário de marcador não encontrado na tela retornada.')
+    return
+  }
+
+  abrirPopupMarcador(acao, opcoes, formularioMarcador, idProcedimento, idTabela, config)
+}
+
+function interceptarClickNativoMarcador(link: HTMLAnchorElement | null, chave: 'adicionar' | 'remover'): void {
+  if (!link) return
+  const acaoOriginal = link.getAttribute('onclick')
+  if (!acaoOriginal) return
+
+  link.setAttribute(
+    'onclick',
+    `if (window.__seirmgMarcadorRapido && window.__seirmgMarcadorRapido.deveInterceptar()) { window.__seirmgMarcadorRapido.processar('${chave}'); return false; } else { ${acaoOriginal} }`
+  )
+}
+
+function montarMarcadorRapido(config: SyncConfig): void {
+  try {
+    const linkAdicionar = document.querySelector<HTMLAnchorElement>(
+      '#divComandos a[onclick*="andamento_marcador_cadastrar"]'
+    )
+    const linkRemover = document.querySelector<HTMLAnchorElement>(
+      '#divComandos a[onclick*="andamento_marcador_remover"]'
+    )
+    if (!linkAdicionar && !linkRemover) return
+
+    window.__seirmgMarcadorRapido = {
+      deveInterceptar: () => contarCheckboxesMarcados() === 1,
+      processar: (chave: 'adicionar' | 'remover') => {
+        const link = chave === 'adicionar' ? linkAdicionar : linkRemover
+        const acao = chave === 'adicionar' ? ACAO_ADICIONAR_MARCADOR : ACAO_REMOVER_MARCADOR
+        const selecionado = localizarUnicoCheckboxMarcado()
+        if (!link || !selecionado) return
+
+        processarClickMarcador(acao, link, selecionado.checkbox.value, selecionado.idTabela, config).catch(
+          (error) => {
+            console.error('[SEIRMG] Falha ao processar clique de marcador rápido:', error)
+          }
+        )
+      },
+    }
+
+    interceptarClickNativoMarcador(linkAdicionar, 'adicionar')
+    interceptarClickNativoMarcador(linkRemover, 'remover')
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao montar marcador rápido:', error)
+  }
+}
+
 async function bootstrap(): Promise<void> {
   try {
     injetarEstilos()
@@ -1698,6 +2046,7 @@ async function bootstrap(): Promise<void> {
     montarBuscaRapida()
     montarSelecaoMultipla()
     montarConfirmarAntesDeConcluir()
+    montarMarcadorRapido(config)
     montarFiltroBloco()
     montarOrdenacaoTabelas()
     await montarFiltroAtribuicao()
