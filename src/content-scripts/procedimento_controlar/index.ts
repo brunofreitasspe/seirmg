@@ -1711,7 +1711,7 @@ function montarFiltroBloco(): void {
 // deslogamento real da sessão do SEI).
 async function verificarBlocoAssinaturaOportunisticamente(): Promise<void> {
   const syncConfig = await createSyncConfigStore().get()
-  const intervaloMinutos = syncConfig.blocoAssinatura.checagemOportunistaIntervaloMinutos
+  const intervaloMinutos = syncConfig.blocoAssinatura.checagemOportunistaIntervaloMinutos ?? 0
   if (intervaloMinutos <= 0) return
 
   const localConfig = await createLocalConfigStore().get()
