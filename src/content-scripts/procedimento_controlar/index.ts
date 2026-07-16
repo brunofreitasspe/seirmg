@@ -43,6 +43,8 @@ import {
   parseOpcoesMarcador,
   type OpcaoMarcador,
 } from '../../features/controle-processos/marcadorRapido'
+import { EVENTO_CLIQUE_MARCADOR_RAPIDO } from './protocoloMarcadorRapido'
+import type { DetalheCliqueMarcadorRapido } from './protocoloMarcadorRapido'
 import { fetchText } from '../../lib/fetchViaBackground'
 import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
 import type { ControleProcessosConfig, SyncConfig } from '../../lib/storage'
@@ -1773,22 +1775,6 @@ const ACAO_REMOVER_MARCADOR: AcaoMarcadorRapido = {
   mensagemSucesso: 'Marcador removido.',
 }
 
-function contarCheckboxesMarcados(): number {
-  return IDS_TABELAS.reduce((total, idTabela) => {
-    const tabela = document.querySelector(idTabela)
-    return total + (tabela ? tabela.querySelectorAll('tbody input[type="checkbox"]:checked').length : 0)
-  }, 0)
-}
-
-function localizarUnicoCheckboxMarcado(): { checkbox: HTMLInputElement; idTabela: string } | null {
-  for (const idTabela of IDS_TABELAS) {
-    const tabela = document.querySelector(idTabela)
-    const checkbox = tabela?.querySelector<HTMLInputElement>('tbody input[type="checkbox"]:checked')
-    if (checkbox) return { checkbox, idTabela }
-  }
-  return null
-}
-
 let popupMarcadorRapidoAtual: HTMLElement | null = null
 
 function fecharPopupMarcadorRapido(): void {
@@ -1980,40 +1966,32 @@ async function processarClickMarcador(
   abrirPopupMarcador(acao, opcoes, formularioMarcador, idProcedimento, idTabela, config)
 }
 
+// A decisão de interceptar (contagem de selecionados) e o preventDefault/
+// stopImmediatePropagation do onclick nativo acontecem no main world (pontePrincipal.ts /
+// pontePrincipalMain.ts) -- confirmado ao vivo que um listener registrado pelo content
+// script isolado (aqui) não consegue impedir o onclick inline de rodar, porque ele é
+// compilado/executado no realm da própria página (mesma armadilha do CKEditor, ver
+// documento_editar/pontePrincipal.ts). Aqui só se recebe o aviso via CustomEvent e se faz o
+// trabalho de verdade (fetch/popup), que precisa das APIs da extensão e por isso não pode
+// rodar no main world.
 function montarMarcadorRapido(config: SyncConfig): void {
   try {
-    document.addEventListener(
-      'click',
-      (evento) => {
-        const alvo = evento.target
-        if (!(alvo instanceof Element)) return
+    window.addEventListener(EVENTO_CLIQUE_MARCADOR_RAPIDO, (evento) => {
+      const { chave, idProcedimento, idTabela } = (evento as CustomEvent<DetalheCliqueMarcadorRapido>).detail
 
-        const link = alvo.closest<HTMLAnchorElement>(
-          '#divComandos a[onclick*="andamento_marcador_cadastrar"], #divComandos a[onclick*="andamento_marcador_remover"]'
-        )
-        if (!link) return
+      const seletor =
+        chave === 'adicionar'
+          ? '#divComandos a[onclick*="andamento_marcador_cadastrar"]'
+          : '#divComandos a[onclick*="andamento_marcador_remover"]'
+      const link = document.querySelector<HTMLAnchorElement>(seletor)
+      if (!link) return
 
-        if (contarCheckboxesMarcados() !== 1) return
+      const acao = chave === 'adicionar' ? ACAO_ADICIONAR_MARCADOR : ACAO_REMOVER_MARCADOR
 
-        const selecionado = localizarUnicoCheckboxMarcado()
-        if (!selecionado) return
-
-        evento.preventDefault()
-        evento.stopImmediatePropagation()
-
-        const onclick = link.getAttribute('onclick') ?? ''
-        const acao = onclick.includes('andamento_marcador_cadastrar')
-          ? ACAO_ADICIONAR_MARCADOR
-          : ACAO_REMOVER_MARCADOR
-
-        processarClickMarcador(acao, link, selecionado.checkbox.value, selecionado.idTabela, config).catch(
-          (error) => {
-            console.error('[SEIRMG] Falha ao processar clique de marcador rápido:', error)
-          }
-        )
-      },
-      true
-    )
+      processarClickMarcador(acao, link, idProcedimento, idTabela, config).catch((error) => {
+        console.error('[SEIRMG] Falha ao processar clique de marcador rápido:', error)
+      })
+    })
   } catch (error) {
     console.error('[SEIRMG] Falha ao montar marcador rápido:', error)
   }

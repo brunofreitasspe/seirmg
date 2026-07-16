@@ -73,6 +73,15 @@ export default defineManifest({
     },
     {
       matches: [
+        '*://*.br/*controlador.php?acao=procedimento_controlar*',
+        '*://*.org/*controlador.php?acao=procedimento_controlar*',
+      ],
+      js: ['src/content-scripts/procedimento_controlar/pontePrincipalMain.ts'],
+      run_at: 'document_idle',
+      world: 'MAIN',
+    },
+    {
+      matches: [
         '*://*.br/*controlador.php?acao=*',
         '*://*.org/*controlador.php?acao=*',
       ],
