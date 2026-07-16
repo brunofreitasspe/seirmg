@@ -61,3 +61,44 @@ describe('parseOpcoesMarcador', () => {
     expect(parseOpcoesMarcador(doc)).toEqual([])
   })
 })
+
+import { parseFormularioMarcador } from './marcadorRapido'
+
+describe('parseFormularioMarcador', () => {
+  it('lê action e campos ocultos do formulário de Adicionar Marcador', () => {
+    const doc = new DOMParser().parseFromString(
+      `<form id="frmAndamentoMarcadorCadastro" action="controlador.php?acao=andamento_marcador_cadastrar&acao_origem=andamento_marcador_cadastrar&id_procedimento=123&infra_hash=abc">
+        <input type="hidden" id="hdnIdMarcador" name="hdnIdMarcador" value="" />
+        <input type="hidden" id="hdnIdProtocolo" name="hdnIdProtocolo" value="456" />
+        <textarea id="txaTexto" name="txaTexto"></textarea>
+      </form>`,
+      'text/html'
+    )
+
+    expect(parseFormularioMarcador(doc, 'frmAndamentoMarcadorCadastro')).toEqual({
+      actionUrl:
+        'controlador.php?acao=andamento_marcador_cadastrar&acao_origem=andamento_marcador_cadastrar&id_procedimento=123&infra_hash=abc',
+      campos: { hdnIdMarcador: '', hdnIdProtocolo: '456' },
+    })
+  })
+
+  it('lê o formulário de Remoção com hdnIdMarcador já pré-preenchido', () => {
+    const doc = new DOMParser().parseFromString(
+      `<form id="frmAndamentoMarcadorRemocao" action="controlador.php?acao=andamento_marcador_remover&id_procedimento=123&infra_hash=xyz">
+        <input type="hidden" id="hdnIdMarcador" name="hdnIdMarcador" value="3" />
+        <input type="hidden" id="hdnIdProtocolo" name="hdnIdProtocolo" value="456" />
+      </form>`,
+      'text/html'
+    )
+
+    expect(parseFormularioMarcador(doc, 'frmAndamentoMarcadorRemocao')).toEqual({
+      actionUrl: 'controlador.php?acao=andamento_marcador_remover&id_procedimento=123&infra_hash=xyz',
+      campos: { hdnIdMarcador: '3', hdnIdProtocolo: '456' },
+    })
+  })
+
+  it('retorna null quando o formulário não é encontrado', () => {
+    const doc = new DOMParser().parseFromString('<div></div>', 'text/html')
+    expect(parseFormularioMarcador(doc, 'frmAndamentoMarcadorCadastro')).toBeNull()
+  })
+})

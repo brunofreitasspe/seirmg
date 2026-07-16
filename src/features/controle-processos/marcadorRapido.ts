@@ -19,3 +19,18 @@ export function parseOpcoesMarcador(doc: Document): OpcaoMarcador[] {
     }))
     .filter((opcao) => opcao.id !== '' && opcao.id !== 'null')
 }
+
+export function parseFormularioMarcador(
+  doc: Document,
+  idFormulario: string
+): { actionUrl: string; campos: Record<string, string> } | null {
+  const form = doc.getElementById(idFormulario)
+  if (!form) return null
+
+  const campos: Record<string, string> = {}
+  Array.from(form.querySelectorAll<HTMLInputElement>('input[type="hidden"]')).forEach((input) => {
+    if (input.name) campos[input.name] = input.value
+  })
+
+  return { actionUrl: form.getAttribute('action') ?? '', campos }
+}
