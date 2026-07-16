@@ -113,18 +113,40 @@ function montarTabelaBlocos(linhas: string[]): string {
 
 describe('parseListaBlocosAssinatura', () => {
   it('lê número, href, descrição e classifica o estado de cada bloco', () => {
-    expect(true).toBe(true)
+    const html = montarTabelaBlocos([
+      montarLinhaBloco('154569', 'controlador.php?acao=rel_bloco_protocolo_listar&id_bloco=154569', 'Disponibilizado', '', 'Autorização'),
+    ])
+    document.body.innerHTML = html
+
+    expect(parseListaBlocosAssinatura(document.body)).toEqual([
+      {
+        numero: '154569',
+        descricao: 'Autorização',
+        href: 'controlador.php?acao=rel_bloco_protocolo_listar&id_bloco=154569',
+        estado: 'disponibilizado_para_area',
+      },
+    ])
   })
 
   it('lê várias linhas (infraTrClara e infraTrEscura)', () => {
-    expect(true).toBe(true)
+    const html = montarTabelaBlocos([
+      montarLinhaBloco('1', '/bloco/1', 'Retornado', '', 'Desc 1', 'infraTrClara'),
+      montarLinhaBloco('2', '/bloco/2', 'Aberto', '', 'Desc 2', 'infraTrEscura'),
+    ])
+    document.body.innerHTML = html
+
+    const itens = parseListaBlocosAssinatura(document.body)
+    expect(itens.map((item) => item.numero)).toEqual(['1', '2'])
+    expect(itens.map((item) => item.estado)).toEqual(['retornado', 'aberto'])
   })
 
   it('ignora a linha de cabeçalho (sem classe infraTrClara/infraTrEscura/trVermelha)', () => {
-    expect(true).toBe(true)
+    document.body.innerHTML = montarTabelaBlocos([])
+    expect(parseListaBlocosAssinatura(document.body)).toEqual([])
   })
 
   it('retorna lista vazia quando #tblBlocos não existe no documento', () => {
-    expect(true).toBe(true)
+    document.body.innerHTML = '<div></div>'
+    expect(parseListaBlocosAssinatura(document.body)).toEqual([])
   })
 })
