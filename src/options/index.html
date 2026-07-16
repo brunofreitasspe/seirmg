@@ -258,6 +258,16 @@
         <input type="number" id="assinatura-lembrete-intervalo" min="0" step="1" />
       </label>
       <br />
+      <label>
+        Checar bloco de assinatura a cada (minutos, 0 = desativado):
+        <input type="number" id="assinatura-checagem-oportunista-intervalo" min="0" step="1" />
+      </label>
+      <p style="font-size: 0.85em; color: #666; max-width: 480px;">
+        Checagem oportunista: só roda quando você já está navegando pelo Controle de Processos (não
+        cria nenhum alarme novo em segundo plano). Notifica quando um bloco fica disponível pra sua
+        área assinar.
+      </p>
+      <br />
       <button id="assinatura-salvar">Salvar</button>
       <span id="assinatura-status"></span>
     </section>
