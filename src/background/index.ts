@@ -2,7 +2,13 @@ import { processarItensBlocoAssinatura } from './blocoAssinaturaPipeline'
 import { fetchTextComGate, registrarNavegacaoReal, abrirCircuitBreaker } from './sessionGate'
 import { fetchText } from '../lib/result'
 import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
-import { NOTIFICATION_ID_PREFIX, NOTIFICATION_ID_LEMBRETE_BLOCO_ASSINATURA, notificarLembreteBlocoAssinatura } from './notifications/notify'
+import {
+  NOTIFICATION_ID_PREFIX,
+  NOTIFICATION_ID_LEMBRETE_BLOCO_ASSINATURA,
+  NOTIFICATION_ID_BLOCO_DISPONIBILIZADO_PREFIX,
+  notificarLembreteBlocoAssinatura,
+  notificarBlocoDisponibilizado,
+} from './notifications/notify'
 import { ALARME_LEMBRETE_BLOCO_ASSINATURA, agendarLembreteBlocoAssinatura } from './lembreteBlocoAssinatura'
 import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
 
@@ -11,6 +17,11 @@ const ACAO_BLOCO_ASSINATURA = 'bloco_assinatura_listar'
 interface MensagemItensBloco {
   type: 'seirmg:bloco-assinatura:itens'
   itens: BlocoAssinaturaItem[]
+}
+
+interface MensagemBlocoDisponibilizado {
+  type: 'seirmg:bloco-disponibilizado'
+  bloco: { numero: string; descricao: string }
 }
 
 interface MensagemSeiDetectado {
@@ -42,6 +53,14 @@ function ehMensagemItensBloco(mensagem: unknown): mensagem is MensagemItensBloco
     typeof mensagem === 'object' &&
     mensagem !== null &&
     (mensagem as { type?: unknown }).type === 'seirmg:bloco-assinatura:itens'
+  )
+}
+
+function ehMensagemBlocoDisponibilizado(mensagem: unknown): mensagem is MensagemBlocoDisponibilizado {
+  return (
+    typeof mensagem === 'object' &&
+    mensagem !== null &&
+    (mensagem as { type?: unknown }).type === 'seirmg:bloco-disponibilizado'
   )
 }
 
@@ -137,6 +156,11 @@ chrome.runtime.onMessage.addListener((mensagem) => {
 })
 
 chrome.runtime.onMessage.addListener((mensagem) => {
+  if (!ehMensagemBlocoDisponibilizado(mensagem)) return
+  notificarBlocoDisponibilizado(mensagem.bloco)
+})
+
+chrome.runtime.onMessage.addListener((mensagem) => {
   if (!ehMensagemSeiDetectado(mensagem)) return
   registrarNavegacaoReal().catch((error) => {
     console.error('[SEIRMG] Falha ao registrar navegação real:', error)
@@ -187,7 +211,8 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
 
     if (
       notificationId.startsWith(NOTIFICATION_ID_PREFIX) ||
-      notificationId === NOTIFICATION_ID_LEMBRETE_BLOCO_ASSINATURA
+      notificationId === NOTIFICATION_ID_LEMBRETE_BLOCO_ASSINATURA ||
+      notificationId.startsWith(NOTIFICATION_ID_BLOCO_DISPONIBILIZADO_PREFIX)
     ) {
       await abrirOuFocarAba(
         localConfig.baseUrlSei,
