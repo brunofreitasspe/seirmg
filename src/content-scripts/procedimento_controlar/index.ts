@@ -1855,9 +1855,20 @@ function substituirLinhaAtualizada(
     const linhaNova = docResposta.getElementById(idLinha)
     if (!linhaNova) return
 
-    const linhaAdotada = document.adoptNode(linhaNova)
-    linhaAntiga.replaceWith(linhaAdotada)
-    reaplicarTratamentosNasLinhasNovas(idTabela, config, [linhaAdotada])
+    // document.adoptNode() num nó vindo de um documento inerte do DOMParser (nunca chegou a
+    // ser renderizado de verdade) deixa controles de formulário com um bug visual real no
+    // Chromium -- o valor (.checked) alterna certinho, mas o quadradinho/check do checkbox
+    // nunca aparece na tela (confirmado ao vivo). Reconstruir via innerHTML no documento AO
+    // VIVO (mesmo parser usado pro resto da página) evita o bug -- precisa envolver num
+    // <table><tbody> porque um <tr> sozinho fora desse contexto é descartado pelo parser HTML
+    // (foster parenting, o mesmo motivo documentado nos testes de pontePrincipal.test.ts).
+    const wrapper = document.createElement('table')
+    wrapper.innerHTML = `<tbody>${linhaNova.outerHTML}</tbody>`
+    const linhaReconstruida = wrapper.querySelector('tr')
+    if (!linhaReconstruida) return
+
+    linhaAntiga.replaceWith(linhaReconstruida)
+    reaplicarTratamentosNasLinhasNovas(idTabela, config, [linhaReconstruida])
   } catch (error) {
     console.error('[SEIRMG] Falha ao atualizar a linha do processo após marcador:', error)
   }
