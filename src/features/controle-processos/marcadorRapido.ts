@@ -9,15 +9,20 @@ export interface OpcaoMarcador {
   icone: string
 }
 
+// #selMarcador é um <select> nativo no HTML bruto do servidor (confirmado ao vivo via "Ver
+// código-fonte" numa instância SEI real) -- o widget customizado com classes .dd-container/
+// .dd-options (ddslick) só existe depois que o JS da própria página transforma o <select> no
+// carregamento (onload="inicializar()"), o que nunca roda aqui (só fazemos fetch + parse do
+// HTML, sem executar nenhum script da página).
 export function parseOpcoesMarcador(doc: Document): OpcaoMarcador[] {
-  const opcoes = Array.from(doc.querySelectorAll('#selMarcador .dd-options .dd-option'))
+  const opcoes = Array.from(doc.querySelectorAll<HTMLOptionElement>('#selMarcador option'))
   return opcoes
+    .filter((opcao) => opcao.value !== '' && opcao.value !== 'null')
     .map((opcao) => ({
-      id: opcao.querySelector<HTMLInputElement>('.dd-option-value')?.value ?? '',
-      nome: opcao.querySelector('.dd-option-text')?.textContent?.trim() ?? '',
-      icone: opcao.querySelector<HTMLImageElement>('.dd-option-image')?.getAttribute('src') ?? '',
+      id: opcao.value,
+      nome: opcao.textContent?.trim() ?? '',
+      icone: opcao.getAttribute('data-imagesrc') ?? '',
     }))
-    .filter((opcao) => opcao.id !== '' && opcao.id !== 'null')
 }
 
 export function parseFormularioMarcador(

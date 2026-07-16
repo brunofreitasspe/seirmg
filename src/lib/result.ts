@@ -27,7 +27,15 @@ export async function fetchText(
       if (!response.ok) {
         return { ok: false, error: `HTTP ${response.status}` }
       }
-      const text = await response.text()
+      // response.text() sempre decodifica como UTF-8, ignorando o charset do header
+      // Content-Type (limitação conhecida do fetch(), ao contrário do XMLHttpRequest antigo)
+      // -- o SEI serve HTML em iso-8859-1, então acentos saíam corrompidos. Decodifica com o
+      // charset real do header quando presente, caindo pra utf-8 (comportamento de antes) se
+      // o header não declarar nenhum.
+      const buffer = await response.arrayBuffer()
+      const charsetMatch = response.headers.get('content-type')?.match(/charset=([^;]+)/i)
+      const charset = charsetMatch ? charsetMatch[1].trim() : 'utf-8'
+      const text = new TextDecoder(charset).decode(buffer)
       return { ok: true, data: text }
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)

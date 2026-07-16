@@ -219,9 +219,52 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     margin-bottom: 10px;
   }
   .seirmg-marcador-rapido-select {
-    width: 100%;
+    position: relative;
     margin-bottom: 10px;
+  }
+  .seirmg-marcador-rapido-select-atual {
+    width: 100%;
     box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    background: #fff;
+    cursor: pointer;
+    text-align: left;
+    font: inherit;
+  }
+  .seirmg-marcador-rapido-select-lista {
+    position: absolute;
+    z-index: 1;
+    top: 100%;
+    left: 0;
+    right: 0;
+    max-height: 220px;
+    overflow-y: auto;
+    margin: 2px 0 0;
+    padding: 0;
+    list-style: none;
+    background: #fff;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .15);
+  }
+  .seirmg-marcador-rapido-opcao {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    cursor: pointer;
+  }
+  .seirmg-marcador-rapido-opcao:hover {
+    background: #f0f4f8;
+  }
+  .seirmg-marcador-rapido-opcao-icone {
+    width: 16px;
+    height: 16px;
   }
   .seirmg-marcador-rapido-textarea {
     width: 100%;
@@ -1586,7 +1629,15 @@ function desabilitarSelecaoNaLinha(linha: Element): void {
 
 function reaplicarTratamentosNasLinhasNovas(idTabela: string, config: SyncConfig, linhas: Element[]): void {
   const ordemOriginal = ordemOriginalPorTabela.get(idTabela) ?? []
-  const novosIds = linhas.map((linha, index) => linha.id || String(ordemOriginal.length + index))
+  // Filtra ids que já estavam na ordem (caso de uma linha existente sendo SUBSTITUÍDA, não
+  // uma linha genuinamente nova vinda da rolagem infinita) -- sem isso, o id ficava duplicado
+  // (uma vez na posição original, outra no fim), e reordenarLinhasPorId (via appendChild, que
+  // MOVE o nó já presente na tbody) acabava jogando a linha pro fim da tabela na última
+  // ocorrência do id no array.
+  const idsExistentes = new Set(ordemOriginal)
+  const novosIds = linhas
+    .map((linha, index) => linha.id || String(ordemOriginal.length + index))
+    .filter((id) => !idsExistentes.has(id))
   ordemOriginalPorTabela.set(idTabela, [...ordemOriginal, ...novosIds])
 
   aplicarPrazosEmLinhas(config.controleProcessos.prazos, linhas)
@@ -1599,7 +1650,6 @@ function reaplicarTratamentosNasLinhasNovas(idTabela: string, config: SyncConfig
   aplicarFiltroFavoritoNaTabela(idTabela)
   reaplicarFiltrosAposNovasLinhas.forEach((reaplicar) => reaplicar())
   reaplicarOrdemDaTabela(idTabela)
-  linhas.forEach((linha) => desabilitarSelecaoNaLinha(linha))
   renderizarPainelFavoritos()
 }
 
@@ -1852,6 +1902,98 @@ async function confirmarMarcador(
   }
 }
 
+function criarItemSeletorMarcador(opcao: OpcaoMarcador, aoEscolher: (opcao: OpcaoMarcador) => void): HTMLLIElement {
+  const item = document.createElement('li')
+  item.className = 'seirmg-marcador-rapido-opcao'
+
+  if (opcao.icone) {
+    const img = document.createElement('img')
+    img.className = 'seirmg-marcador-rapido-opcao-icone'
+    img.src = opcao.icone
+    item.appendChild(img)
+  }
+
+  const texto = document.createElement('span')
+  texto.textContent = opcao.nome
+  item.appendChild(texto)
+
+  item.addEventListener('click', () => aoEscolher(opcao))
+  return item
+}
+
+interface SeletorMarcador {
+  elemento: HTMLElement
+  obterValor: () => string
+  fecharLista: () => void
+}
+
+// #selMarcador na tela real do SEI é um <select> nativo (sem imagem inline possível em
+// <option>), mas cada <option> carrega data-imagesrc com o ícone colorido do marcador
+// (confirmado ao vivo). Como o popup já não usa um <select> de verdade, esse widget próprio
+// mostra o ícone + nome de cada opção na lista, igual ao "dd" nativo do SEI depois que o
+// jQuery ddslick monta em cima do <select> (JS que nunca roda no nosso fetch/parse).
+function criarSeletorMarcador(
+  opcoes: OpcaoMarcador[],
+  valorInicial: string,
+  rotuloPlaceholder: string | null
+): SeletorMarcador {
+  let valorAtual = valorInicial
+
+  const container = document.createElement('div')
+  container.className = 'seirmg-marcador-rapido-select'
+
+  const botaoAtual = document.createElement('button')
+  botaoAtual.type = 'button'
+  botaoAtual.className = 'seirmg-marcador-rapido-select-atual'
+
+  const lista = document.createElement('ul')
+  lista.className = 'seirmg-marcador-rapido-select-lista'
+  lista.hidden = true
+
+  function atualizarBotaoAtual(): void {
+    botaoAtual.innerHTML = ''
+    const opcaoAtual = opcoes.find((opcao) => opcao.id === valorAtual)
+    if (!opcaoAtual) {
+      botaoAtual.textContent = rotuloPlaceholder ?? ''
+      return
+    }
+    if (opcaoAtual.icone) {
+      const img = document.createElement('img')
+      img.className = 'seirmg-marcador-rapido-opcao-icone'
+      img.src = opcaoAtual.icone
+      botaoAtual.appendChild(img)
+    }
+    const texto = document.createElement('span')
+    texto.textContent = opcaoAtual.nome
+    botaoAtual.appendChild(texto)
+  }
+
+  function escolher(opcao: OpcaoMarcador): void {
+    valorAtual = opcao.id
+    atualizarBotaoAtual()
+    lista.hidden = true
+  }
+
+  opcoes.forEach((opcao) => lista.appendChild(criarItemSeletorMarcador(opcao, escolher)))
+
+  botaoAtual.addEventListener('click', (evento) => {
+    evento.stopPropagation()
+    lista.hidden = !lista.hidden
+  })
+
+  atualizarBotaoAtual()
+  container.appendChild(botaoAtual)
+  container.appendChild(lista)
+
+  return {
+    elemento: container,
+    obterValor: () => valorAtual,
+    fecharLista: () => {
+      lista.hidden = true
+    },
+  }
+}
+
 function abrirPopupMarcador(
   acao: AcaoMarcadorRapido,
   opcoes: OpcaoMarcador[],
@@ -1868,7 +2010,10 @@ function abrirPopupMarcador(
 
   const popup = document.createElement('div')
   popup.className = 'seirmg-marcador-rapido-popup'
-  popup.addEventListener('click', (evento) => evento.stopPropagation())
+  popup.addEventListener('click', (evento) => {
+    evento.stopPropagation()
+    seletor.fecharLista()
+  })
 
   const titulo = document.createElement('div')
   titulo.className = 'seirmg-marcador-rapido-titulo'
@@ -1880,15 +2025,9 @@ function abrirPopupMarcador(
   erro.style.display = 'none'
   popup.appendChild(erro)
 
-  const select = document.createElement('select')
-  select.className = 'seirmg-marcador-rapido-select'
-  if (acao.tipo === 'adicionar') {
-    select.appendChild(new Option('Selecione um marcador', ''))
-  }
-  opcoes.forEach((opcao) => select.appendChild(new Option(opcao.nome, opcao.id)))
-  const marcadorAtual = formularioMarcador.campos.hdnIdMarcador
-  if (marcadorAtual) select.value = marcadorAtual
-  popup.appendChild(select)
+  const rotuloPlaceholder = acao.tipo === 'adicionar' ? 'Selecione um marcador' : null
+  const seletor = criarSeletorMarcador(opcoes, formularioMarcador.campos.hdnIdMarcador, rotuloPlaceholder)
+  popup.appendChild(seletor.elemento)
 
   let textarea: HTMLTextAreaElement | null = null
   if (acao.tipo === 'adicionar') {
@@ -1918,7 +2057,7 @@ function abrirPopupMarcador(
       idProcedimento,
       idTabela,
       config,
-      select.value,
+      seletor.obterValor(),
       textarea?.value ?? '',
       erro
     ).finally(() => {
