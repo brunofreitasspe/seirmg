@@ -1,5 +1,7 @@
 import { EVENTO_CLIQUE_MARCADOR_RAPIDO } from './protocoloMarcadorRapido'
 import type { ChaveAcaoMarcadorRapido, DetalheCliqueMarcadorRapido } from './protocoloMarcadorRapido'
+import { EVENTO_CLIQUE_ATRIBUICAO_RAPIDA } from './protocoloAtribuicaoRapida'
+import type { DetalheCliqueAtribuicaoRapida } from './protocoloAtribuicaoRapida'
 
 const IDS_TABELAS = ['#tblProcessosDetalhado', '#tblProcessosGerados', '#tblProcessosRecebidos']
 
@@ -48,6 +50,45 @@ export function criarPonteMarcadorRapidoMainWorld(
 
     const detalhe: DetalheCliqueMarcadorRapido = { chave, quantidade }
     janelaGlobal.dispatchEvent(new CustomEvent(EVENTO_CLIQUE_MARCADOR_RAPIDO, { detail: detalhe }))
+  }
+
+  documentoGlobal.addEventListener('click', tratarClique, true)
+
+  return {
+    destruir(): void {
+      documentoGlobal.removeEventListener('click', tratarClique, true)
+    },
+  }
+}
+
+export interface PonteAtribuicaoRapidaMainWorld {
+  destruir: () => void
+}
+
+// Mesmo motivo do bridge de marcador (ver comentário acima): a interceptação (contagem de
+// selecionados) e o preventDefault/stopImmediatePropagation do onclick nativo precisam acontecer
+// aqui, no main world -- um listener do isolated world não impede o onclick inline de rodar.
+export function criarPonteAtribuicaoRapidaMainWorld(
+  documentoGlobal: Document,
+  janelaGlobal: Window
+): PonteAtribuicaoRapidaMainWorld {
+  function tratarClique(evento: Event): void {
+    const alvo = (evento as MouseEvent).target
+    if (!(alvo instanceof Element)) return
+
+    const link = alvo.closest<HTMLAnchorElement>(
+      '#divComandos a[onclick*="procedimento_atribuicao_cadastrar"]'
+    )
+    if (!link) return
+
+    const quantidade = contarCheckboxesMarcados(documentoGlobal)
+    if (quantidade < 1) return
+
+    evento.preventDefault()
+    evento.stopImmediatePropagation()
+
+    const detalhe: DetalheCliqueAtribuicaoRapida = { quantidade }
+    janelaGlobal.dispatchEvent(new CustomEvent(EVENTO_CLIQUE_ATRIBUICAO_RAPIDA, { detail: detalhe }))
   }
 
   documentoGlobal.addEventListener('click', tratarClique, true)
