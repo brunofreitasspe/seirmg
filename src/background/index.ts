@@ -6,9 +6,11 @@ import {
   NOTIFICATION_ID_PREFIX,
   NOTIFICATION_ID_LEMBRETE_BLOCO_ASSINATURA,
   NOTIFICATION_ID_BLOCO_DISPONIBILIZADO_PREFIX,
+  NOTIFICATION_ID_TAREFA_VENCIDA_PREFIX,
   notificarLembreteBlocoAssinatura,
   notificarBlocoDisponibilizado,
 } from './notifications/notify'
+import { processarTarefasVencidas } from './tarefasPipeline'
 import { ALARME_LEMBRETE_BLOCO_ASSINATURA, agendarLembreteBlocoAssinatura } from './lembreteBlocoAssinatura'
 import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
 
@@ -22,6 +24,11 @@ interface MensagemItensBloco {
 interface MensagemBlocoDisponibilizado {
   type: 'seirmg:bloco-disponibilizado'
   bloco: { numero: string; descricao: string }
+}
+
+interface MensagemTarefasVencidas {
+  type: 'seirmg:tarefas-vencidas'
+  tarefas: Array<{ id: string; titulo: string }>
 }
 
 interface MensagemSeiDetectado {
@@ -61,6 +68,14 @@ function ehMensagemBlocoDisponibilizado(mensagem: unknown): mensagem is Mensagem
     typeof mensagem === 'object' &&
     mensagem !== null &&
     (mensagem as { type?: unknown }).type === 'seirmg:bloco-disponibilizado'
+  )
+}
+
+function ehMensagemTarefasVencidas(mensagem: unknown): mensagem is MensagemTarefasVencidas {
+  return (
+    typeof mensagem === 'object' &&
+    mensagem !== null &&
+    (mensagem as { type?: unknown }).type === 'seirmg:tarefas-vencidas'
   )
 }
 
@@ -161,6 +176,13 @@ chrome.runtime.onMessage.addListener((mensagem) => {
 })
 
 chrome.runtime.onMessage.addListener((mensagem) => {
+  if (!ehMensagemTarefasVencidas(mensagem)) return
+  processarTarefasVencidas(mensagem.tarefas).catch((error) => {
+    console.error('[SEIRMG] Falha ao processar tarefas vencidas:', error)
+  })
+})
+
+chrome.runtime.onMessage.addListener((mensagem) => {
   if (!ehMensagemSeiDetectado(mensagem)) return
   registrarNavegacaoReal().catch((error) => {
     console.error('[SEIRMG] Falha ao registrar navegação real:', error)
@@ -218,6 +240,10 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
         localConfig.baseUrlSei,
         `${localConfig.baseUrlSei}/controlador.php?acao=${ACAO_BLOCO_ASSINATURA}`
       )
+    } else if (notificationId.startsWith(NOTIFICATION_ID_TAREFA_VENCIDA_PREFIX)) {
+      // Sem tela dedicada de tarefas -- o painel convive em qualquer página do SEI, então só
+      // focamos/abrimos a aba do SEI onde o usuário já estava.
+      await abrirOuFocarAba(localConfig.baseUrlSei, localConfig.baseUrlSei)
     }
 
     chrome.notifications.clear(notificationId)
