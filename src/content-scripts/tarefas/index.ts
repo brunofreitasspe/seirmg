@@ -12,6 +12,9 @@ import alertTriangleIconSvg from 'lucide-static/icons/alert-triangle.svg?raw'
 import clockIconSvg from 'lucide-static/icons/clock.svg?raw'
 import minusIconSvg from 'lucide-static/icons/minus.svg?raw'
 import gripVerticalIconSvg from 'lucide-static/icons/grip-vertical.svg?raw'
+import checkIconSvg from 'lucide-static/icons/check.svg?raw'
+import trash2IconSvg from 'lucide-static/icons/trash-2.svg?raw'
+import plusIconSvg from 'lucide-static/icons/plus.svg?raw'
 
 const ESTILO_TAREFAS = `
   #seirmg-tarefas-fab {
@@ -202,6 +205,86 @@ const ESTILO_TAREFAS = `
   .seirmg-theme-black #seirmg-tarefas-divisor {
     background: #2c3033;
   }
+  .seirmg-tarefas-acao {
+    display: none;
+    gap: 4px;
+    color: #adb3b8;
+  }
+  .seirmg-tarefas-linha:hover .seirmg-tarefas-acao {
+    display: flex;
+  }
+  .seirmg-tarefas-linha:hover .seirmg-tarefas-linha-data {
+    display: none;
+  }
+  .seirmg-tarefas-acao svg {
+    width: 12px;
+    height: 12px;
+  }
+  .seirmg-tarefas-acao button {
+    background: none;
+    border: none;
+    padding: 2px;
+    color: inherit;
+    cursor: pointer;
+  }
+  .seirmg-tarefas-edicao {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    padding: 8px 4px;
+    border: 1px solid #dbe9fb;
+    background: #f5faff;
+    border-radius: 8px;
+    margin-bottom: 4px;
+  }
+  .seirmg-tarefas-input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 5px 7px;
+    font: inherit;
+    font-size: 11.5px;
+    border: 1px solid #dbe9fb;
+    border-radius: 6px;
+  }
+  .seirmg-tarefas-input:disabled {
+    background: #eee;
+    color: #888;
+  }
+  .seirmg-tarefas-btn-fechar-edicao {
+    align-self: flex-end;
+    background: var(--seirmg-accent-color, #017fff);
+    color: #fff;
+    border: none;
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-size: 11px;
+    cursor: pointer;
+  }
+  #seirmg-tarefas-barra {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 10px 16px;
+    border-top: 1px solid #f0f2f4;
+    flex-shrink: 0;
+  }
+  #seirmg-tarefas-add {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: var(--seirmg-accent-color, #017fff);
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 6px 14px rgba(1, 127, 255, .4);
+    border: 3px solid #fff;
+    cursor: pointer;
+  }
+  #seirmg-tarefas-add svg {
+    width: 18px;
+    height: 18px;
+  }
 `
 
 function injetarEstilos(): void {
@@ -225,9 +308,15 @@ const ORDEM_GRUPOS: GrupoUrgencia[] = ['atrasadas', 'hoje', 'proximas', 'semPraz
 const LIMITE_CONCLUIDAS_RECENTES = 3
 
 function montarLinhaTarefa(tarefa: Tarefa, concluidaRecente: boolean, hoje: Date): HTMLElement {
+  if (idEmEdicao === tarefa.id) return montarLinhaEdicao(tarefa)
+
   const linha = document.createElement('div')
   linha.className = concluidaRecente ? 'seirmg-tarefas-linha concluida' : 'seirmg-tarefas-linha'
   linha.dataset.id = tarefa.id
+  linha.addEventListener('click', (evento) => {
+    if ((evento.target as HTMLElement).closest('.seirmg-tarefas-acao')) return
+    if (!concluidaRecente) abrirEdicao(tarefa.id)
+  })
 
   const ponto = document.createElement('span')
   ponto.className = `seirmg-tarefas-ponto ${tarefa.prioridade}`
@@ -238,10 +327,34 @@ function montarLinhaTarefa(tarefa: Tarefa, concluidaRecente: boolean, hoje: Date
   titulo.textContent = tarefa.titulo || '(sem título)'
   linha.appendChild(titulo)
 
+  const acoes = document.createElement('span')
+  acoes.className = 'seirmg-tarefas-acao'
+  const botaoConcluir = document.createElement('button')
+  botaoConcluir.type = 'button'
+  botaoConcluir.title = concluidaRecente ? 'Reabrir' : 'Concluir'
+  botaoConcluir.innerHTML = checkIconSvg
+  botaoConcluir.addEventListener('click', (evento) => {
+    evento.stopPropagation()
+    alternarConcluida(tarefa.id)
+  })
+  acoes.appendChild(botaoConcluir)
+
+  const botaoExcluir = document.createElement('button')
+  botaoExcluir.type = 'button'
+  botaoExcluir.title = 'Excluir'
+  botaoExcluir.innerHTML = trash2IconSvg
+  botaoExcluir.addEventListener('click', (evento) => {
+    evento.stopPropagation()
+    excluirTarefa(tarefa.id)
+  })
+  acoes.appendChild(botaoExcluir)
+  linha.appendChild(acoes)
+
   const data = document.createElement('span')
   const vencimento = tarefa.vencimento ? new Date(tarefa.vencimento) : null
   const atrasada = !concluidaRecente && !!vencimento && vencimento < hoje
-  data.className = atrasada ? 'seirmg-tarefas-linha-data atrasada' : 'seirmg-tarefas-linha-data'
+  data.className = atrasada ? 'seirmg-tarefas-linha-data' : 'seirmg-tarefas-linha-data'
+  if (atrasada) data.classList.add('atrasada')
   data.textContent = concluidaRecente
     ? '✓ concluída'
     : tarefa.vencimento
@@ -250,6 +363,64 @@ function montarLinhaTarefa(tarefa: Tarefa, concluidaRecente: boolean, hoje: Date
   linha.appendChild(data)
 
   return linha
+}
+
+function montarLinhaEdicao(tarefa: Tarefa): HTMLElement {
+  const container = document.createElement('div')
+  container.className = 'seirmg-tarefas-edicao'
+
+  const inputTitulo = document.createElement('textarea')
+  inputTitulo.className = 'seirmg-tarefas-input'
+  inputTitulo.rows = 2
+  inputTitulo.placeholder = 'Título...'
+  inputTitulo.value = tarefa.titulo
+  inputTitulo.disabled = !!tarefa.bloqueada
+  inputTitulo.addEventListener('input', () => atualizarCampoTarefa(tarefa.id, { titulo: inputTitulo.value }))
+  container.appendChild(inputTitulo)
+
+  const inputProcesso = document.createElement('input')
+  inputProcesso.type = 'text'
+  inputProcesso.className = 'seirmg-tarefas-input'
+  inputProcesso.placeholder = 'Processo SEI...'
+  inputProcesso.value = tarefa.processo
+  inputProcesso.disabled = !!tarefa.bloqueada
+  inputProcesso.addEventListener('input', () =>
+    atualizarCampoTarefa(tarefa.id, { processo: inputProcesso.value })
+  )
+  container.appendChild(inputProcesso)
+
+  const inputVencimento = document.createElement('input')
+  inputVencimento.type = 'date'
+  inputVencimento.className = 'seirmg-tarefas-input'
+  inputVencimento.value = tarefa.vencimento
+  inputVencimento.disabled = !!tarefa.bloqueada
+  inputVencimento.addEventListener('change', () => {
+    atualizarCampoTarefa(tarefa.id, { vencimento: inputVencimento.value })
+    renderizarPainel()
+  })
+  container.appendChild(inputVencimento)
+
+  const selectPrioridade = document.createElement('select')
+  selectPrioridade.className = 'seirmg-tarefas-input'
+  ;(['baixa', 'media', 'alta'] as const).forEach((valor) => {
+    const rotulo = valor === 'baixa' ? 'Baixa' : valor === 'media' ? 'Média' : 'Alta'
+    const opcao = new Option(rotulo, valor, false, tarefa.prioridade === valor)
+    selectPrioridade.appendChild(opcao)
+  })
+  selectPrioridade.addEventListener('change', () => {
+    atualizarCampoTarefa(tarefa.id, { prioridade: selectPrioridade.value as Tarefa['prioridade'] })
+    renderizarPainel()
+  })
+  container.appendChild(selectPrioridade)
+
+  const botaoFechar = document.createElement('button')
+  botaoFechar.type = 'button'
+  botaoFechar.textContent = 'Concluído'
+  botaoFechar.className = 'seirmg-tarefas-btn-fechar-edicao'
+  botaoFechar.addEventListener('click', fecharEdicao)
+  container.appendChild(botaoFechar)
+
+  return container
 }
 
 function renderizarPainel(): void {
@@ -323,6 +494,9 @@ function montarEsqueleto(): void {
       <span id="seirmg-tarefas-titulo">Tarefas<span id="seirmg-tarefas-contagem">0 pendentes</span></span>
     </div>
     <div id="seirmg-tarefas-corpo"></div>
+    <div id="seirmg-tarefas-barra">
+      <button id="seirmg-tarefas-add" title="Nova tarefa">${plusIconSvg}</button>
+    </div>
   `
   document.body.appendChild(painel)
 
@@ -330,6 +504,95 @@ function montarEsqueleto(): void {
     const aberto = painel.style.display === 'flex'
     painel.style.display = aberto ? 'none' : 'flex'
   })
+
+  document.getElementById('seirmg-tarefas-add')?.addEventListener('click', criarTarefa)
+
+  const botaoMover = document.getElementById('seirmg-tarefas-mover')
+  let arrastando = false
+  let deslocX = 0
+  let deslocY = 0
+
+  botaoMover?.addEventListener('mousedown', (evento) => {
+    arrastando = true
+    const rect = painel.getBoundingClientRect()
+    deslocX = evento.clientX - rect.left
+    deslocY = evento.clientY - rect.top
+    document.body.style.userSelect = 'none'
+  })
+
+  document.addEventListener('mousemove', (evento) => {
+    if (!arrastando) return
+    painel.style.top = `${evento.clientY - deslocY}px`
+    painel.style.left = `${evento.clientX - deslocX}px`
+    painel.style.right = 'auto'
+    painel.style.bottom = 'auto'
+  })
+
+  document.addEventListener('mouseup', () => {
+    arrastando = false
+    document.body.style.userSelect = ''
+  })
+}
+
+async function salvarTarefas(): Promise<void> {
+  const store = createSyncConfigStore()
+  const config = await store.get()
+  await store.set({ ...config, tarefas: { ...config.tarefas, itens: tarefasAtuais } })
+}
+
+function criarTarefa(): void {
+  const nova: Tarefa = {
+    id: crypto.randomUUID(),
+    titulo: '',
+    processo: '',
+    vencimento: '',
+    prioridade: 'media',
+    concluido: false,
+  }
+  tarefasAtuais = [...tarefasAtuais, nova]
+  salvarTarefas().catch((error) => console.error('[SEIRMG] Falha ao salvar tarefa nova:', error))
+  renderizarPainel()
+  atualizarBadge()
+  abrirEdicao(nova.id)
+}
+
+function alternarConcluida(id: string): void {
+  tarefasAtuais = tarefasAtuais.map((tarefa) =>
+    tarefa.id === id
+      ? {
+          ...tarefa,
+          concluido: !tarefa.concluido,
+          concluidoEm: !tarefa.concluido ? new Date().toISOString() : undefined,
+        }
+      : tarefa
+  )
+  salvarTarefas().catch((error) => console.error('[SEIRMG] Falha ao salvar conclusão de tarefa:', error))
+  renderizarPainel()
+  atualizarBadge()
+}
+
+function excluirTarefa(id: string): void {
+  tarefasAtuais = tarefasAtuais.filter((tarefa) => tarefa.id !== id)
+  salvarTarefas().catch((error) => console.error('[SEIRMG] Falha ao salvar exclusão de tarefa:', error))
+  renderizarPainel()
+  atualizarBadge()
+}
+
+function atualizarCampoTarefa(id: string, campos: Partial<Tarefa>): void {
+  tarefasAtuais = tarefasAtuais.map((tarefa) => (tarefa.id === id ? { ...tarefa, ...campos } : tarefa))
+  salvarTarefas().catch((error) => console.error('[SEIRMG] Falha ao salvar edição de tarefa:', error))
+}
+
+let idEmEdicao: string | null = null
+
+function abrirEdicao(id: string): void {
+  idEmEdicao = id
+  renderizarPainel()
+}
+
+function fecharEdicao(): void {
+  idEmEdicao = null
+  renderizarPainel()
 }
 
 async function bootstrap(): Promise<void> {
