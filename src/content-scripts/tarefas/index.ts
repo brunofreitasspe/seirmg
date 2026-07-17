@@ -15,6 +15,11 @@ import gripVerticalIconSvg from 'lucide-static/icons/grip-vertical.svg?raw'
 import checkIconSvg from 'lucide-static/icons/check.svg?raw'
 import trash2IconSvg from 'lucide-static/icons/trash-2.svg?raw'
 import plusIconSvg from 'lucide-static/icons/plus.svg?raw'
+import { montarExportacao, parseImportacao, tarefasImportadasParaAdicionar } from '../../features/tarefas/exportar'
+import downloadIconSvg from 'lucide-static/icons/download.svg?raw'
+import uploadIconSvg from 'lucide-static/icons/upload.svg?raw'
+import circleHelpIconSvg from 'lucide-static/icons/circle-help.svg?raw'
+import checkCircle2IconSvg from 'lucide-static/icons/check-circle-2.svg?raw'
 
 const ESTILO_TAREFAS = `
   #seirmg-tarefas-fab {
@@ -285,6 +290,83 @@ const ESTILO_TAREFAS = `
     width: 18px;
     height: 18px;
   }
+  #seirmg-tarefas-popup-historico,
+  #seirmg-tarefas-popup-ajuda {
+    position: fixed;
+    bottom: 70px;
+    right: 300px;
+    width: 280px;
+    max-height: 65vh;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #edf0f2;
+    border-radius: 14px;
+    padding: 12px;
+    z-index: 999999;
+    box-shadow: 0 14px 34px rgba(0, 0, 0, .16);
+    font-size: 11.5px;
+    font-family: -apple-system, "Segoe UI", Arial, sans-serif;
+    color: #1a1d1f;
+  }
+  .seirmg-tarefas-popup-cabecalho {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-weight: bold;
+    margin-bottom: 8px;
+    padding-bottom: 4px;
+    border-bottom: 1px solid #f0f2f4;
+  }
+  .seirmg-tarefas-popup-vazio {
+    color: #adb3b8;
+    font-style: italic;
+  }
+  .seirmg-tarefas-popup-item {
+    background: #fbfcfd;
+    border: 1px solid #f0f2f4;
+    border-radius: 8px;
+    padding: 7px 9px;
+    margin-bottom: 6px;
+  }
+  .seirmg-tarefas-popup-item-titulo {
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  .seirmg-tarefas-popup-item-acoes {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+  }
+  .seirmg-tarefas-popup-item-acoes button {
+    font-size: 10px;
+    padding: 3px 7px;
+    border-radius: 6px;
+    border: none;
+    background: #eaf4ff;
+    color: var(--seirmg-accent-color, #017fff);
+    cursor: pointer;
+  }
+  #seirmg-tarefas-popup-ajuda h2 {
+    margin-top: 0;
+    font-size: 13.5px;
+  }
+  #seirmg-tarefas-popup-ajuda h3 {
+    font-size: 12px;
+    margin: 10px 0 4px;
+  }
+  #seirmg-tarefas-popup-ajuda ul {
+    padding-left: 16px;
+    margin: 4px 0;
+  }
+  #seirmg-tarefas-popup-ajuda button {
+    margin-top: 10px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    border: none;
+    background: var(--seirmg-accent-color, #017fff);
+    color: #fff;
+    cursor: pointer;
+  }
 `
 
 function injetarEstilos(): void {
@@ -495,8 +577,13 @@ function montarEsqueleto(): void {
     </div>
     <div id="seirmg-tarefas-corpo"></div>
     <div id="seirmg-tarefas-barra">
+      <button id="seirmg-tarefas-historico" title="Concluídas">${checkCircle2IconSvg}</button>
+      <button id="seirmg-tarefas-exportar" title="Exportar">${downloadIconSvg}</button>
       <button id="seirmg-tarefas-add" title="Nova tarefa">${plusIconSvg}</button>
+      <button id="seirmg-tarefas-importar" title="Importar">${uploadIconSvg}</button>
+      <button id="seirmg-tarefas-ajuda" title="Ajuda">${circleHelpIconSvg}</button>
     </div>
+    <input type="file" id="seirmg-tarefas-input-importar" accept="application/json" style="display:none" />
   `
   document.body.appendChild(painel)
 
@@ -506,6 +593,25 @@ function montarEsqueleto(): void {
   })
 
   document.getElementById('seirmg-tarefas-add')?.addEventListener('click', criarTarefa)
+
+  document.getElementById('seirmg-tarefas-historico')?.addEventListener('click', abrirPopupHistorico)
+  document.getElementById('seirmg-tarefas-exportar')?.addEventListener('click', exportarTarefas)
+  document.getElementById('seirmg-tarefas-ajuda')?.addEventListener('click', abrirPopupAjuda)
+
+  const inputImportar = document.getElementById('seirmg-tarefas-input-importar') as HTMLInputElement | null
+  document.getElementById('seirmg-tarefas-importar')?.addEventListener('click', () => inputImportar?.click())
+  inputImportar?.addEventListener('change', () => {
+    const arquivo = inputImportar.files?.[0]
+    if (arquivo) importarTarefas(arquivo)
+    inputImportar.value = ''
+  })
+
+  document.addEventListener('click', (evento) => {
+    const alvo = evento.target as HTMLElement
+    if (popupHistoricoAtual && !popupHistoricoAtual.contains(alvo) && alvo.id !== 'seirmg-tarefas-historico') {
+      fecharPopupHistorico()
+    }
+  })
 
   const botaoMover = document.getElementById('seirmg-tarefas-mover')
   let arrastando = false
@@ -595,6 +701,135 @@ function fecharEdicao(): void {
   renderizarPainel()
 }
 
+let popupHistoricoAtual: HTMLElement | null = null
+
+function fecharPopupHistorico(): void {
+  popupHistoricoAtual?.remove()
+  popupHistoricoAtual = null
+}
+
+function abrirPopupHistorico(): void {
+  fecharPopupHistorico()
+
+  const concluidas = tarefasAtuais.filter((tarefa) => tarefa.concluido)
+
+  const popup = document.createElement('div')
+  popup.id = 'seirmg-tarefas-popup-historico'
+  popup.addEventListener('click', (evento) => evento.stopPropagation())
+
+  const cabecalho = document.createElement('div')
+  cabecalho.className = 'seirmg-tarefas-popup-cabecalho'
+  cabecalho.innerHTML = `<span>${checkCircle2IconSvg} Concluídas</span><small>${concluidas.length} item(ns)</small>`
+  popup.appendChild(cabecalho)
+
+  if (concluidas.length === 0) {
+    const vazio = document.createElement('p')
+    vazio.className = 'seirmg-tarefas-popup-vazio'
+    vazio.textContent = 'Nenhuma tarefa concluída ainda.'
+    popup.appendChild(vazio)
+  }
+
+  concluidas.forEach((tarefa) => {
+    const item = document.createElement('div')
+    item.className = 'seirmg-tarefas-popup-item'
+
+    const titulo = document.createElement('div')
+    titulo.className = 'seirmg-tarefas-popup-item-titulo'
+    titulo.textContent = tarefa.titulo || '(sem título)'
+    item.appendChild(titulo)
+
+    const acoes = document.createElement('div')
+    acoes.className = 'seirmg-tarefas-popup-item-acoes'
+
+    const reabrir = document.createElement('button')
+    reabrir.type = 'button'
+    reabrir.textContent = 'Reabrir'
+    reabrir.addEventListener('click', () => {
+      alternarConcluida(tarefa.id)
+      abrirPopupHistorico()
+    })
+    acoes.appendChild(reabrir)
+
+    const excluir = document.createElement('button')
+    excluir.type = 'button'
+    excluir.innerHTML = trash2IconSvg
+    excluir.addEventListener('click', () => {
+      excluirTarefa(tarefa.id)
+      abrirPopupHistorico()
+    })
+    acoes.appendChild(excluir)
+
+    item.appendChild(acoes)
+    popup.appendChild(item)
+  })
+
+  document.body.appendChild(popup)
+  popupHistoricoAtual = popup
+}
+
+function abrirPopupAjuda(): void {
+  fecharPopupHistorico()
+
+  if (document.getElementById('seirmg-tarefas-popup-ajuda')) return
+
+  const popup = document.createElement('div')
+  popup.id = 'seirmg-tarefas-popup-ajuda'
+  popup.innerHTML = `
+    <h2>Painel de Tarefas — Guia</h2>
+    <p>Checklist pessoal disponível em qualquer tela do SEI. Os dados são salvos na sua conta
+    (chrome.storage.sync), sincronizados entre os navegadores em que você estiver logado.</p>
+    <h3>Como usar</h3>
+    <ul>
+      <li>O botão azul abre/fecha o painel.</li>
+      <li>Clique numa tarefa pra editar; passe o mouse pra ver os atalhos de concluir/excluir.</li>
+      <li>Tarefas são agrupadas por urgência: atrasadas, hoje, próximas e sem prazo.</li>
+      <li>As últimas concluídas ficam esmaecidas no fim da lista, pra desfazer rápido.</li>
+    </ul>
+    <h3>Exportar / Importar</h3>
+    <p>Exporte suas tarefas pra um arquivo, e importe em outro perfil ou compartilhe com um
+    colega. Tarefas importadas ficam com título/processo/vencimento travados (só prioridade,
+    concluir e excluir continuam editáveis).</p>
+    <button id="seirmg-tarefas-fechar-ajuda">Fechar</button>
+  `
+  document.body.appendChild(popup)
+  document.getElementById('seirmg-tarefas-fechar-ajuda')?.addEventListener('click', () => {
+    popup.remove()
+  })
+}
+
+function exportarTarefas(): void {
+  const exportacao = montarExportacao(tarefasAtuais, chrome.runtime.getManifest().version, new Date())
+  const blob = new Blob([JSON.stringify(exportacao, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'tarefas-seirmg.json'
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+function importarTarefas(arquivo: File): void {
+  const leitor = new FileReader()
+  leitor.onload = (evento) => {
+    const conteudo = evento.target?.result
+    if (typeof conteudo !== 'string') return
+
+    const exportacao = parseImportacao(conteudo)
+    if (!exportacao) {
+      window.alert('Arquivo inválido.')
+      return
+    }
+
+    const novas = tarefasImportadasParaAdicionar(exportacao, () => crypto.randomUUID())
+    tarefasAtuais = [...tarefasAtuais, ...novas]
+    salvarTarefas().catch((error) => console.error('[SEIRMG] Falha ao salvar tarefas importadas:', error))
+    renderizarPainel()
+    atualizarBadge()
+    window.alert(`${novas.length} tarefa(s) importada(s).`)
+  }
+  leitor.readAsText(arquivo)
+}
+
 async function bootstrap(): Promise<void> {
   try {
     const config = await createSyncConfigStore().get()
@@ -605,6 +840,17 @@ async function bootstrap(): Promise<void> {
     montarEsqueleto()
     renderizarPainel()
     atualizarBadge()
+
+    const hoje = new Date()
+    const vencidas = agruparPorUrgencia(tarefasAtuais, hoje).atrasadas.map((tarefa) => ({
+      id: tarefa.id,
+      titulo: tarefa.titulo,
+    }))
+    if (vencidas.length > 0) {
+      chrome.runtime
+        .sendMessage({ type: 'seirmg:tarefas-vencidas', tarefas: vencidas })
+        .catch((error) => console.error('[SEIRMG] Falha ao notificar tarefas vencidas:', error))
+    }
   } catch (error) {
     console.error('[SEIRMG] Falha ao montar painel de tarefas:', error)
   }
