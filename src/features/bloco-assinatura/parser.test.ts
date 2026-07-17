@@ -187,4 +187,14 @@ describe('detectarTransicoesParaDisponibilizado', () => {
     const blocoRetornado: BlocoListaItem = { numero: '2', descricao: 'D2', href: '/bloco/2', estado: 'retornado' }
     expect(detectarTransicoesParaDisponibilizado([blocoRetornado], {})).toEqual([])
   })
+
+  it('trata conhecidos undefined como vazio (LocalConfig salvo antes do campo existir)', () => {
+    // Reproduz o bug real: chrome.storage.local.get() de uma instalação já existente antes de
+    // blocoAssinaturaEstadosConhecidos existir retorna o objeto salvo como está, sem mesclar com
+    // DEFAULT_LOCAL_CONFIG (createLocalConfigStore só cai no default quando não há NENHUM config
+    // salvo, não campo por campo) -- então o campo chega undefined, não {}.
+    expect(detectarTransicoesParaDisponibilizado([blocoDisponibilizado], undefined)).toEqual([
+      blocoDisponibilizado,
+    ])
+  })
 })

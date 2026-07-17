@@ -128,11 +128,16 @@ export function parseListaBlocosAssinatura(root: ParentNode): BlocoListaItem[] {
 
 export function detectarTransicoesParaDisponibilizado(
   atuais: BlocoListaItem[],
-  conhecidos: Record<string, string>
+  // `| undefined` de propósito: chrome.storage.local.get() de uma instalação já existente antes
+  // desse campo existir retorna o LocalConfig salvo como está (createLocalConfigStore só cai no
+  // default quando NÃO HÁ config salvo nenhum, não campo por campo) -- então este valor pode
+  // chegar undefined na prática mesmo com o tipo de LocalConfig dizendo que não pode.
+  conhecidos: Record<string, string> | undefined
 ): BlocoListaItem[] {
+  const estadosConhecidos = conhecidos ?? {}
   return atuais.filter(
     (bloco) =>
       bloco.estado === 'disponibilizado_para_area' &&
-      conhecidos[bloco.numero] !== 'disponibilizado_para_area'
+      estadosConhecidos[bloco.numero] !== 'disponibilizado_para_area'
   )
 }
