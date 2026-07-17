@@ -608,7 +608,7 @@ function montarEsqueleto(): void {
 
   document.addEventListener('click', (evento) => {
     const alvo = evento.target as HTMLElement
-    if (popupHistoricoAtual && !popupHistoricoAtual.contains(alvo) && alvo.id !== 'seirmg-tarefas-historico') {
+    if (popupHistoricoAtual && !popupHistoricoAtual.contains(alvo) && !alvo.closest('#seirmg-tarefas-historico')) {
       fecharPopupHistorico()
     }
   })
@@ -710,6 +710,7 @@ function fecharPopupHistorico(): void {
 
 function abrirPopupHistorico(): void {
   fecharPopupHistorico()
+  document.getElementById('seirmg-tarefas-popup-ajuda')?.remove()
 
   const concluidas = tarefasAtuais.filter((tarefa) => tarefa.concluido)
 
