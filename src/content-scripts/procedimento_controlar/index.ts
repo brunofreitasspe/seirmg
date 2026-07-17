@@ -47,8 +47,16 @@ import {
   parseOpcoesMarcador,
   type OpcaoMarcador,
 } from '../../features/controle-processos/marcadorRapido'
+import {
+  montarCorpoConfirmacaoAtribuicao,
+  parseFormularioAtribuicao,
+  parseOpcoesAtribuicao,
+  type OpcaoAtribuicao,
+} from '../../features/controle-processos/atribuicaoRapida'
 import { EVENTO_CLIQUE_MARCADOR_RAPIDO } from './protocoloMarcadorRapido'
 import type { DetalheCliqueMarcadorRapido } from './protocoloMarcadorRapido'
+import { EVENTO_CLIQUE_ATRIBUICAO_RAPIDA } from './protocoloAtribuicaoRapida'
+import type { DetalheCliqueAtribuicaoRapida } from './protocoloAtribuicaoRapida'
 import { fetchText } from '../../lib/fetchViaBackground'
 import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
 import type { ControleProcessosConfig, SyncConfig } from '../../lib/storage'
@@ -355,6 +363,17 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
   }
   .seirmg-marcador-rapido-btn-primario:hover {
     filter: brightness(1.08);
+  }
+
+  .seirmg-atribuicao-rapida-select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    border: 1px solid #dbe9fb;
+    background: #f5faff;
+    border-radius: 8px;
+    font: inherit;
+    font-size: 13.5px;
   }
 `
 
@@ -1982,6 +2001,128 @@ function fecharPopupMarcadorRapido(): void {
   popupMarcadorRapidoAtual = null
 }
 
+const ACAO_ATRIBUICAO = {
+  botao: { nome: 'sbmSalvar', valor: 'Salvar' },
+  tituloPopup: 'Atribuir Processo',
+  iconeSvg: userIconSvg,
+}
+
+let popupAtribuicaoRapidaAtual: HTMLElement | null = null
+
+function fecharPopupAtribuicaoRapida(): void {
+  popupAtribuicaoRapidaAtual?.remove()
+  popupAtribuicaoRapidaAtual = null
+}
+
+async function confirmarAtribuicao(
+  formularioAtribuicao: { actionUrl: string; campos: Record<string, string> },
+  pessoaEscolhida: string,
+  erro: HTMLElement
+): Promise<void> {
+  try {
+    const corpo = montarCorpoConfirmacaoAtribuicao(
+      formularioAtribuicao.campos,
+      pessoaEscolhida,
+      ACAO_ATRIBUICAO.botao
+    )
+    const urlConfirmacao = new URL(formularioAtribuicao.actionUrl, window.location.href).href
+    const resultado = await fetchText(urlConfirmacao, { method: 'POST', body: corpo })
+    if (!resultado.ok) {
+      erro.textContent = 'Falha ao salvar a atribuição. Tente novamente.'
+      erro.style.display = ''
+      return
+    }
+
+    // Mesma decisão já validada pelo marcador rápido: recarregar a página inteira em vez de
+    // tentar atualizar só a linha ao vivo (adoptNode/innerHTML deixavam o checkbox invisível).
+    window.location.reload()
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao confirmar atribuição:', error)
+    erro.textContent = 'Falha ao salvar a atribuição. Tente novamente.'
+    erro.style.display = ''
+  }
+}
+
+function abrirPopupAtribuicao(
+  opcoes: OpcaoAtribuicao[],
+  formularioAtribuicao: { actionUrl: string; campos: Record<string, string> },
+  quantidade: number
+): void {
+  fecharPopupAtribuicaoRapida()
+
+  const fundo = document.createElement('div')
+  fundo.className = 'seirmg-marcador-rapido-fundo'
+  fundo.addEventListener('click', fecharPopupAtribuicaoRapida)
+
+  const popup = document.createElement('div')
+  popup.className = 'seirmg-marcador-rapido-popup'
+  popup.addEventListener('click', (evento) => evento.stopPropagation())
+
+  const header = document.createElement('div')
+  header.className = 'seirmg-marcador-rapido-header'
+
+  const icone = document.createElement('div')
+  icone.className = 'seirmg-marcador-rapido-icone'
+  icone.innerHTML = ACAO_ATRIBUICAO.iconeSvg
+  header.appendChild(icone)
+
+  const titulos = document.createElement('div')
+  const titulo = document.createElement('strong')
+  titulo.className = 'seirmg-marcador-rapido-titulo'
+  titulo.textContent = ACAO_ATRIBUICAO.tituloPopup
+  const subtitulo = document.createElement('p')
+  subtitulo.className = 'seirmg-marcador-rapido-subtitulo'
+  subtitulo.textContent = textoQuantidadeProcessos(quantidade)
+  titulos.append(titulo, subtitulo)
+  header.appendChild(titulos)
+  popup.appendChild(header)
+
+  const corpo = document.createElement('div')
+  corpo.className = 'seirmg-marcador-rapido-corpo'
+
+  const erro = document.createElement('div')
+  erro.className = 'seirmg-marcador-rapido-erro'
+  erro.style.display = 'none'
+  corpo.appendChild(erro)
+
+  const select = document.createElement('select')
+  select.className = 'seirmg-atribuicao-rapida-select'
+  opcoes.forEach((opcao) => {
+    select.appendChild(new Option(opcao.nome, opcao.id))
+  })
+  corpo.appendChild(select)
+
+  popup.appendChild(corpo)
+
+  const rodape = document.createElement('div')
+  rodape.className = 'seirmg-marcador-rapido-rodape'
+
+  const botaoCancelar = document.createElement('button')
+  botaoCancelar.type = 'button'
+  botaoCancelar.className = 'seirmg-marcador-rapido-btn seirmg-marcador-rapido-btn-secundario'
+  botaoCancelar.textContent = 'Cancelar'
+  botaoCancelar.addEventListener('click', fecharPopupAtribuicaoRapida)
+  rodape.appendChild(botaoCancelar)
+
+  const botaoConfirmar = document.createElement('button')
+  botaoConfirmar.type = 'button'
+  botaoConfirmar.className = 'seirmg-marcador-rapido-btn seirmg-marcador-rapido-btn-primario'
+  botaoConfirmar.textContent = 'Atribuir'
+  botaoConfirmar.addEventListener('click', () => {
+    botaoConfirmar.disabled = true
+    confirmarAtribuicao(formularioAtribuicao, select.value, erro).finally(() => {
+      botaoConfirmar.disabled = false
+    })
+  })
+  rodape.appendChild(botaoConfirmar)
+
+  popup.appendChild(rodape)
+  fundo.appendChild(popup)
+  document.body.appendChild(fundo)
+
+  popupAtribuicaoRapidaAtual = fundo
+}
+
 async function confirmarMarcador(
   acao: AcaoMarcadorRapido,
   formularioMarcador: { actionUrl: string; campos: Record<string, string> },
@@ -2291,6 +2432,56 @@ function montarMarcadorRapido(): void {
   }
 }
 
+async function processarClickAtribuicao(link: HTMLAnchorElement, quantidade: number): Promise<void> {
+  const urlRelativa = extrairUrlDeOnclick(link.getAttribute('onclick') ?? '')
+  if (!urlRelativa) {
+    console.error('[SEIRMG] Não foi possível extrair a URL do link de atribuição.')
+    return
+  }
+  const url = new URL(urlRelativa, window.location.href).href
+
+  const formPagina = document.getElementById('frmProcedimentoControlar') as HTMLFormElement | null
+  if (!formPagina) return
+
+  const resultadoTela = await fetchText(url, {
+    method: 'POST',
+    body: new URLSearchParams(extrairCamposOcultos(formPagina)),
+  })
+  if (!resultadoTela.ok) {
+    console.error('[SEIRMG] Falha ao buscar tela de atribuição:', resultadoTela.error)
+    return
+  }
+
+  const docTela = new DOMParser().parseFromString(resultadoTela.data, 'text/html')
+  const opcoes = parseOpcoesAtribuicao(docTela)
+  const formularioAtribuicao = parseFormularioAtribuicao(docTela)
+  if (!formularioAtribuicao) {
+    console.error('[SEIRMG] Formulário de atribuição não encontrado na tela retornada.')
+    return
+  }
+
+  abrirPopupAtribuicao(opcoes, formularioAtribuicao, quantidade)
+}
+
+function montarAtribuicaoRapida(): void {
+  try {
+    window.addEventListener(EVENTO_CLIQUE_ATRIBUICAO_RAPIDA, (evento) => {
+      const { quantidade } = (evento as CustomEvent<DetalheCliqueAtribuicaoRapida>).detail
+
+      const link = document.querySelector<HTMLAnchorElement>(
+        '#divComandos a[onclick*="procedimento_atribuicao_cadastrar"]'
+      )
+      if (!link) return
+
+      processarClickAtribuicao(link, quantidade).catch((error) => {
+        console.error('[SEIRMG] Falha ao processar clique de atribuição rápida:', error)
+      })
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao montar atribuição rápida:', error)
+  }
+}
+
 async function bootstrap(): Promise<void> {
   try {
     injetarEstilos()
@@ -2303,6 +2494,7 @@ async function bootstrap(): Promise<void> {
     montarSelecaoMultipla()
     montarConfirmarAntesDeConcluir()
     montarMarcadorRapido()
+    montarAtribuicaoRapida()
     montarFiltroBloco()
     montarOrdenacaoTabelas()
     await montarFiltroAtribuicao()
