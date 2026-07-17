@@ -90,6 +90,14 @@ export default defineManifest({
     },
     {
       matches: [
+        '*://*.br/*controlador.php?acao=*',
+        '*://*.org/*controlador.php?acao=*',
+      ],
+      js: ['src/content-scripts/tarefas/index.ts'],
+      run_at: 'document_idle',
+    },
+    {
+      matches: [
         '*://*.br/*controlador.php?acao=controle_unidade_gerar*',
         '*://*.org/*controlador.php?acao=controle_unidade_gerar*',
       ],
