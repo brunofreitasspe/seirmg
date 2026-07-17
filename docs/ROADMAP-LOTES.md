@@ -52,6 +52,29 @@
   tem validação de "selecione alguém" -- confirmar direto em "Ninguém" é um caso de uso válido. ⚠️
   **Pendente de validação manual numa instância SEI real** — mesmo tratamento de risco do marcador
   rápido (duas chamadas de rede em sequência via `fetchText`, interceptação main-world).
+- **Painel de Tarefas — checklist pessoal em qualquer tela do SEI (port do plugin "SEI Notas")** —
+  spec `docs/superpowers/specs/2026-07-17-seirmg-painel-tarefas-design.md`, plano
+  `docs/superpowers/plans/2026-07-17-seirmg-painel-tarefas.md`. Port de `C:\sei\seinotas`
+  ("SEI Notas" v4.5, extensão de terceiros encontrada pelo usuário), com visual redesenhado
+  seguindo o padrão já estabelecido do SEIRMG (mockup aprovado: painel agrupado por urgência --
+  atrasadas/hoje/próximas/sem prazo -- em vez da lista plana original, botão flutuante com badge de
+  atrasadas, barra de ações com "+" central em destaque). **Opt-in, desligado por padrão**
+  (`SyncConfig.tarefas.ativo`, aba Geral das Opções) -- a pedido explícito do usuário, não roda o
+  tempo todo. Tarefas ficam em `controleProcessos`-like array (`tarefas.itens`) dentro do mesmo
+  `SyncConfig` já existente, mesmo padrão já usado por `favoritos.itens` (sem storage novo).
+  Notificação de tarefas vencidas reaproveita `chrome.notifications` (mesmo mecanismo do bloco de
+  assinatura) com um pipeline espelhando `blocoAssinaturaPipeline.ts`, mas com regra de "1x por dia
+  por tarefa" (`diffVencidas`, diferente do "1x pra sempre" do bloco de assinatura). **Desvio
+  deliberado da spec original do plugin:** a checagem `Notification.permission` do código-fonte
+  original (`C:\sei\seinotas\content.js`) misturava a API de notificação web com `chrome.notifications`
+  da extensão -- removida, já que só a permissão de manifest (já concedida) é necessária. Exportar/
+  importar usa um formato próprio do SEIRMG (JSON), não compatível com o `.seinotas` do plugin
+  original (decisão do usuário, vai começar as tarefas do zero) -- mas manteve o conceito de tarefa
+  "bloqueada" quando importada (título/processo/vencimento somente-leitura), preservando o caso de
+  uso original de compartilhar tarefas entre usuários sem risco de sobrescrever os dados de origem
+  por engano. ⚠️ **Pendente de validação manual** -- confirmar visualmente em telas variadas do SEI
+  que o painel não conflita com nada nativo, e observar o badge/notificação de atrasadas ao longo de
+  alguns dias de uso real.
 
 ## Roteiro (ordem sugerida)
 
