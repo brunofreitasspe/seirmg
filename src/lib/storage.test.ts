@@ -83,6 +83,30 @@ describe('createSyncConfigStore', () => {
     })
   })
 
+  it('inclui tarefas padrão (desativado, sem itens) quando vazio', async () => {
+    const store = createSyncConfigStore(criarAreaFalsa())
+    expect((await store.get()).tarefas).toEqual({ ativo: false, itens: [] })
+  })
+
+  it('persiste alteração de tarefas.itens', async () => {
+    const area = criarAreaFalsa()
+    const store = createSyncConfigStore(area)
+    const tarefa = {
+      id: '1',
+      titulo: 'Analisar parecer',
+      processo: '0021.334',
+      vencimento: '2026-07-20',
+      prioridade: 'alta' as const,
+      concluido: false,
+    }
+    const atualizado = {
+      ...DEFAULT_SYNC_CONFIG,
+      tarefas: { ativo: true, itens: [tarefa] },
+    }
+    await store.set(atualizado)
+    expect(await store.get()).toEqual(atualizado)
+  })
+
   it('persiste alteração de controleProcessos', async () => {
     const area = criarAreaFalsa()
     const store = createSyncConfigStore(area)
@@ -291,6 +315,11 @@ describe('createLocalConfigStore', () => {
     }
     await store.set(atualizado)
     expect(await store.get()).toEqual(atualizado)
+  })
+
+  it('inclui tarefasNotificadas vazio por padrão', async () => {
+    const store = createLocalConfigStore(criarAreaFalsa())
+    expect((await store.get()).tarefasNotificadas).toEqual({})
   })
 
   it('inclui blocoAssinaturaUltimaChecagemOportunista vazia por padrão', async () => {
