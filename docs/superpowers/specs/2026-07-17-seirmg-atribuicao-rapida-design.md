@@ -39,10 +39,16 @@ processos marcados, e a tela de confirmação completa nos dois casos):
   preciso buscar essa tela primeiro pra pegar a URL certa de envio.
 - **Diferença importante do marcador**: `#selAtribuicao` é um **`<select>` nativo de verdade**
   (`<option value="ID">login - NOME COMPLETO</option>`), não um widget customizado tipo
-  `#selMarcador` (que precisa de `dd-option`/ícone). Primeira opção é
-  `<option value="null" selected="selected">&nbsp;</option>` (placeholder). Não há ícone por opção,
-  então o popup pode usar um `<select>` comum estilizado, sem precisar recriar o dropdown
-  customizado que o marcador tem.
+  `#selMarcador` (que precisa de `dd-option`/ícone). Não há ícone por opção, então o popup pode usar
+  um `<select>` comum estilizado, sem precisar recriar o dropdown customizado que o marcador tem.
+- **A opção em branco (`<option value="null" selected="selected">&nbsp;</option>`) não é um
+  placeholder de "escolha algo" — é uma opção real e válida, "atribuir a ninguém" (remove a
+  atribuição atual)**. Confirmado pelo usuário: um processo só pode estar atribuído a uma pessoa por
+  vez (atribuir pra outra automaticamente tira a anterior), e essa opção em branco é como se
+  desatribui um processo pelo fluxo nativo. **Confirmado também**: o select sempre abre nessa opção
+  em branco por padrão, mesmo quando o processo marcado já está atribuído a alguém (não pré-seleciona
+  a pessoa atual, ao contrário da tela de "Remoção de Marcador" que pré-seleciona o marcador atual) —
+  então não precisamos de nenhuma lógica de pré-seleção, e não é uma opção a ignorar/filtrar.
 - **Sem campos extras**: diferente do marcador (que tem `<textarea>` opcional), a tela de atribuição
   só tem o select de pessoa + `hdnIdProtocolo` (oculto). Nenhum campo de observação, sigilo ou
   reabertura.
@@ -60,6 +66,12 @@ processos marcados, e a tela de confirmação completa nos dois casos):
   selecionados já cobre automaticamente.
 - **Campos do popup**: só escolher a pessoa + confirmar (sem campo de texto livre, sem opções
   extras) — bate com o que a tela nativa realmente tem.
+- **"Ninguém" é uma opção real, não um estado de erro**: diferente do marcador (que exige escolher
+  um marcador, senão mostra "Selecione um marcador"), aqui **não há validação de "nada selecionado"**
+  — o select já abre com "Ninguém" pré-selecionado (o próprio padrão nativo), e confirmar direto
+  nessa opção é um caso de uso válido (desatribuir). Rotulamos essa opção como "Ninguém (remover
+  atribuição)" no nosso popup, em vez do `&nbsp;` em branco da tela nativa, pra ficar claro que é uma
+  escolha deliberada.
 - **Após confirmar**: `window.location.reload()` — reaproveita a mesma decisão já validada pelo
   marcador (tentativas de atualizar só a linha ao vivo deixavam o checkbox funcional mas invisível;
   não vamos repetir essa investigação).
@@ -110,8 +122,9 @@ export function montarCorpoConfirmacaoAtribuicao(
 ): URLSearchParams
 ```
 
-- `parseOpcoesAtribuicao`: lê `#selAtribuicao option`, ignora `value === '' || value === 'null'`
-  (placeholder), retorna `{id, nome}` (sem ícone — diferente de `OpcaoMarcador`).
+- `parseOpcoesAtribuicao`: lê `#selAtribuicao option`, **inclui** a opção `value="null"` como uma
+  opção real (rotulada "Ninguém (remover atribuição)" em vez do `&nbsp;` original — ver decisão
+  acima), retorna `{id, nome}` de cada uma (sem ícone — diferente de `OpcaoMarcador`).
 - `parseFormularioAtribuicao`: localiza `<form id="frmAtividadeAtribuir">`, lê `action` e todos os
   `input[type=hidden]` com `name` preenchido (mesmo padrão genérico já usado por
   `parseFormularioMarcador`/`extrairCamposOcultos`, mas em função própria — ver decisão de
@@ -163,10 +176,11 @@ Nova função `montarAtribuicaoRapida()`, chamada no `bootstrap()` ao lado de `m
    - Faz `parseOpcoesAtribuicao` + `parseFormularioAtribuicao` no HTML retornado.
    - Abre um popup central (mesmo estilo visual do marcador — fundo escurecido, card branco,
      header com ícone + título "Atribuir Processo" + subtítulo "N processos selecionados", corpo,
-     rodapé com Cancelar/Atribuir), mas com um `<select>` nativo de pessoas em vez do widget
-     customizado do marcador.
-   - Ao confirmar: valida que uma pessoa foi escolhida (senão erro inline "Selecione uma pessoa.");
-     `fetchText(actionUrl, { method: 'POST', body: montarCorpoConfirmacaoAtribuicao(...) })`.
+     rodapé com Cancelar/Atribuir), mas com um `<select>` nativo de pessoas (incluindo "Ninguém
+     (remover atribuição)" já pré-selecionado, igual ao padrão nativo) em vez do widget customizado
+     do marcador.
+   - Ao confirmar (**sem validação de "nada selecionado"** — "Ninguém" é uma opção válida, ver
+     decisão acima): `fetchText(actionUrl, { method: 'POST', body: montarCorpoConfirmacaoAtribuicao(...) })`.
    - Sucesso: `window.location.reload()` (mesma decisão já validada do marcador). Falha: erro inline
      no popup (rede ou HTTP not-ok), popup continua aberto pro usuário tentar de novo ou cancelar.
 4. Todo o fluxo em `try/catch`, `console.error('[SEIRMG] ...', error)`.
@@ -192,8 +206,9 @@ pelo isolated world), e que o popup abre corretamente com 1 e com 2+ processos m
 
 ## Testes
 
-`atribuicaoRapida.test.ts`: `parseOpcoesAtribuicao` (fixture HTML com `<option>`, ignorando
-`value="null"`/`""`, lista vazia se `#selAtribuicao` não existir), `parseFormularioAtribuicao`
+`atribuicaoRapida.test.ts`: `parseOpcoesAtribuicao` (fixture HTML com `<option>`, incluindo a opção
+`value="null"` mapeada pra "Ninguém (remover atribuição)", lista vazia se `#selAtribuicao` não
+existir), `parseFormularioAtribuicao`
 (fixture com `hdnIdProtocolo` singular e separado por vírgula, action correto, caso o formulário não
 seja encontrado), `montarCorpoConfirmacaoAtribuicao` (sobrescrevendo `selAtribuicao`, incluindo o
 par do botão). Wiring em `pontePrincipal.ts`/`pontePrincipalMain.ts`/`index.ts` sem teste
