@@ -52,6 +52,24 @@
   tem validação de "selecione alguém" -- confirmar direto em "Ninguém" é um caso de uso válido. ⚠️
   **Pendente de validação manual numa instância SEI real** — mesmo tratamento de risco do marcador
   rápido (duas chamadas de rede em sequência via `fetchText`, interceptação main-world).
+- **Marcador rápido — criar novo marcador do popup + correção de acentos** — spec
+  `docs/superpowers/specs/2026-07-19-seirmg-marcador-criar-novo-design.md`, plano
+  `docs/superpowers/plans/2026-07-19-seirmg-marcador-criar-novo.md`. O popup "Adicionar Marcador"
+  deixava de propósito fora do escopo criar um marcador novo (só linkar um já cadastrado) — agora
+  tem um link "+ Novo marcador" que abre um sub-popup (Ícone/Nome/Descrição), reaproveitando a URL
+  do botão nativo "+" (`cadastrarMarcador()`), extraída via regex de dentro do `<script>` da tela
+  "Adicionar Marcador" (a URL, com `infra_hash` válido, já vem embutida no HTML que a extensão já
+  buscava). Ao criar com sucesso, refaz o fetch da lista de marcadores e pré-seleciona o
+  recém-criado pelo nome. Também corrigido: o texto opcional do marcador vinculado perdia acentos
+  depois de salvo — `montarCorpoConfirmacao` usava `URLSearchParams` (sempre UTF-8), mas o SEI
+  espera o corpo do POST em ISO-8859-1 (mesma classe de bug já corrigida antes em `anotacao.ts` e
+  `dropzone.ts`, nunca replicada aqui); corrigido reaproveitando `escapeComponentAnotacao` (agora
+  usada em três lugares) tanto no texto do marcador vinculado quanto nos campos Nome/Descrição do
+  marcador novo. ⚠️ **Pendente de validação manual numa instância SEI real** — `#selStaIcone` como
+  `<select>` nativo no HTML bruto é assumido por analogia direta com `#selMarcador` (mesma versão do
+  SEI, mesmo padrão de widget), não confirmado com código-fonte bruto desta tela específica nesta
+  sessão; e o casamento por nome pra pré-selecionar o marcador recém-criado depende do SEI não
+  alterar o nome digitado (espaços, maiúsculas) na resposta.
 
 ## Roteiro (ordem sugerida)
 
