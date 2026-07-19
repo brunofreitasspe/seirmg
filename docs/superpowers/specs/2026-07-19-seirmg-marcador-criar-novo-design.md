@@ -108,14 +108,16 @@ export function montarCorpoConfirmacao(
   (mesma ideia de `extrairUrlDeOnclick`, adaptada pro formato de chamada de função em vez de
   atributo `onclick`). Retorna `null` se não encontrar (SEI sem esse botão, versão diferente, etc.)
   — usado só pra decidir se mostra ou não o link "+ Novo marcador" no popup, nunca lançando erro.
-- `montarCorpoNovoMarcador`: monta a query string manualmente (não usa `URLSearchParams`), escapando
-  `nome` e `descricao` com a mesma função `escape()`-based do padrão já usado em `anotacao.ts`
-  (nome local `escapeComponenteTexto`, sem acoplar aos outros arquivos — mesma duplicação
-  deliberada que já existe entre `anotacao.ts` e o recurso de documento externo). Demais campos
-  (`hdnStaIcone`, campos ocultos de `campos`, o par do botão) são valores puramente
-  numéricos/tokens do próprio SEI — sem acento, seguros pra interpolar direto.
-- `montarCorpoConfirmacao`: mesma ideia — escapa só o `texto` (o único campo de conteúdo livre
-  digitado pelo usuário nesse formulário), interpola o resto de `campos` direto.
+- `montarCorpoNovoMarcador`/`montarCorpoConfirmacao`: montam a query string manualmente (não usam
+  `URLSearchParams`), reaproveitando a função já existente `escapeComponentAnotacao` (exportada de
+  `features/procedimento-visualizar/anotacao.ts`) — **padrão real já confirmado no código**:
+  `dropzone.ts` (`documento_externo_arraste`) já importa essa mesma função de `anotacao.ts` e aplica
+  em **todos** os campos do corpo, uniformemente, via
+  `Object.entries(postFields).map(([chave, valor]) => \`${chave}=${escapeComponentAnotacao(valor)}\`).join('&')`
+  — não é uma duplicação por feature, é uma função compartilhada entre as duas já, e o marcador
+  passa a ser a terceira consumidora, seguindo exatamente o mesmo formato (`postFields` como
+  `Record<string, string>`, todos os valores escapados, nunca só os campos de texto livre — mais
+  simples e mais consistente do que escapar seletivamente).
 
 ### `content-scripts/procedimento_controlar/index.ts` (wiring)
 
