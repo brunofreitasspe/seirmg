@@ -69,7 +69,14 @@
   `<select>` nativo no HTML bruto é assumido por analogia direta com `#selMarcador` (mesma versão do
   SEI, mesmo padrão de widget), não confirmado com código-fonte bruto desta tela específica nesta
   sessão; e o casamento por nome pra pré-selecionar o marcador recém-criado depende do SEI não
-  alterar o nome digitado (espaços, maiúsculas) na resposta.
+  alterar o nome digitado (espaços, maiúsculas) na resposta. **Revisão final (subagent-driven-development)
+  encontrou e corrigiu um bug real antes de fechar:** a URL do botão "+" nunca era resolvida contra
+  a página atual antes do fetch (rodava no service worker de fundo, que resolveria a URL relativa
+  contra `chrome-extension://`, não contra o SEI) — o recurso inteiro quebraria em produção; corrigido
+  com `new URL(url, window.location.href).href`, mesmo padrão já usado no resto do arquivo. Também
+  corrigido: a mensagem "Carregando..." do sub-popup aparecia dentro da caixa com estilo de erro
+  (vermelha), e não havia nenhum botão visível pra fechar o sub-popup durante o carregamento ou numa
+  falha de fetch (só o clique fora funcionava) — ambos ajustados por polish pós-revisão.
 
 ## Roteiro (ordem sugerida)
 
