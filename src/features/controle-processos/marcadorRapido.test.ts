@@ -49,6 +49,22 @@ describe('parseOpcoesMarcador', () => {
     const doc = new DOMParser().parseFromString('<div></div>', 'text/html')
     expect(parseOpcoesMarcador(doc)).toEqual([])
   })
+
+  it('lê as opções de um seletor customizado (ex.: #selStaIcone, mesmo formato de <select>)', () => {
+    const doc = new DOMParser().parseFromString(
+      `<select id="selStaIcone" name="selStaIcone">
+        <option value="null" selected="selected">&nbsp;</option>
+        <option value="4" data-imagesrc="svg/marcador_amarelo.svg?11">Amarelo</option>
+        <option value="6" data-imagesrc="svg/marcador_azul.svg?11">Azul</option>
+      </select>`,
+      'text/html'
+    )
+
+    expect(parseOpcoesMarcador(doc, '#selStaIcone option')).toEqual([
+      { id: '4', nome: 'Amarelo', icone: 'svg/marcador_amarelo.svg?11' },
+      { id: '6', nome: 'Azul', icone: 'svg/marcador_azul.svg?11' },
+    ])
+  })
 })
 
 import { parseFormularioMarcador } from './marcadorRapido'

@@ -14,8 +14,8 @@ export interface OpcaoMarcador {
 // .dd-options (ddslick) só existe depois que o JS da própria página transforma o <select> no
 // carregamento (onload="inicializar()"), o que nunca roda aqui (só fazemos fetch + parse do
 // HTML, sem executar nenhum script da página).
-export function parseOpcoesMarcador(doc: Document): OpcaoMarcador[] {
-  const opcoes = Array.from(doc.querySelectorAll<HTMLOptionElement>('#selMarcador option'))
+export function parseOpcoesMarcador(doc: Document, seletor = '#selMarcador option'): OpcaoMarcador[] {
+  const opcoes = Array.from(doc.querySelectorAll<HTMLOptionElement>(seletor))
   return opcoes
     .filter((opcao) => opcao.value !== '' && opcao.value !== 'null')
     .map((opcao) => ({
