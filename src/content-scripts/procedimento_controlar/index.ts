@@ -2492,7 +2492,7 @@ function abrirPopupNovoMarcador(
   document.body.appendChild(fundo)
   popupNovoMarcadorAtual = fundo
 
-  fetchText(url)
+  fetchText(new URL(url, window.location.href).href)
     .then((resultado) => {
       if (!resultado.ok) {
         erro.textContent = 'Falha ao carregar o formulário de novo marcador.'
@@ -2586,6 +2586,13 @@ async function buscarTelaEAbrirPopupMarcador(
   })
   if (!resultadoTela.ok) {
     console.error('[SEIRMG] Falha ao buscar tela de marcador:', resultadoTela.error)
+    const erroExistente = popupMarcadorRapidoAtual?.querySelector<HTMLElement>(
+      '.seirmg-marcador-rapido-erro'
+    )
+    if (erroExistente) {
+      erroExistente.textContent = 'Falha ao atualizar a lista de marcadores. Tente novamente.'
+      erroExistente.style.display = ''
+    }
     return
   }
 
