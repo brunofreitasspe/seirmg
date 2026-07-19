@@ -268,6 +268,10 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     padding: 8px 12px;
     font-size: 12.5px;
   }
+  .seirmg-marcador-rapido-carregando {
+    color: #777;
+    font-size: 12.5px;
+  }
   .seirmg-marcador-rapido-select {
     position: relative;
   }
@@ -2482,20 +2486,43 @@ function abrirPopupNovoMarcador(
   const corpo = document.createElement('div')
   corpo.className = 'seirmg-marcador-rapido-corpo'
 
+  const carregando = document.createElement('div')
+  carregando.className = 'seirmg-marcador-rapido-carregando'
+  carregando.textContent = 'Carregando...'
+  corpo.appendChild(carregando)
+
   const erro = document.createElement('div')
   erro.className = 'seirmg-marcador-rapido-erro'
-  erro.textContent = 'Carregando...'
+  erro.style.display = 'none'
   corpo.appendChild(erro)
 
   popup.appendChild(corpo)
+
+  // Cancelar já entra montado (não só depois do fetch) pra sempre ter um jeito visível de fechar
+  // o sub-popup, inclusive durante o carregamento ou se o fetch falhar -- antes só o clique fora
+  // (no fundo) fechava nesses estados, sem nenhum controle visível na tela.
+  const rodape = document.createElement('div')
+  rodape.className = 'seirmg-marcador-rapido-rodape'
+
+  const botaoCancelar = document.createElement('button')
+  botaoCancelar.type = 'button'
+  botaoCancelar.className = 'seirmg-marcador-rapido-btn seirmg-marcador-rapido-btn-secundario'
+  botaoCancelar.textContent = 'Cancelar'
+  botaoCancelar.addEventListener('click', fecharPopupNovoMarcador)
+  rodape.appendChild(botaoCancelar)
+
+  popup.appendChild(rodape)
   fundo.appendChild(popup)
   document.body.appendChild(fundo)
   popupNovoMarcadorAtual = fundo
 
   fetchText(new URL(url, window.location.href).href)
     .then((resultado) => {
+      carregando.remove()
+
       if (!resultado.ok) {
         erro.textContent = 'Falha ao carregar o formulário de novo marcador.'
+        erro.style.display = ''
         return
       }
 
@@ -2504,11 +2531,9 @@ function abrirPopupNovoMarcador(
       const formularioNovoMarcador = parseFormularioMarcador(doc, 'frmMarcadorCadastro')
       if (!formularioNovoMarcador) {
         erro.textContent = 'Falha ao carregar o formulário de novo marcador.'
+        erro.style.display = ''
         return
       }
-
-      erro.textContent = ''
-      erro.style.display = 'none'
 
       const seletorIcone = criarSeletorMarcador(opcoesIcone, '', 'Selecione um ícone')
       corpo.appendChild(seletorIcone.elemento)
@@ -2526,16 +2551,6 @@ function abrirPopupNovoMarcador(
       textareaDescricao.placeholder = 'Descrição (opcional)'
       textareaDescricao.maxLength = 250
       corpo.appendChild(textareaDescricao)
-
-      const rodape = document.createElement('div')
-      rodape.className = 'seirmg-marcador-rapido-rodape'
-
-      const botaoCancelar = document.createElement('button')
-      botaoCancelar.type = 'button'
-      botaoCancelar.className = 'seirmg-marcador-rapido-btn seirmg-marcador-rapido-btn-secundario'
-      botaoCancelar.textContent = 'Cancelar'
-      botaoCancelar.addEventListener('click', fecharPopupNovoMarcador)
-      rodape.appendChild(botaoCancelar)
 
       const botaoConfirmar = document.createElement('button')
       botaoConfirmar.type = 'button'
@@ -2559,12 +2574,12 @@ function abrirPopupNovoMarcador(
         })
       })
       rodape.appendChild(botaoConfirmar)
-
-      popup.appendChild(rodape)
     })
     .catch((error) => {
       console.error('[SEIRMG] Falha ao abrir formulário de novo marcador:', error)
+      carregando.remove()
       erro.textContent = 'Falha ao carregar o formulário de novo marcador.'
+      erro.style.display = ''
     })
 }
 
