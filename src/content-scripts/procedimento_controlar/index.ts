@@ -2142,7 +2142,10 @@ async function confirmarMarcador(
     // formulário na tela retornada (string crua, relativa), não da propriedade .action do DOM
     // (que resolveria sozinha) -- precisa ser resolvida contra a página atual antes do fetch.
     const urlConfirmacao = new URL(formularioMarcador.actionUrl, window.location.href).href
-    const resultado = await fetchText(urlConfirmacao, { method: 'POST', body: corpo })
+    // bodyRaw (não body/URLSearchParams) -- corpo já vem escapado em ISO-8859-1 por
+    // montarCorpoConfirmacao, e o background seta Content-Type: application/x-www-form-urlencoded
+    // sem charset quando bodyRaw é usado, deixando os bytes crus controlarem a codificação.
+    const resultado = await fetchText(urlConfirmacao, { method: 'POST', bodyRaw: corpo })
     if (!resultado.ok) {
       erro.textContent = 'Falha ao salvar o marcador. Tente novamente.'
       erro.style.display = ''

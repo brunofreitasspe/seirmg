@@ -1,3 +1,5 @@
+import { escapeComponentAnotacao } from '../procedimento-visualizar/anotacao'
+
 export function extrairUrlDeOnclick(onclick: string): string | null {
   const match = onclick.match(/'([^']*)'/)
   return match ? match[1] : null
@@ -55,14 +57,21 @@ export function extrairUrlNovoMarcador(doc: Document): string | null {
   return null
 }
 
+// O corpo do POST precisa ir em ISO-8859-1 (o SEI declara charset=iso-8859-1 no HTML e corrompe
+// qualquer acento enviado em UTF-8) -- URLSearchParams sempre codifica em UTF-8, por isso não pode
+// ser usado aqui. Reaproveita escapeComponentAnotacao (já usada por dropzone.ts pro mesmo motivo)
+// em vez de reimplementar a mesma lógica de escape.
 export function montarCorpoConfirmacao(
   campos: Record<string, string>,
   marcadorEscolhido: string,
   texto: string,
   botao: { nome: string; valor: string }
-): URLSearchParams {
-  const corpo: Record<string, string> = { ...campos, hdnIdMarcador: marcadorEscolhido }
-  if (texto) corpo.txaTexto = texto
-  corpo[botao.nome] = botao.valor
-  return new URLSearchParams(corpo)
+): string {
+  const postFields: Record<string, string> = { ...campos, hdnIdMarcador: marcadorEscolhido }
+  if (texto) postFields.txaTexto = texto
+  postFields[botao.nome] = botao.valor
+
+  return Object.entries(postFields)
+    .map(([chave, valor]) => `${chave}=${escapeComponentAnotacao(valor)}`)
+    .join('&')
 }

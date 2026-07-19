@@ -108,6 +108,7 @@ describe('parseFormularioMarcador', () => {
   })
 })
 
+import { escapeComponentAnotacao } from '../procedimento-visualizar/anotacao'
 import { montarCorpoConfirmacao } from './marcadorRapido'
 
 describe('montarCorpoConfirmacao', () => {
@@ -119,7 +120,7 @@ describe('montarCorpoConfirmacao', () => {
       { nome: 'sbmSalvar', valor: 'Salvar' }
     )
 
-    expect(Object.fromEntries(corpo)).toEqual({
+    expect(Object.fromEntries(new URLSearchParams(corpo))).toEqual({
       hdnIdMarcador: '3',
       hdnIdProtocolo: '456',
       sbmSalvar: 'Salvar',
@@ -130,14 +131,14 @@ describe('montarCorpoConfirmacao', () => {
     const corpo = montarCorpoConfirmacao(
       { hdnIdMarcador: '', hdnIdProtocolo: '456' },
       '3',
-      'Observação qualquer',
+      'Observacao qualquer',
       { nome: 'sbmSalvar', valor: 'Salvar' }
     )
 
-    expect(Object.fromEntries(corpo)).toEqual({
+    expect(Object.fromEntries(new URLSearchParams(corpo))).toEqual({
       hdnIdMarcador: '3',
       hdnIdProtocolo: '456',
-      txaTexto: 'Observação qualquer',
+      txaTexto: 'Observacao qualquer',
       sbmSalvar: 'Salvar',
     })
   })
@@ -147,7 +148,7 @@ describe('montarCorpoConfirmacao', () => {
       nome: 'sbmSalvar',
       valor: 'Salvar',
     })
-    expect(corpo.has('txaTexto')).toBe(false)
+    expect(new URLSearchParams(corpo).has('txaTexto')).toBe(false)
   })
 
   it('sobrescreve um hdnIdMarcador já preenchido (fluxo de remoção)', () => {
@@ -158,11 +159,24 @@ describe('montarCorpoConfirmacao', () => {
       { nome: 'sbmRemover', valor: 'Remover' }
     )
 
-    expect(Object.fromEntries(corpo)).toEqual({
+    expect(Object.fromEntries(new URLSearchParams(corpo))).toEqual({
       hdnIdMarcador: '7',
       hdnIdProtocolo: '456',
       sbmRemover: 'Remover',
     })
+  })
+
+  it('escapa acentos no texto no padrão ISO-8859-1 (mesmo de escapeComponentAnotacao, não UTF-8)', () => {
+    const corpo = montarCorpoConfirmacao(
+      { hdnIdMarcador: '' },
+      '3',
+      'Atenção à ordem de expedição',
+      { nome: 'sbmSalvar', valor: 'Salvar' }
+    )
+
+    expect(corpo).toContain(`txaTexto=${escapeComponentAnotacao('Atenção à ordem de expedição')}`)
+    // confirma que NÃO é a codificação UTF-8 que o URLSearchParams/encodeURIComponent produziriam
+    expect(corpo).not.toContain(encodeURIComponent('Atenção à ordem de expedição'))
   })
 })
 
