@@ -143,6 +143,27 @@ export interface FormatacaoBasicaConfig {
   atalhos: AtalhoParagrafo[]
 }
 
+export type PrioridadeTarefa = 'baixa' | 'media' | 'alta'
+
+export interface Tarefa {
+  id: string
+  titulo: string
+  processo: string
+  vencimento: string // ISO date (yyyy-mm-dd) ou '' quando sem prazo
+  prioridade: PrioridadeTarefa
+  concluido: boolean
+  concluidoEm?: string // ISO datetime, só presente depois de marcar como concluída
+  // true em tarefas trazidas por importação -- título/processo/vencimento ficam somente-leitura
+  // na UI (mesmo comportamento do plugin original, pra evitar editar por engano dados de origem
+  // quando a exportação veio de outra pessoa).
+  bloqueada?: boolean
+}
+
+export interface TarefasConfig {
+  ativo: boolean
+  itens: Tarefa[]
+}
+
 export interface SyncConfig {
   schemaVersion: 1
   featureFlags: FeatureFlags
@@ -154,6 +175,7 @@ export interface SyncConfig {
   ferramentasIA: FerramentasIAConfig
   corretorOrtografico: CorretorOrtograficoConfig
   formatacaoBasica: FormatacaoBasicaConfig
+  tarefas: TarefasConfig
 }
 
 export interface NotificadoState {
@@ -179,6 +201,9 @@ export interface LocalConfig {
   // (não o tipo EstadoBloco) porque lib/storage.ts não importa de features/.
   blocoAssinaturaEstadosConhecidos: Record<string, string>
   blocoAssinaturaUltimaChecagemOportunista: string
+  // Última data (yyyy-mm-dd) em que cada tarefa vencida já notificou -- no máximo 1x por dia por
+  // tarefa (chave = Tarefa.id).
+  tarefasNotificadas: NotificadoState
   baseUrlSei?: string
   seiVersionAtLeast4?: boolean
   atribuicaoSelecionada?: string
@@ -263,6 +288,10 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     ativo: false,
     atalhos: [],
   },
+  tarefas: {
+    ativo: false,
+    itens: [],
+  },
 }
 
 export const DEFAULT_LOCAL_CONFIG: LocalConfig = {
@@ -271,6 +300,7 @@ export const DEFAULT_LOCAL_CONFIG: LocalConfig = {
   blocoAssinaturaPendenteAtual: [],
   blocoAssinaturaEstadosConhecidos: {},
   blocoAssinaturaUltimaChecagemOportunista: '',
+  tarefasNotificadas: {},
 }
 
 export interface StorageArea {

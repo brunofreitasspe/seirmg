@@ -55,3 +55,15 @@ export function notificarBlocoDisponibilizado(bloco: { numero: string; descricao
     priority: 2,
   })
 }
+
+export const NOTIFICATION_ID_TAREFA_VENCIDA_PREFIX = 'seirmg-tarefa-vencida-'
+
+export function notificarTarefaVencida(tarefa: { id: string; titulo: string }): void {
+  chrome.notifications.create(`${NOTIFICATION_ID_TAREFA_VENCIDA_PREFIX}${tarefa.id}`, {
+    type: 'basic',
+    iconUrl: chrome.runtime.getURL('src/assets/icons/icon-128.png'),
+    title: 'SEIRMG — Tarefa vencida',
+    message: `"${tarefa.titulo || 'Sem título'}" está com o prazo vencido.`,
+    priority: 1,
+  })
+}
