@@ -213,3 +213,50 @@ describe('extrairUrlNovoMarcador', () => {
     expect(extrairUrlNovoMarcador(doc)).toBeNull()
   })
 })
+
+import { montarCorpoNovoMarcador } from './marcadorRapido'
+
+describe('montarCorpoNovoMarcador', () => {
+  it('monta o corpo com ícone, nome e descrição, e o botão de confirmação', () => {
+    const corpo = montarCorpoNovoMarcador(
+      { hdnStaIcone: '', hdnIdMarcador: '' },
+      '4',
+      'Urgente',
+      'Marcador de urgencia',
+      { nome: 'sbmCadastrarMarcador', valor: 'Salvar' }
+    )
+
+    expect(Object.fromEntries(new URLSearchParams(corpo))).toEqual({
+      hdnStaIcone: '4',
+      hdnIdMarcador: '',
+      txtNome: 'Urgente',
+      txaDescricao: 'Marcador de urgencia',
+      sbmCadastrarMarcador: 'Salvar',
+    })
+  })
+
+  it('escapa acentos no nome e na descrição no padrão ISO-8859-1', () => {
+    const corpo = montarCorpoNovoMarcador(
+      { hdnStaIcone: '', hdnIdMarcador: '' },
+      '4',
+      'Atenção',
+      'Descrição com acentuação',
+      { nome: 'sbmCadastrarMarcador', valor: 'Salvar' }
+    )
+
+    expect(corpo).toContain(`txtNome=${escapeComponentAnotacao('Atenção')}`)
+    expect(corpo).toContain(`txaDescricao=${escapeComponentAnotacao('Descrição com acentuação')}`)
+  })
+
+  it('aceita descrição vazia', () => {
+    const corpo = montarCorpoNovoMarcador(
+      { hdnStaIcone: '', hdnIdMarcador: '' },
+      '4',
+      'Urgente',
+      '',
+      { nome: 'sbmCadastrarMarcador', valor: 'Salvar' }
+    )
+
+    expect(Object.fromEntries(new URLSearchParams(corpo)).txaDescricao).toBe('')
+  })
+})

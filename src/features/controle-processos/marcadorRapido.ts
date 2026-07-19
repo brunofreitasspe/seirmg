@@ -75,3 +75,28 @@ export function montarCorpoConfirmacao(
     .map(([chave, valor]) => `${chave}=${escapeComponentAnotacao(valor)}`)
     .join('&')
 }
+
+// Mesma técnica de montarCorpoConfirmacao (escapeComponentAnotacao, ISO-8859-1) -- campos vindos
+// de `campos` (hdnStaIcone/hdnIdMarcador, extraídos como <input type="hidden"> por
+// parseFormularioMarcador) são tokens numéricos do próprio SEI, sem acento, mas passam pelo mesmo
+// escape por uniformidade (mesmo padrão já usado em dropzone.ts, que escapa todos os campos do
+// corpo sem distinguir quais são "de risco").
+export function montarCorpoNovoMarcador(
+  campos: Record<string, string>,
+  iconeEscolhido: string,
+  nome: string,
+  descricao: string,
+  botao: { nome: string; valor: string }
+): string {
+  const postFields: Record<string, string> = {
+    ...campos,
+    hdnStaIcone: iconeEscolhido,
+    txtNome: nome,
+    txaDescricao: descricao,
+  }
+  postFields[botao.nome] = botao.valor
+
+  return Object.entries(postFields)
+    .map(([chave, valor]) => `${chave}=${escapeComponentAnotacao(valor)}`)
+    .join('&')
+}
