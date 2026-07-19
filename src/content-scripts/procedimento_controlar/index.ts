@@ -42,7 +42,9 @@ import {
 } from '../../features/controle-processos/rolagemInfinita'
 import {
   extrairUrlDeOnclick,
+  extrairUrlNovoMarcador,
   montarCorpoConfirmacao,
+  montarCorpoNovoMarcador,
   parseFormularioMarcador,
   parseOpcoesMarcador,
   type OpcaoMarcador,
@@ -321,6 +323,25 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     width: 14px;
     height: 14px;
     flex-shrink: 0;
+  }
+  .seirmg-marcador-rapido-novo-link {
+    align-self: flex-start;
+    font-size: 12.5px;
+    color: #017fff;
+    text-decoration: none;
+  }
+  .seirmg-marcador-rapido-novo-link:hover {
+    text-decoration: underline;
+  }
+  .seirmg-marcador-rapido-input {
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid #dbe9fb;
+    background: #f5faff;
+    border-radius: 8px;
+    padding: 8px 10px;
+    font: inherit;
+    font-size: 13.5px;
   }
   .seirmg-marcador-rapido-textarea {
     width: 100%;
@@ -2279,7 +2300,9 @@ function abrirPopupMarcador(
   acao: AcaoMarcadorRapido,
   opcoes: OpcaoMarcador[],
   formularioMarcador: { actionUrl: string; campos: Record<string, string> },
-  quantidade: number
+  quantidade: number,
+  urlNovoMarcador: string | null,
+  recarregarComNovoMarcador: (nomeCriado: string) => Promise<void>
 ): void {
   fecharPopupMarcadorRapido()
 
@@ -2325,6 +2348,18 @@ function abrirPopupMarcador(
   const seletor = criarSeletorMarcador(opcoes, formularioMarcador.campos.hdnIdMarcador, rotuloPlaceholder)
   corpo.appendChild(seletor.elemento)
 
+  if (acao.tipo === 'adicionar' && urlNovoMarcador) {
+    const linkNovoMarcador = document.createElement('a')
+    linkNovoMarcador.href = '#'
+    linkNovoMarcador.className = 'seirmg-marcador-rapido-novo-link'
+    linkNovoMarcador.textContent = '+ Novo marcador'
+    linkNovoMarcador.addEventListener('click', (evento) => {
+      evento.preventDefault()
+      abrirPopupNovoMarcador(urlNovoMarcador, recarregarComNovoMarcador)
+    })
+    corpo.appendChild(linkNovoMarcador)
+  }
+
   let textarea: HTMLTextAreaElement | null = null
   if (acao.tipo === 'adicionar') {
     textarea = document.createElement('textarea')
@@ -2364,23 +2399,184 @@ function abrirPopupMarcador(
   popupMarcadorRapidoAtual = fundo
 }
 
-async function processarClickMarcador(
-  acao: AcaoMarcadorRapido,
-  link: HTMLAnchorElement,
-  quantidade: number
-): Promise<void> {
-  const urlRelativa = extrairUrlDeOnclick(link.getAttribute('onclick') ?? '')
-  if (!urlRelativa) {
-    console.error('[SEIRMG] Não foi possível extrair a URL do link de marcador.')
-    return
-  }
-  // A URL vem de dentro de um onclick (string crua, não um atributo href/action refletido
-  // pelo DOM) -- por isso precisa ser resolvida contra a página atual antes do fetch, mesmo
-  // padrão já usado em documento_externo_arraste/procedimento_visualizar (o fetch de verdade
-  // roda no service worker de fundo, que não tem "página atual" nenhuma pra resolver uma URL
-  // relativa como controlador.php?acao=... sozinho -- resolveria contra chrome-extension://).
-  const url = new URL(urlRelativa, window.location.href).href
+let popupNovoMarcadorAtual: HTMLElement | null = null
 
+function fecharPopupNovoMarcador(): void {
+  popupNovoMarcadorAtual?.remove()
+  popupNovoMarcadorAtual = null
+}
+
+async function confirmarNovoMarcador(
+  formularioNovoMarcador: { actionUrl: string; campos: Record<string, string> },
+  iconeEscolhido: string,
+  nome: string,
+  descricao: string,
+  erro: HTMLElement,
+  aoCriar: (nomeCriado: string) => void
+): Promise<void> {
+  try {
+    const nomeTratado = nome.trim()
+    if (!iconeEscolhido) {
+      erro.textContent = 'Selecione um ícone.'
+      erro.style.display = ''
+      return
+    }
+    if (!nomeTratado) {
+      erro.textContent = 'Informe um nome.'
+      erro.style.display = ''
+      return
+    }
+
+    const corpo = montarCorpoNovoMarcador(
+      formularioNovoMarcador.campos,
+      iconeEscolhido,
+      nomeTratado,
+      descricao.trim(),
+      { nome: 'sbmCadastrarMarcador', valor: 'Salvar' }
+    )
+    const urlConfirmacao = new URL(formularioNovoMarcador.actionUrl, window.location.href).href
+    const resultado = await fetchText(urlConfirmacao, { method: 'POST', bodyRaw: corpo })
+    if (!resultado.ok) {
+      erro.textContent = 'Falha ao criar o marcador. Tente novamente.'
+      erro.style.display = ''
+      return
+    }
+
+    fecharPopupNovoMarcador()
+    aoCriar(nomeTratado)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao confirmar novo marcador:', error)
+    erro.textContent = 'Falha ao criar o marcador. Tente novamente.'
+    erro.style.display = ''
+  }
+}
+
+// Chamada a partir do link "+ Novo marcador" (só no popup de Adicionar Marcador). GET simples,
+// sem corpo -- mesma navegação que o iframe modal nativo (parent.infraAbrirJanelaModal) faria;
+// não precisa de nenhum dado de contexto de processo, o formulário de criação de marcador não tem
+// hdnIdProtocolo (confirmado no HTML real colado pelo usuário nesta sessão).
+function abrirPopupNovoMarcador(
+  url: string,
+  recarregarComNovoMarcador: (nomeCriado: string) => Promise<void>
+): void {
+  fecharPopupNovoMarcador()
+
+  const fundo = document.createElement('div')
+  fundo.className = 'seirmg-marcador-rapido-fundo'
+  fundo.addEventListener('click', fecharPopupNovoMarcador)
+
+  const popup = document.createElement('div')
+  popup.className = 'seirmg-marcador-rapido-popup'
+  popup.addEventListener('click', (evento) => evento.stopPropagation())
+
+  const header = document.createElement('div')
+  header.className = 'seirmg-marcador-rapido-header'
+  const titulos = document.createElement('div')
+  const titulo = document.createElement('strong')
+  titulo.className = 'seirmg-marcador-rapido-titulo'
+  titulo.textContent = 'Novo Marcador'
+  titulos.appendChild(titulo)
+  header.appendChild(titulos)
+  popup.appendChild(header)
+
+  const corpo = document.createElement('div')
+  corpo.className = 'seirmg-marcador-rapido-corpo'
+
+  const erro = document.createElement('div')
+  erro.className = 'seirmg-marcador-rapido-erro'
+  erro.textContent = 'Carregando...'
+  corpo.appendChild(erro)
+
+  popup.appendChild(corpo)
+  fundo.appendChild(popup)
+  document.body.appendChild(fundo)
+  popupNovoMarcadorAtual = fundo
+
+  fetchText(url)
+    .then((resultado) => {
+      if (!resultado.ok) {
+        erro.textContent = 'Falha ao carregar o formulário de novo marcador.'
+        return
+      }
+
+      const doc = new DOMParser().parseFromString(resultado.data, 'text/html')
+      const opcoesIcone = parseOpcoesMarcador(doc, '#selStaIcone option')
+      const formularioNovoMarcador = parseFormularioMarcador(doc, 'frmMarcadorCadastro')
+      if (!formularioNovoMarcador) {
+        erro.textContent = 'Falha ao carregar o formulário de novo marcador.'
+        return
+      }
+
+      erro.textContent = ''
+      erro.style.display = 'none'
+
+      const seletorIcone = criarSeletorMarcador(opcoesIcone, '', 'Selecione um ícone')
+      corpo.appendChild(seletorIcone.elemento)
+      popup.addEventListener('click', () => seletorIcone.fecharLista())
+
+      const inputNome = document.createElement('input')
+      inputNome.type = 'text'
+      inputNome.className = 'seirmg-marcador-rapido-input'
+      inputNome.placeholder = 'Nome'
+      inputNome.maxLength = 50
+      corpo.appendChild(inputNome)
+
+      const textareaDescricao = document.createElement('textarea')
+      textareaDescricao.className = 'seirmg-marcador-rapido-textarea'
+      textareaDescricao.placeholder = 'Descrição (opcional)'
+      textareaDescricao.maxLength = 250
+      corpo.appendChild(textareaDescricao)
+
+      const rodape = document.createElement('div')
+      rodape.className = 'seirmg-marcador-rapido-rodape'
+
+      const botaoCancelar = document.createElement('button')
+      botaoCancelar.type = 'button'
+      botaoCancelar.className = 'seirmg-marcador-rapido-btn seirmg-marcador-rapido-btn-secundario'
+      botaoCancelar.textContent = 'Cancelar'
+      botaoCancelar.addEventListener('click', fecharPopupNovoMarcador)
+      rodape.appendChild(botaoCancelar)
+
+      const botaoConfirmar = document.createElement('button')
+      botaoConfirmar.type = 'button'
+      botaoConfirmar.className = 'seirmg-marcador-rapido-btn seirmg-marcador-rapido-btn-primario'
+      botaoConfirmar.textContent = 'Salvar'
+      botaoConfirmar.addEventListener('click', () => {
+        botaoConfirmar.disabled = true
+        confirmarNovoMarcador(
+          formularioNovoMarcador,
+          seletorIcone.obterValor(),
+          inputNome.value,
+          textareaDescricao.value,
+          erro,
+          (nomeCriado) => {
+            recarregarComNovoMarcador(nomeCriado).catch((error) => {
+              console.error('[SEIRMG] Falha ao recarregar marcadores após criar um novo:', error)
+            })
+          }
+        ).finally(() => {
+          botaoConfirmar.disabled = false
+        })
+      })
+      rodape.appendChild(botaoConfirmar)
+
+      popup.appendChild(rodape)
+    })
+    .catch((error) => {
+      console.error('[SEIRMG] Falha ao abrir formulário de novo marcador:', error)
+      erro.textContent = 'Falha ao carregar o formulário de novo marcador.'
+    })
+}
+
+// Extraída de processarClickMarcador pra ser reutilizável: também é chamada depois de criar um
+// marcador novo (Task 7), passando nomeParaSelecionar pra pré-selecionar o marcador recém-criado
+// na lista recém-buscada, em vez de reabrir o popup com a seleção em branco.
+async function buscarTelaEAbrirPopupMarcador(
+  acao: AcaoMarcadorRapido,
+  url: string,
+  quantidade: number,
+  nomeParaSelecionar?: string
+): Promise<void> {
   const formPagina = document.getElementById('frmProcedimentoControlar') as HTMLFormElement | null
   if (!formPagina) return
 
@@ -2401,7 +2597,38 @@ async function processarClickMarcador(
     return
   }
 
-  abrirPopupMarcador(acao, opcoes, formularioMarcador, quantidade)
+  if (nomeParaSelecionar) {
+    const opcaoCriada = opcoes.find((opcao) => opcao.nome === nomeParaSelecionar)
+    if (opcaoCriada) formularioMarcador.campos.hdnIdMarcador = opcaoCriada.id
+  }
+
+  // Só o popup de Adicionar Marcador ganha o link de criar um marcador novo -- o de Remoção só
+  // lista marcadores que o processo já tem, criar um novo não faz sentido nesse fluxo.
+  const urlNovoMarcador = acao.tipo === 'adicionar' ? extrairUrlNovoMarcador(docTela) : null
+
+  abrirPopupMarcador(acao, opcoes, formularioMarcador, quantidade, urlNovoMarcador, (nomeCriado) =>
+    buscarTelaEAbrirPopupMarcador(acao, url, quantidade, nomeCriado)
+  )
+}
+
+async function processarClickMarcador(
+  acao: AcaoMarcadorRapido,
+  link: HTMLAnchorElement,
+  quantidade: number
+): Promise<void> {
+  const urlRelativa = extrairUrlDeOnclick(link.getAttribute('onclick') ?? '')
+  if (!urlRelativa) {
+    console.error('[SEIRMG] Não foi possível extrair a URL do link de marcador.')
+    return
+  }
+  // A URL vem de dentro de um onclick (string crua, não um atributo href/action refletido
+  // pelo DOM) -- por isso precisa ser resolvida contra a página atual antes do fetch, mesmo
+  // padrão já usado em documento_externo_arraste/procedimento_visualizar (o fetch de verdade
+  // roda no service worker de fundo, que não tem "página atual" nenhuma pra resolver uma URL
+  // relativa como controlador.php?acao=... sozinho -- resolveria contra chrome-extension://).
+  const url = new URL(urlRelativa, window.location.href).href
+
+  await buscarTelaEAbrirPopupMarcador(acao, url, quantidade)
 }
 
 // A decisão de interceptar (contagem de selecionados) e o preventDefault/
