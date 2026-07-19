@@ -165,3 +165,37 @@ describe('montarCorpoConfirmacao', () => {
     })
   })
 })
+
+import { extrairUrlNovoMarcador } from './marcadorRapido'
+
+describe('extrairUrlNovoMarcador', () => {
+  it('extrai a URL de dentro da função cadastrarMarcador() num <script> (formato real confirmado)', () => {
+    const doc = new DOMParser().parseFromString(
+      `<html><head><script>
+        function inicializar(){}
+        function cadastrarMarcador(){
+          parent.infraAbrirJanelaModal('controlador.php?acao=marcador_cadastrar&acao_origem=andamento_marcador_cadastrar&acao_retorno=andamento_marcador_cadastrar&pagina_simples=1&infra_sistema=100000100&infra_unidade_atual=110002133&infra_hash=abb1398175f14729ef520469874ce8549e4ff88bdb86f5e2309a216dab21604e',700,450);
+        }
+        function recarregarMarcadores(idMarcador){}
+      </script></head><body></body></html>`,
+      'text/html'
+    )
+
+    expect(extrairUrlNovoMarcador(doc)).toBe(
+      'controlador.php?acao=marcador_cadastrar&acao_origem=andamento_marcador_cadastrar&acao_retorno=andamento_marcador_cadastrar&pagina_simples=1&infra_sistema=100000100&infra_unidade_atual=110002133&infra_hash=abb1398175f14729ef520469874ce8549e4ff88bdb86f5e2309a216dab21604e'
+    )
+  })
+
+  it('retorna null quando existe <script> mas sem a função cadastrarMarcador', () => {
+    const doc = new DOMParser().parseFromString(
+      '<html><head><script>function outraFuncao(){}</script></head><body></body></html>',
+      'text/html'
+    )
+    expect(extrairUrlNovoMarcador(doc)).toBeNull()
+  })
+
+  it('retorna null quando não há nenhum <script> no documento', () => {
+    const doc = new DOMParser().parseFromString('<div></div>', 'text/html')
+    expect(extrairUrlNovoMarcador(doc)).toBeNull()
+  })
+})

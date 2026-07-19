@@ -40,6 +40,21 @@ export function parseFormularioMarcador(
   return { actionUrl: form.getAttribute('action') ?? '', campos }
 }
 
+// cadastrarMarcador() não é um onclick inline com URL direta (como os outros links já tratados
+// neste arquivo) -- é uma função JS definida num <script> no <head> da tela "Adicionar Marcador",
+// que abre um iframe modal via parent.infraAbrirJanelaModal(url, largura, altura). Confirmado com
+// o código-fonte bruto (Ctrl+U) de uma instância SEI real: a URL completa, com infra_hash válido
+// pra esta sessão/ação, já vem embutida como string literal dentro dessa função -- não precisa de
+// nenhuma chamada de rede extra só pra descobri-la.
+export function extrairUrlNovoMarcador(doc: Document): string | null {
+  const regex = /function\s+cadastrarMarcador\s*\(\s*\)\s*\{[^}]*infraAbrirJanelaModal\(\s*'([^']+)'/
+  for (const script of Array.from(doc.querySelectorAll('script'))) {
+    const match = script.textContent?.match(regex)
+    if (match) return match[1]
+  }
+  return null
+}
+
 export function montarCorpoConfirmacao(
   campos: Record<string, string>,
   marcadorEscolhido: string,
