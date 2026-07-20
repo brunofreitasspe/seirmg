@@ -5,6 +5,10 @@ import {
   extrairInteressados,
   obterUnidadeAtual,
   extrairAtribuicao,
+  extrairNivelAcesso,
+  extrairAssuntos,
+  extrairObservacao,
+  extrairEspecificacao,
 } from './painelLateral'
 
 function montarDocumento(html: string): Document {
@@ -148,5 +152,93 @@ describe('extrairAtribuicao', () => {
     // contra um processo sigiloso real do SEI antes de confiar neste branch em produção
     // (mesmo tratamento do Lote F).
     expect(resultado?.mais).toBe(2)
+  })
+})
+
+describe('extrairNivelAcesso', () => {
+  it('retorna Público quando rdoNivelAcesso = 0', () => {
+    const doc = montarDocumento(`
+      <input type="radio" name="rdoNivelAcesso" value="0" checked>
+      <input type="radio" name="rdoNivelAcesso" value="1">
+    `)
+    expect(extrairNivelAcesso(doc)).toEqual({ nivel: 'Público', hipoteseLegal: null })
+  })
+
+  it('retorna Restrito com a hipótese legal selecionada quando rdoNivelAcesso = 1', () => {
+    const doc = montarDocumento(`
+      <input type="radio" name="rdoNivelAcesso" value="1" checked>
+      <select id="selHipoteseLegal">
+        <option value="1">Outra hipótese</option>
+        <option value="2" selected>Informação Pessoal</option>
+      </select>
+    `)
+    expect(extrairNivelAcesso(doc)).toEqual({ nivel: 'Restrito', hipoteseLegal: 'Informação Pessoal' })
+  })
+
+  it('retorna Sigiloso quando rdoNivelAcesso = 2', () => {
+    const doc = montarDocumento(`<input type="radio" name="rdoNivelAcesso" value="2" checked>`)
+    expect(extrairNivelAcesso(doc)).toEqual({ nivel: 'Sigiloso', hipoteseLegal: null })
+  })
+
+  it('retorna nível vazio quando não há rádio marcado', () => {
+    expect(extrairNivelAcesso(montarDocumento('<div></div>'))).toEqual({ nivel: '', hipoteseLegal: null })
+  })
+})
+
+describe('extrairAssuntos', () => {
+  it('extrai o texto de cada option', () => {
+    const doc = montarDocumento(`
+      <select id="selAssuntos">
+        <option value="1">Recursos Humanos</option>
+        <option value="2">Licitação</option>
+      </select>
+    `)
+    expect(extrairAssuntos(doc)).toEqual(['Recursos Humanos', 'Licitação'])
+  })
+
+  it('ignora options com texto vazio', () => {
+    const doc = montarDocumento(`
+      <select id="selAssuntos">
+        <option value=""></option>
+        <option value="1">Licitação</option>
+      </select>
+    `)
+    expect(extrairAssuntos(doc)).toEqual(['Licitação'])
+  })
+
+  it('retorna lista vazia quando não há select', () => {
+    expect(extrairAssuntos(montarDocumento('<div></div>'))).toEqual([])
+  })
+})
+
+describe('extrairObservacao', () => {
+  it('extrai o texto da textarea', () => {
+    const doc = montarDocumento(`<textarea id="txaObservacoes">Aguardando retorno da unidade.</textarea>`)
+    expect(extrairObservacao(doc)).toBe('Aguardando retorno da unidade.')
+  })
+
+  it('retorna string vazia quando a textarea está vazia', () => {
+    const doc = montarDocumento(`<textarea id="txaObservacoes"></textarea>`)
+    expect(extrairObservacao(doc)).toBe('')
+  })
+
+  it('retorna string vazia quando não há textarea', () => {
+    expect(extrairObservacao(montarDocumento('<div></div>'))).toBe('')
+  })
+})
+
+describe('extrairEspecificacao', () => {
+  it('extrai o valor do campo de texto', () => {
+    const doc = montarDocumento(`<input type="text" id="txtDescricao" value="Contrato de manutenção predial">`)
+    expect(extrairEspecificacao(doc)).toBe('Contrato de manutenção predial')
+  })
+
+  it('retorna string vazia quando o campo está vazio', () => {
+    const doc = montarDocumento(`<input type="text" id="txtDescricao" value="">`)
+    expect(extrairEspecificacao(doc)).toBe('')
+  })
+
+  it('retorna string vazia quando não há o campo', () => {
+    expect(extrairEspecificacao(montarDocumento('<div></div>'))).toBe('')
   })
 })

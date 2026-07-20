@@ -95,3 +95,34 @@ export function extrairAtribuicao(scriptHtml: string, unidadeAtual: string): Dad
 
   return null
 }
+
+export interface NivelAcessoExtraido {
+  nivel: 'Público' | 'Restrito' | 'Sigiloso' | ''
+  hipoteseLegal: string | null
+}
+
+export function extrairNivelAcesso(doc: Document): NivelAcessoExtraido {
+  const valor = doc.querySelector<HTMLInputElement>('input[name="rdoNivelAcesso"]:checked')?.value
+
+  if (valor === '0') return { nivel: 'Público', hipoteseLegal: null }
+  if (valor === '2') return { nivel: 'Sigiloso', hipoteseLegal: null }
+  if (valor === '1') {
+    const hipotese = doc.querySelector<HTMLSelectElement>('#selHipoteseLegal')?.selectedOptions[0]?.textContent?.trim()
+    return { nivel: 'Restrito', hipoteseLegal: hipotese || null }
+  }
+  return { nivel: '', hipoteseLegal: null }
+}
+
+export function extrairAssuntos(doc: Document): string[] {
+  return Array.from(doc.querySelectorAll('#selAssuntos option'))
+    .map((option) => option.textContent?.trim() ?? '')
+    .filter((texto) => texto !== '')
+}
+
+export function extrairObservacao(doc: Document): string {
+  return doc.querySelector<HTMLTextAreaElement>('#txaObservacoes')?.value.trim() ?? ''
+}
+
+export function extrairEspecificacao(doc: Document): string {
+  return doc.querySelector<HTMLInputElement>('#txtDescricao')?.value.trim() ?? ''
+}
