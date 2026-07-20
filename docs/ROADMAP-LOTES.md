@@ -122,6 +122,12 @@
   mouse num interessado — plano `docs/superpowers/plans/2026-07-20-seirmg-visual-painel-arvore.md`.
   `criarSeparador` virou `criarSecao` (retorna `{ secao, corpo }`, cabeçalho com ícone já embutido);
   nenhuma função de extração de dados mudou. Mesma paleta já usada no popup redesenhado (item acima).
+  **Mesmo dia, follow-up:** os botões Remover/Editar/Cancelar/Salvar da seção Anotações (mockup aprovado:
+  https://claude.ai/code/artifact/fb10f7cf-7ee5-4145-af97-c8e6d010d149) também eram botões nativos sem
+  nenhum estilo — os quatro agora compartilham um único componente (`criarBotaoAcao`, classe
+  `seirmg-btn-acao`), mesmo padding/tamanho/borda, só variando cor por modificador (`-perigo` no Remover,
+  `-primario` no Salvar) — pedido explícito do usuário depois de notar que os dois pares não batiam entre
+  si na primeira versão do mockup.
 
 - **Histórico de processos visitados** — spec `docs/superpowers/specs/2026-07-20-seirmg-historico-processos-visitados-design.md`,
   plano `docs/superpowers/plans/2026-07-20-seirmg-historico-processos-visitados.md`. Porta o "Histórico de
