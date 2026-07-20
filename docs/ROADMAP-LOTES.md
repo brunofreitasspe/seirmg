@@ -127,7 +127,12 @@
   nenhum estilo — os quatro agora compartilham um único componente (`criarBotaoAcao`, classe
   `seirmg-btn-acao`), mesmo padding/tamanho/borda, só variando cor por modificador (`-perigo` no Remover,
   `-primario` no Salvar) — pedido explícito do usuário depois de notar que os dois pares não batiam entre
-  si na primeira versão do mockup.
+  si na primeira versão do mockup. **Bug real encontrado e corrigido na mesma sessão:** o link "Clique
+  aqui" (criar nova nota, no estado vazio) não fazia nada ao clicar — `iniciarEdicao()` nunca tornava
+  `comAnotacao` (o `<div>` que envolve o formulário) visível; funcionava ao editar uma nota já existente
+  (esse `<div>` já estava visível nesse caso) mas quebrava por completo ao criar uma nota nova a partir
+  do estado vazio (`comAnotacao` começa com `display:none` nesse caso). Mais um sintoma do Lote G nunca
+  ter sido testado ao vivo antes desta sessão (ver a entrada de `all_frames` acima).
 
 - **Histórico de processos visitados** — spec `docs/superpowers/specs/2026-07-20-seirmg-historico-processos-visitados-design.md`,
   plano `docs/superpowers/plans/2026-07-20-seirmg-historico-processos-visitados.md`. Porta o "Histórico de
