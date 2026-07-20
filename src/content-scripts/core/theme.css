@@ -469,36 +469,127 @@ body.seirmg-theme-super-black,
 
 /* ===== Painel lateral — procedimento_visualizar ===== */
 
-p.seirmg-tipo-processo {
-  margin: 0 0 0 1.2em;
-  font-size: 12px;
+.seirmg-secao {
+  padding: 9px 6px;
+  border-bottom: 1px solid #e2e7f0;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
 }
 
-#seirmg-interessados,
-#seirmg-atribuicao {
-  margin-left: 1.2em;
+.seirmg-secao:last-child {
+  border-bottom: none;
 }
 
-p.seirmg-interessado,
-p.seirmg-atribuido-para {
-  margin: 3px 0 0 0;
-  font-size: 12px;
+.seirmg-secao-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #667085;
+  margin-bottom: 4px;
 }
 
-p.seirmg-atribuido-para.seirmg-sem-atribuicao {
-  color: red;
+.seirmg-secao-icone {
+  display: inline-flex;
+  flex-shrink: 0;
+  color: var(--seirmg-accent-color);
 }
 
-p.seirmg-atribuido-para.seirmg-atribuido-para-mais {
+.seirmg-secao-icone svg {
+  width: 13px;
+  height: 13px;
+  display: block;
+}
+
+.seirmg-secao-cabecalho span:last-child {
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.seirmg-secao-corpo {
+  padding-left: 20px;
+  font-size: 12.5px;
+  line-height: 1.45;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.seirmg-secao-corpo p {
+  margin: 0;
+}
+
+.seirmg-vazio {
+  color: #667085;
+  font-style: italic;
+}
+
+.seirmg-badge-nivel {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px 2px 6px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  width: fit-content;
+}
+
+.seirmg-badge-nivel svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+.seirmg-badge-nivel-publico {
+  background: #e7f6ef;
+  color: #17875a;
+}
+
+.seirmg-badge-nivel-restrito {
+  background: #fdf1e6;
+  color: #b5530a;
+}
+
+.seirmg-badge-nivel-sigiloso {
+  background: #fdecec;
+  color: #b3261e;
+}
+
+.seirmg-hipotese-legal {
+  color: #667085;
+  font-size: 11.5px;
+}
+
+p.seirmg-interessado {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.seirmg-interessado-marcador {
+  width: 4px;
+  height: 4px;
+  border-radius: 999px;
+  background: #667085;
+  flex-shrink: 0;
+}
+
+.seirmg-interessado-sigla {
+  color: #667085;
   font-size: 11px;
-  color: #757575;
 }
 
 span.seirmg-copiar-sigla {
   display: inline-flex;
   cursor: pointer;
-  margin-left: 4px;
-  opacity: 0.6;
+  margin-left: auto;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+
+p.seirmg-interessado:hover span.seirmg-copiar-sigla {
+  opacity: 1;
 }
 
 span.seirmg-copiar-sigla svg {
@@ -510,7 +601,32 @@ span.seirmg-copiar-sigla svg {
   display: inline-block;
   margin-left: 6px;
   font-size: 10px;
-  color: #017fff;
+  color: var(--seirmg-accent-color);
+}
+
+p.seirmg-atribuido-para {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 2px 9px 2px 3px;
+  border-radius: 999px;
+  background: #eaf3ff;
+  color: var(--seirmg-accent-color);
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+p.seirmg-atribuido-para.seirmg-sem-atribuicao {
+  background: transparent;
+  padding: 0;
+  color: #b3261e;
+  font-weight: 400;
+}
+
+p.seirmg-atribuido-para.seirmg-atribuido-para-mais {
+  font-size: 11px;
+  background: #f4f7fb;
+  color: #667085;
 }
 
 #seirmg-dropzone-overlay {

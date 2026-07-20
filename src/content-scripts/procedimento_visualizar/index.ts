@@ -29,6 +29,16 @@ import { tokenValido } from '../../features/planka/token'
 import { montarEstiloPlanka, montarConteudoCardPlanka, type RespostaConsultaPlanka } from '../shared/plankaCard'
 import { limparTokenPlanka } from '../shared/plankaToken'
 import copyIconSvg from 'lucide-static/icons/copy.svg?raw'
+import stickyNoteIconSvg from 'lucide-static/icons/sticky-note.svg?raw'
+import briefcaseIconSvg from 'lucide-static/icons/briefcase.svg?raw'
+import globeIconSvg from 'lucide-static/icons/globe.svg?raw'
+import lockIconSvg from 'lucide-static/icons/lock.svg?raw'
+import shieldAlertIconSvg from 'lucide-static/icons/shield-alert.svg?raw'
+import fileTextIconSvg from 'lucide-static/icons/file-text.svg?raw'
+import messageSquareIconSvg from 'lucide-static/icons/message-square.svg?raw'
+import tagsIconSvg from 'lucide-static/icons/tags.svg?raw'
+import usersIconSvg from 'lucide-static/icons/users.svg?raw'
+import userCheckIconSvg from 'lucide-static/icons/user-check.svg?raw'
 
 function ajustarElementosNativos(): void {
   try {
@@ -149,15 +159,9 @@ function montarPainelAnotacao(): void {
 
     const container = document.getElementById('container') ?? document.body
 
-    const separador = document.createElement('div')
-    separador.className = 'seirmg-separador'
-    const spanSep = document.createElement('span')
-    spanSep.textContent = 'Anotações'
-    separador.appendChild(spanSep)
-
-    const divAnotacao = document.createElement('div')
+    const { secao, corpo: divAnotacao } = criarSecao('Anotações', stickyNoteIconSvg)
     divAnotacao.id = 'seirmg-anotacao'
-    container.append(separador, divAnotacao)
+    container.appendChild(secao)
 
     let dadosAtuais: AnotacaoDados = {
       texto: '',
@@ -335,13 +339,24 @@ async function consultarDadosPlanka(numero: string): Promise<RespostaConsultaPla
   return (await resposta.json()) as RespostaConsultaPlanka
 }
 
-function criarSeparador(titulo: string): HTMLDivElement {
-  const separador = document.createElement('div')
-  separador.className = 'seirmg-separador'
-  const span = document.createElement('span')
-  span.textContent = titulo
-  separador.appendChild(span)
-  return separador
+function criarSecao(titulo: string, iconeSvg: string): { secao: HTMLDivElement; corpo: HTMLDivElement } {
+  const secao = document.createElement('div')
+  secao.className = 'seirmg-secao'
+
+  const cabecalho = document.createElement('div')
+  cabecalho.className = 'seirmg-secao-cabecalho'
+  const icone = document.createElement('span')
+  icone.className = 'seirmg-secao-icone'
+  icone.innerHTML = iconeSvg
+  const rotulo = document.createElement('span')
+  rotulo.textContent = titulo
+  cabecalho.append(icone, rotulo)
+
+  const corpo = document.createElement('div')
+  corpo.className = 'seirmg-secao-corpo'
+
+  secao.append(cabecalho, corpo)
+  return { secao, corpo }
 }
 
 function criarIconeCopiar(sigla: string, ancora: HTMLElement): HTMLSpanElement {
@@ -368,89 +383,118 @@ function criarIconeCopiar(sigla: string, ancora: HTMLElement): HTMLSpanElement {
 }
 
 function renderizarInteressados(container: HTMLElement, interessados: InteressadoExtraido[]): void {
-  container.appendChild(criarSeparador('Interessado(s)'))
-  const div = document.createElement('div')
-  div.id = 'seirmg-interessados'
+  const { secao, corpo } = criarSecao('Interessado(s)', usersIconSvg)
+  corpo.id = 'seirmg-interessados'
 
   if (interessados.length === 0) {
     const p = document.createElement('p')
-    p.className = 'seirmg-interessado'
+    p.className = 'seirmg-interessado seirmg-vazio'
     p.textContent = 'Nenhum interessado especificado.'
-    div.appendChild(p)
+    corpo.appendChild(p)
   } else {
     interessados.forEach((interessado) => {
       const p = document.createElement('p')
       p.className = 'seirmg-interessado'
+      const marcador = document.createElement('span')
+      marcador.className = 'seirmg-interessado-marcador'
+      p.appendChild(marcador)
       const spanNome = document.createElement('span')
       spanNome.textContent = interessado.nome
       p.appendChild(spanNome)
       if (interessado.sigla) {
         const spanSigla = document.createElement('span')
-        spanSigla.textContent = ` (${interessado.sigla})`
+        spanSigla.className = 'seirmg-interessado-sigla'
+        spanSigla.textContent = `(${interessado.sigla})`
         p.appendChild(spanSigla)
         p.appendChild(criarIconeCopiar(interessado.sigla, p))
       }
-      div.appendChild(p)
+      corpo.appendChild(p)
     })
   }
 
-  container.appendChild(div)
+  container.appendChild(secao)
+}
+
+const ICONES_NIVEL_ACESSO: Record<'Público' | 'Restrito' | 'Sigiloso', { classe: string; icone: string }> = {
+  Público: { classe: 'seirmg-badge-nivel-publico', icone: globeIconSvg },
+  Restrito: { classe: 'seirmg-badge-nivel-restrito', icone: lockIconSvg },
+  Sigiloso: { classe: 'seirmg-badge-nivel-sigiloso', icone: shieldAlertIconSvg },
 }
 
 function renderizarNivelAcesso(container: HTMLElement, dados: NivelAcessoExtraido): void {
-  container.appendChild(criarSeparador('Nível de Acesso'))
-  const p = document.createElement('p')
-  p.className = 'seirmg-nivel-acesso'
+  const { secao, corpo } = criarSecao('Nível de Acesso', shieldAlertIconSvg)
+
   if (!dados.nivel) {
+    const p = document.createElement('p')
+    p.className = 'seirmg-vazio'
     p.textContent = 'Não especificado.'
-  } else if (dados.hipoteseLegal) {
-    p.textContent = `${dados.nivel}: ${dados.hipoteseLegal}`
+    corpo.appendChild(p)
   } else {
-    p.textContent = dados.nivel
+    const info = ICONES_NIVEL_ACESSO[dados.nivel]
+    const badge = document.createElement('span')
+    badge.className = `seirmg-badge-nivel ${info.classe}`
+    const icone = document.createElement('span')
+    icone.innerHTML = info.icone
+    badge.append(icone, document.createTextNode(dados.nivel))
+    corpo.appendChild(badge)
+
+    if (dados.hipoteseLegal) {
+      const hipotese = document.createElement('p')
+      hipotese.className = 'seirmg-hipotese-legal'
+      hipotese.textContent = dados.hipoteseLegal
+      corpo.appendChild(hipotese)
+    }
   }
-  container.appendChild(p)
+
+  container.appendChild(secao)
 }
 
 function renderizarAssuntos(container: HTMLElement, assuntos: string[]): void {
-  container.appendChild(criarSeparador('Assuntos'))
-  const div = document.createElement('div')
-  div.id = 'seirmg-assuntos'
+  const { secao, corpo } = criarSecao('Assuntos', tagsIconSvg)
+  corpo.id = 'seirmg-assuntos'
 
   if (assuntos.length === 0) {
     const p = document.createElement('p')
-    p.className = 'seirmg-assunto'
+    p.className = 'seirmg-assunto seirmg-vazio'
     p.textContent = 'Nenhum assunto especificado.'
-    div.appendChild(p)
+    corpo.appendChild(p)
   } else {
     assuntos.forEach((assunto) => {
       const p = document.createElement('p')
       p.className = 'seirmg-assunto'
       p.textContent = assunto
-      div.appendChild(p)
+      corpo.appendChild(p)
     })
   }
 
-  container.appendChild(div)
+  container.appendChild(secao)
 }
 
-function renderizarTextoSimples(container: HTMLElement, titulo: string, classe: string, texto: string, vazio: string): void {
-  container.appendChild(criarSeparador(titulo))
+function renderizarTextoSimples(
+  container: HTMLElement,
+  titulo: string,
+  classe: string,
+  texto: string,
+  vazio: string,
+  iconeSvg: string
+): void {
+  const { secao, corpo } = criarSecao(titulo, iconeSvg)
   const p = document.createElement('p')
-  p.className = classe
+  p.className = texto ? classe : `${classe} seirmg-vazio`
   p.textContent = texto || vazio
-  container.appendChild(p)
+  corpo.appendChild(p)
+  container.appendChild(secao)
 }
 
 function renderizarAtribuicao(container: HTMLElement, dados: DadosAtribuicao): void {
-  container.appendChild(criarSeparador(dados.sigiloso ? 'Credencial para' : 'Atribuído para'))
-  const div = document.createElement('div')
-  div.id = 'seirmg-atribuicao'
+  const { secao, corpo } = criarSecao(dados.sigiloso ? 'Credencial para' : 'Atribuído para', userCheckIconSvg)
+  corpo.id = 'seirmg-atribuicao'
 
   if (dados.usuarios.length === 0) {
     const p = document.createElement('p')
     p.className = 'seirmg-atribuido-para seirmg-sem-atribuicao'
     p.textContent = '(processo sem atribuição)'
-    div.appendChild(p)
+    corpo.appendChild(p)
   } else {
     dados.usuarios.forEach((usuario) => {
       const p = document.createElement('p')
@@ -459,18 +503,18 @@ function renderizarAtribuicao(container: HTMLElement, dados: DadosAtribuicao): v
         ? `Credencial para ${usuario.nome} (${usuario.login}).`
         : `Atribuído para ${usuario.nome} (${usuario.login}).`
       p.textContent = usuario.login
-      div.appendChild(p)
+      corpo.appendChild(p)
     })
     if (dados.sigiloso && dados.mais) {
       const p = document.createElement('p')
       p.className = 'seirmg-atribuido-para seirmg-atribuido-para-mais'
       p.textContent = `+${dados.mais}`
       p.title = `Mais ${dados.mais} usuário(s) de outra(s) área(s).`
-      div.appendChild(p)
+      corpo.appendChild(p)
     }
   }
 
-  container.appendChild(div)
+  container.appendChild(secao)
 }
 
 async function montarPainelTipoEInteressados(): Promise<void> {
@@ -490,24 +534,23 @@ async function montarPainelTipoEInteressados(): Promise<void> {
 
   const tipo = extrairTipoProcesso(doc)
 
-  container.appendChild(criarSeparador('Tipo do processo'))
-  const divTipo = document.createElement('div')
+  const { secao: secaoTipo, corpo: divTipo } = criarSecao('Tipo do processo', briefcaseIconSvg)
   divTipo.id = 'seirmg-tipo-processo'
   const pTipo = document.createElement('p')
-  pTipo.className = 'seirmg-tipo-processo'
+  pTipo.className = 'seirmg-tipo-processo-texto'
   pTipo.textContent = tipo
   divTipo.appendChild(pTipo)
-  container.appendChild(divTipo)
+  container.appendChild(secaoTipo)
 
   registrarHistoricoVisita(numero, tipo).catch((error) => {
     console.error('[SEIRMG] Falha ao registrar processo no histórico:', error)
   })
 
   renderizarNivelAcesso(container, extrairNivelAcesso(doc))
-  renderizarTextoSimples(container, 'Especificação', 'seirmg-especificacao', extrairEspecificacao(doc), 'Sem especificação.')
+  renderizarTextoSimples(container, 'Especificação', 'seirmg-especificacao', extrairEspecificacao(doc), 'Sem especificação.', fileTextIconSvg)
   renderizarAssuntos(container, extrairAssuntos(doc))
   renderizarInteressados(container, extrairInteressados(doc))
-  renderizarTextoSimples(container, 'Observação', 'seirmg-observacao', extrairObservacao(doc), 'Sem observação.')
+  renderizarTextoSimples(container, 'Observação', 'seirmg-observacao', extrairObservacao(doc), 'Sem observação.', messageSquareIconSvg)
 
   if (numero) {
     consultarDadosPlanka(numero)
