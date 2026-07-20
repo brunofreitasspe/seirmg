@@ -100,6 +100,20 @@
   por engano. ⚠️ **Pendente de validação manual** -- confirmar visualmente em telas variadas do SEI
   que o painel não conflita com nada nativo, e observar o badge/notificação de atrasadas ao longo de
   alguns dias de uso real.
+- **Informações adicionais no painel lateral da árvore (Nível de Acesso, Especificação, Assuntos,
+  Observação)** — spec `docs/superpowers/specs/2026-07-20-seirmg-info-adicional-arvore-design.md`,
+  plano `docs/superpowers/plans/2026-07-20-seirmg-info-adicional-arvore.md`. Porta parte da
+  funcionalidade "Informações adicionais na árvore do processo" do Sei Pro (`seipro/pages/INFOARVORE.md`),
+  a partir do HTML de `procedimento_trabalhar` colado pelo usuário. Estende o painel lateral que já
+  existe (`montarPainelTipoEInteressados`, Lote G) reaproveitando o mesmo `fetchText` que ele já faz —
+  nenhuma chamada de rede nova. Quatro funções puras novas em `features/procedimento-visualizar/painelLateral.ts`
+  (`extrairNivelAcesso`, `extrairAssuntos`, `extrairObservacao`, `extrairEspecificacao`), mesmo padrão
+  de `extrairTipoProcesso`/`extrairInteressados` já existentes. **Fora de escopo, decisão explícita:**
+  Marcador (fonte de dado diferente, não vem dessa tela), edição inline de qualquer campo (ícones de
+  lápis do Sei Pro original), observações de todas as unidades (só a da unidade atual). ⚠️ **Pendente
+  de validação manual numa instância SEI real** — seletores (`rdoNivelAcesso`, `selHipoteseLegal`,
+  `selAssuntos`, `txaObservacoes`, `txtDescricao`) baseados nos nomes de campo que o Sei Pro usa pra
+  essa mesma tela, não confirmados contra HTML real.
 
 ## Roteiro (ordem sugerida)
 
