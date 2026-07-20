@@ -18,6 +18,7 @@ import type { AlinhamentoTexto } from '../../features/formatacao-basica/paragraf
 import { lerEstiloElemento } from '../../features/formatacao-basica/estiloTexto'
 import { primeiraLetraMaiuscula } from '../../features/formatacao-basica/maiuscula'
 import { abrirGradeInsercao } from './tabelaDialogo'
+import { abrirDialogoNotaRodape } from './notaRodapeDialogo'
 import { montarQuebraPaginaHtml } from '../../features/formatacao-basica/quebraPagina'
 import { CLASSES_PARAGRAFO_NUMERADO } from '../../features/formatacao-basica/numeracaoParagrafos'
 import { extrairItensSumario, montarSumarioHtml } from '../../features/formatacao-basica/sumario'
@@ -240,25 +241,24 @@ function montarBotaoNotaRodape(editor: EditorSEI): HTMLElement {
   let proximoNumero: number | null = null
 
   return criarBotaoToolbar('seirmg-cke-nota-rodape', 'Inserir nota de rodapé', superscriptIconSvg, () => {
-    const texto = window.prompt('Texto da nota de rodapé:')
-    if (!texto) return
+    abrirDialogoNotaRodape((texto) => {
+      if (proximoNumero === null) {
+        proximoNumero = proximoNumeroNota(editor.corpo)
+      }
+      const numero = proximoNumero
+      proximoNumero += 1
 
-    if (proximoNumero === null) {
-      proximoNumero = proximoNumeroNota(editor.corpo)
-    }
-    const numero = proximoNumero
-    proximoNumero += 1
-
-    const id = `n${Date.now()}`
-    editor
-      .inserirHtml(montarChamadaHtml(id, numero))
-      .then(() => {
-        // Entrada é anexada direto no DOM (não passa pela ponte): é bookkeeping
-        // estrutural do documento (lista de notas), não texto novo digitado pelo
-        // usuário no ponto do cursor — mesma exceção documentada na spec.
-        editor.corpo.insertAdjacentHTML('beforeend', montarEntradaHtml(id, numero, texto))
-      })
-      .catch(tratarErro('Falha ao inserir nota de rodapé'))
+      const id = `n${Date.now()}`
+      editor
+        .inserirHtml(montarChamadaHtml(id, numero))
+        .then(() => {
+          // Entrada é anexada direto no DOM (não passa pela ponte): é bookkeeping
+          // estrutural do documento (lista de notas), não texto novo digitado pelo
+          // usuário no ponto do cursor — mesma exceção documentada na spec.
+          editor.corpo.insertAdjacentHTML('beforeend', montarEntradaHtml(id, numero, texto))
+        })
+        .catch(tratarErro('Falha ao inserir nota de rodapé'))
+    })
   })
 }
 

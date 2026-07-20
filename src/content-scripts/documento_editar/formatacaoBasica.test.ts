@@ -190,42 +190,55 @@ describe('iniciarFormatacaoBasica', () => {
     expect(editor.inserirHtml).toHaveBeenCalledWith(expect.stringContaining(`href="#${paragrafoNumerado.id}"`))
   })
 
-  it('nota de rodapé: pede o texto via prompt, insere a chamada e anexa a entrada no fim do corpo', async () => {
+  it('nota de rodapé: abre diálogo, digita o texto, Inserir insere a chamada e anexa a entrada no fim do corpo', async () => {
     const { iframe, toolbox } = montarToolboxFalsa()
     const editor = criarEditorFalso(iframe)
-    const promptOriginal = window.prompt
-    window.prompt = vi.fn().mockReturnValue('Texto da nota')
 
     await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
     const botao = toolbox.querySelector('#seirmg-cke-nota-rodape') as HTMLElement
     botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    const textarea = document.querySelector('textarea') as HTMLTextAreaElement
+    textarea.value = 'Texto da nota'
+    const btnInserir = Array.from(document.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Inserir')
+    ) as HTMLButtonElement
+    btnInserir.click()
     await Promise.resolve()
 
     expect(editor.inserirHtml).toHaveBeenCalledWith(expect.stringContaining('<sup id="chamada-'))
     expect(editor.corpo.querySelector('.Nota_Rodape')?.textContent).toContain('Texto da nota')
-    window.prompt = promptOriginal
   })
 
-  it('nota de rodapé: duas notas clicadas em sequência, sem esperar a primeira resolver, recebem números 1 e 2 (não repetem)', async () => {
+  it('nota de rodapé: duas notas em sequência, sem esperar a primeira resolver, recebem números 1 e 2 (não repetem)', async () => {
     const { iframe, toolbox } = montarToolboxFalsa()
     const editor = criarEditorFalso(iframe)
-    const promptOriginal = window.prompt
-    window.prompt = vi.fn().mockReturnValue('Nota Y')
 
     await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
     const botao = toolbox.querySelector('#seirmg-cke-nota-rodape') as HTMLElement
-    // Dispara os dois cliques antes de aguardar qualquer resolução: reproduz o cenário real
-    // em que inserirHtml faz um round-trip assíncrono pela ponte e o DOM só reflete a
-    // primeira nota depois que sua Promise resolve.
+
     botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    let textarea = document.querySelector('textarea') as HTMLTextAreaElement
+    textarea.value = 'Nota Y'
+    let btnInserir = Array.from(document.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Inserir')
+    ) as HTMLButtonElement
+    btnInserir.click()
+
     botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+    textarea = document.querySelector('textarea') as HTMLTextAreaElement
+    textarea.value = 'Nota Y'
+    btnInserir = Array.from(document.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Inserir')
+    ) as HTMLButtonElement
+    btnInserir.click()
+
     await Promise.resolve()
     await Promise.resolve()
     await Promise.resolve()
 
     const entradas = Array.from(editor.corpo.querySelectorAll('.Nota_Rodape')).map((e) => e.textContent)
     expect(entradas).toEqual(['1. Nota Y ↑', '2. Nota Y ↑'])
-    window.prompt = promptOriginal
   })
 
   it('atalho de tecla numérica (Ctrl+Alt+Shift+1) aplica a classe configurada, mesmo com Shift trocando o caractere de "1" pra "!"', async () => {
