@@ -129,6 +129,7 @@ export default defineManifest({
         '*://*.org/*controlador.php?acao=procedimento_visualizar*',
       ],
       js: ['src/content-scripts/procedimento_visualizar/index.ts'],
+      all_frames: true,
       run_at: 'document_idle',
     },
     {
