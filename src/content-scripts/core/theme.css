@@ -815,3 +815,66 @@ dialog.seirmg-alerta-nao-assinados::backdrop {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* ===== Diálogos flutuantes do editor (Tabela Rápida, Nota de Rodapé, LaTeX) ===== */
+
+.seirmg-painel-flutuante {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  width: 340px;
+  background: #fff;
+  border: 1px solid #e2e7f0;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(20, 30, 50, 0.18), 0 2px 6px rgba(20, 30, 50, 0.1);
+  z-index: 10000;
+  padding: 14px;
+  font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: #1a2233;
+  box-sizing: border-box;
+}
+
+.seirmg-painel-flutuante-cabecalho {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.seirmg-painel-flutuante-cabecalho svg {
+  width: 15px;
+  height: 15px;
+  color: var(--seirmg-accent-color);
+  flex-shrink: 0;
+  display: block;
+}
+
+.seirmg-painel-flutuante-corpo textarea {
+  width: 100%;
+  min-height: 64px;
+  resize: vertical;
+  border: 1px solid #e2e7f0;
+  border-radius: 6px;
+  padding: 7px 8px;
+  font: inherit;
+  font-size: 12.5px;
+  color: inherit;
+  background: #fff;
+  box-sizing: border-box;
+}
+
+.seirmg-painel-flutuante-corpo textarea:focus {
+  outline: none;
+  border-color: var(--seirmg-accent-color);
+}
+
+.seirmg-painel-flutuante-rodape {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #e2e7f0;
+}
