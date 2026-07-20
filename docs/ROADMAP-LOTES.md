@@ -147,6 +147,22 @@
   circular colorido (verde "tudo em dia"/laranja "pendências"), lista de recentes com marcador + seta ao
   passar o mouse, largura 320px (era 260px). ⚠️ Pendente de validação manual numa instância SEI real.
 
+- **Início do Lote J — Tabela Rápida redesenhada + diálogos do editor** — spec
+  `docs/superpowers/specs/2026-07-20-seirmg-tabela-rapida-redesign-design.md`, plano
+  `docs/superpowers/plans/2026-07-20-seirmg-tabela-rapida-redesign.md`. Escopo restrito por pedido do
+  usuário: só Tabela Rápida (que o Lote I entregou numa versão simplificada com `window.prompt`) + os
+  outros 2 diálogos do editor que ainda usavam prompt/botões crus (Nota de Rodapé, Equação LaTeX). **QR
+  Code e Hashcode ficam explicitamente fora de escopo, inclusive de implementações futuras do Lote J.**
+  O resto do Lote J (referências internas, ~30 campos dinâmicos, etc.) fica pra uma conversa futura.
+  Mockup aprovado antes de implementar: https://claude.ai/code/artifact/82020ae6-d7b1-409c-8cd3-ff73607a3816.
+  Tabela Rápida ganhou uma grade visual de inserção (10×8 fixa, não cresce dinamicamente como o Sei Pro
+  original — simplificação deliberada) e um catálogo de 9 cores × 7 padrões estruturais pro estilo —
+  **desenho 100% próprio, sem reaproveitar o sprite de imagem do Sei Pro** (mesma decisão já tomada
+  antes com ícones, Font Awesome Pro → Lucide). Fluxo único (grade → estilo → insere já formatada, sem
+  botão separado pra reestilizar uma tabela já existente). Nota de Rodapé e Equação (LaTeX) passaram a
+  usar o mesmo helper compartilhado (`dialogoFlutuante.ts` — painel branco arredondado, cabeçalho com
+  ícone, botões `seirmg-btn-acao`). ⚠️ Pendente de validação manual numa instância SEI real.
+
 ## Roteiro (ordem sugerida)
 
 | # | Lote | Escopo | Fonte |
