@@ -4,6 +4,8 @@ import { detectarSeiVersaoMajor, detectarSeiVersionAtLeast4 } from '../../lib/se
 import { deveOcultarMenu } from '../../features/core/menu'
 import { estaNaTelaDeConfiguracao } from '../../features/core/indicarConfiguracao'
 import { renderBadge } from './badge'
+import { fetchText } from '../../lib/fetchViaBackground'
+import { parseListaBlocosAssinatura } from '../../features/bloco-assinatura/parser'
 
 function detectarUrlBaseSei(): string {
   return `${window.location.origin}${window.location.pathname.split('/controlador')[0]}`
@@ -160,6 +162,48 @@ async function indicarConfiguracao(): Promise<void> {
     console.error('[SEIRMG] Falha ao indicar configuração pendente:', error)
   }
 }
+
+interface RespostaBlocosDisponibilizados {
+  ok: boolean
+  total?: number
+  error?: string
+}
+
+async function consultarBlocosDisponibilizados(): Promise<RespostaBlocosDisponibilizados> {
+  const link = document.querySelector<HTMLAnchorElement>(
+    'a[href^="controlador.php?acao=bloco_assinatura_listar"]'
+  )
+  if (!link) return { ok: false, error: 'Link de Bloco de Assinatura não encontrado nessa página' }
+
+  const resultado = await fetchText(link.href)
+  if (!resultado.ok) return { ok: false, error: resultado.error }
+
+  const doc = new DOMParser().parseFromString(resultado.data, 'text/html')
+  const blocos = parseListaBlocosAssinatura(doc)
+  const total = blocos.filter((bloco) => bloco.estado === 'disponibilizado_para_area').length
+  return { ok: true, total }
+}
+
+function ehMensagemConsultarBlocos(
+  mensagem: unknown
+): mensagem is { type: 'seirmg:consultar-blocos-disponibilizados' } {
+  return (
+    typeof mensagem === 'object' &&
+    mensagem !== null &&
+    (mensagem as { type?: unknown }).type === 'seirmg:consultar-blocos-disponibilizados'
+  )
+}
+
+chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
+  if (!ehMensagemConsultarBlocos(mensagem)) return false
+  consultarBlocosDisponibilizados()
+    .then(responder)
+    .catch((error) => {
+      console.error('[SEIRMG] Falha ao consultar blocos de assinatura disponibilizados:', error)
+      responder({ ok: false, error: String(error) })
+    })
+  return true
+})
 
 async function bootstrap(): Promise<void> {
   notificarSeTelaDeLogin()
