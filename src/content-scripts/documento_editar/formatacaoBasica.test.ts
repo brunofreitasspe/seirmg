@@ -108,34 +108,45 @@ describe('iniciarFormatacaoBasica', () => {
     expect(editor.inserirTexto).toHaveBeenCalledWith('Processo administrativo')
   })
 
-  it('tabela rápida: pede linhas/colunas/estilo via prompt e insere a tabela já com o estilo escolhido', async () => {
+  it('tabela rápida: clicar na grade avança pro diálogo de estilo, Aplicar insere a tabela com as dimensões escolhidas', async () => {
     const { iframe, toolbox } = montarToolboxFalsa()
     const editor = criarEditorFalso(iframe)
-    const promptOriginal = window.prompt
-    window.prompt = vi.fn().mockReturnValueOnce('2').mockReturnValueOnce('3').mockReturnValueOnce('bordas')
 
     await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
     const botao = toolbox.querySelector('#seirmg-cke-tabela') as HTMLElement
     botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
-    expect(editor.inserirHtml).toHaveBeenCalledWith(
-      expect.stringContaining('<table class="Tabela" style="border-collapse:collapse;width:100%;border:1px solid #000">')
-    )
-    window.prompt = promptOriginal
+    const celula = document.querySelector('[data-linha="1"][data-coluna="2"]') as HTMLElement
+    celula.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    const btnAplicar = Array.from(document.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Aplicar')
+    ) as HTMLButtonElement
+    btnAplicar.click()
+
+    expect(editor.inserirHtml).toHaveBeenCalledWith(expect.stringContaining('<table class="Tabela"'))
+    const htmlInserido = (editor.inserirHtml as ReturnType<typeof vi.fn>).mock.calls[0][0] as string
+    expect((htmlInserido.match(/<tr>/g) ?? []).length).toBe(2)
+    expect((htmlInserido.match(/<td/g) ?? []).length).toBe(6)
   })
 
-  it('tabela rápida: estilo inválido ou vazio cai no padrão (tabela sem style extra)', async () => {
+  it('tabela rápida: Cancelar no diálogo de estilo não insere nada', async () => {
     const { iframe, toolbox } = montarToolboxFalsa()
     const editor = criarEditorFalso(iframe)
-    const promptOriginal = window.prompt
-    window.prompt = vi.fn().mockReturnValueOnce('1').mockReturnValueOnce('1').mockReturnValueOnce('')
 
     await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
     const botao = toolbox.querySelector('#seirmg-cke-tabela') as HTMLElement
     botao.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
 
-    expect(editor.inserirHtml).toHaveBeenCalledWith(expect.stringContaining('<table class="Tabela">'))
-    window.prompt = promptOriginal
+    const celula = document.querySelector('[data-linha="0"][data-coluna="0"]') as HTMLElement
+    celula.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }))
+
+    const btnCancelar = Array.from(document.querySelectorAll('button')).find((b) =>
+      b.textContent?.includes('Cancelar')
+    ) as HTMLButtonElement
+    btnCancelar.click()
+
+    expect(editor.inserirHtml).not.toHaveBeenCalled()
   })
 
   it('quebra de página: insere o marcador direto, sem diálogo', async () => {
