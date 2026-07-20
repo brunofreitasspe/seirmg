@@ -246,10 +246,11 @@ function montarPainelAnotacao(): void {
 
       const iniciarEdicao = (): void => {
         semAnotacao.style.display = 'none'
+        comAnotacao.style.display = 'block'
         botoes.style.display = 'none'
         pTexto.style.display = 'none'
-        textarea.value = pTexto.textContent ?? ''
         divEditar.style.display = 'block'
+        textarea.value = pTexto.textContent ?? ''
         textarea.focus()
       }
 
