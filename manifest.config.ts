@@ -125,6 +125,14 @@ export default defineManifest({
     },
     {
       matches: [
+        '*://*.br/*controlador.php?acao=editor_montar*',
+        '*://*.org/*controlador.php?acao=editor_montar*',
+      ],
+      js: ['src/content-scripts/editor_montar/index.ts'],
+      run_at: 'document_idle',
+    },
+    {
+      matches: [
         '*://*.br/*controlador.php?acao=procedimento_visualizar*',
         '*://*.org/*controlador.php?acao=procedimento_visualizar*',
       ],
