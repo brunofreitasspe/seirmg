@@ -146,6 +146,23 @@
   https://claude.ai/code/artifact/6d22fd4b-5485-417e-bd69-bba38f8e34ac) — card de status com ícone
   circular colorido (verde "tudo em dia"/laranja "pendências"), lista de recentes com marcador + seta ao
   passar o mouse, largura 320px (era 260px). ⚠️ Pendente de validação manual numa instância SEI real.
+  **2026-07-20 (bug real encontrado e corrigido no mesmo dia):** o card de status lia
+  `LocalConfig.blocoAssinaturaPendenteAtual`, que só atualiza quando o usuário visita a tela de
+  conteúdo de UM bloco específico — usuário testou com pendência real sem ter visitado essa tela e o
+  popup mostrou "Tudo em dia" (dado desatualizado, não bug de lógica). Corrigido pra consultar ao vivo
+  quando o popup abre — spec `docs/superpowers/specs/2026-07-20-seirmg-popup-consulta-blocos-ao-vivo-design.md`,
+  plano `docs/superpowers/plans/2026-07-20-seirmg-popup-consulta-blocos-ao-vivo.md`. Consulta **leve**
+  por decisão do usuário (dado o histórico deste projeto com bloco de assinatura — duas tentativas
+  anteriores de checagem automática via alarme já causaram deslogamento real): uma única requisição (a
+  listagem de blocos, reaproveitando `parseListaBlocosAssinatura` já existente), contando **blocos**
+  disponibilizados pra unidade atual (não o número exato de documentos, que exigiria entrar em cada
+  bloco). Disparada só por ação explícita do usuário (abrir o popup), nunca por timer. Popup não tem
+  como montar sozinho uma URL válida do SEI (falta o `infra_hash`) — novo listener de mensagem em
+  `content-scripts/core/index.ts` (roda em toda página do SEI) faz a consulta de verdade, popup usa
+  `chrome.tabs.sendMessage` numa aba do SEI já aberta. Terceiro estado visual novo ("Status
+  indisponível", cinza) pra quando não dá pra consultar (sem aba do SEI aberta, etc.) — nunca mistura
+  com o valor antigo baseado em documentos. `badge.ts` (indicador nativo perto da logo do SEI) não
+  mudou, continua usando o valor antigo — fora de escopo desta correção.
 
 - **Início do Lote J — Tabela Rápida redesenhada + diálogos do editor** — spec
   `docs/superpowers/specs/2026-07-20-seirmg-tabela-rapida-redesign-design.md`, plano
