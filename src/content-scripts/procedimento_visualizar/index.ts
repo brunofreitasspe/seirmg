@@ -23,7 +23,8 @@ import {
   type NivelAcessoExtraido,
 } from '../../features/procedimento-visualizar/painelLateral'
 import { fetchText } from '../../lib/fetchViaBackground'
-import { createLocalConfigStore } from '../../lib/storage'
+import { createLocalConfigStore, createSyncConfigStore, type HistoricoProcessoEntry } from '../../lib/storage'
+import { registrarProcessoVisitado } from '../../features/procedimento-visualizar/historico'
 import { tokenValido } from '../../features/planka/token'
 import { montarEstiloPlanka, montarConteudoCardPlanka, type RespostaConsultaPlanka } from '../shared/plankaCard'
 import { limparTokenPlanka } from '../shared/plankaToken'
@@ -93,6 +94,29 @@ function obterNumeroProcesso(): string | null {
   const link = document.querySelector('.infraArvore > a[target="ifrVisualizacao"]')
   if (!link) return null
   return link.textContent?.trim() || null
+}
+
+function obterIdProcedimento(): string | null {
+  return new URL(window.location.href).searchParams.get('id_procedimento')
+}
+
+async function registrarHistoricoVisita(numero: string | null, tipo: string): Promise<void> {
+  const idProcedimento = obterIdProcedimento()
+  if (!idProcedimento || !numero) return
+
+  const syncConfig = await createSyncConfigStore().get()
+  if (!syncConfig.historicoProcessos?.ativo) return
+
+  const localStore = createLocalConfigStore()
+  const localConfig = await localStore.get()
+  const novo: HistoricoProcessoEntry = {
+    idProcedimento,
+    numero,
+    tipo,
+    acessadoEm: new Date().toISOString(),
+  }
+  const historico = registrarProcessoVisitado(localConfig.historicoProcessosVisitados ?? [], novo)
+  await localStore.set({ ...localConfig, historicoProcessosVisitados: historico })
 }
 
 function alterarTitulo(): void {
@@ -464,14 +488,20 @@ async function montarPainelTipoEInteressados(): Promise<void> {
 
   const container = document.getElementById('container') ?? document.body
 
+  const tipo = extrairTipoProcesso(doc)
+
   container.appendChild(criarSeparador('Tipo do processo'))
   const divTipo = document.createElement('div')
   divTipo.id = 'seirmg-tipo-processo'
   const pTipo = document.createElement('p')
   pTipo.className = 'seirmg-tipo-processo'
-  pTipo.textContent = extrairTipoProcesso(doc)
+  pTipo.textContent = tipo
   divTipo.appendChild(pTipo)
   container.appendChild(divTipo)
+
+  registrarHistoricoVisita(numero, tipo).catch((error) => {
+    console.error('[SEIRMG] Falha ao registrar processo no histórico:', error)
+  })
 
   renderizarNivelAcesso(container, extrairNivelAcesso(doc))
   renderizarTextoSimples(container, 'Especificação', 'seirmg-especificacao', extrairEspecificacao(doc), 'Sem especificação.')
