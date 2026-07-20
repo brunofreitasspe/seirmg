@@ -79,6 +79,17 @@ export interface AlertaNaoAssinadosConfig {
   ativo: boolean
 }
 
+export interface HistoricoProcessoEntry {
+  idProcedimento: string
+  numero: string
+  tipo: string
+  acessadoEm: string
+}
+
+export interface HistoricoProcessosConfig {
+  ativo: boolean
+}
+
 export interface ControleProcessosConfig {
   prazos: PrazosConfig
   coresProcesso: CoresProcessoConfig
@@ -176,6 +187,7 @@ export interface SyncConfig {
   corretorOrtografico: CorretorOrtograficoConfig
   formatacaoBasica: FormatacaoBasicaConfig
   tarefas: TarefasConfig
+  historicoProcessos: HistoricoProcessosConfig
 }
 
 export interface NotificadoState {
@@ -196,6 +208,7 @@ export interface LocalConfig {
   schemaVersion: 1
   blocoAssinaturaNotificado: NotificadoState
   blocoAssinaturaPendenteAtual: string[]
+  historicoProcessosVisitados: HistoricoProcessoEntry[]
   // Último Estado conhecido de cada bloco (chave = número do bloco), usado só pela checagem
   // oportunista pra detectar transição pra "disponibilizado_para_area". Guardado como string crua
   // (não o tipo EstadoBloco) porque lib/storage.ts não importa de features/.
@@ -292,6 +305,9 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     ativo: false,
     itens: [],
   },
+  historicoProcessos: {
+    ativo: false,
+  },
 }
 
 export const DEFAULT_LOCAL_CONFIG: LocalConfig = {
@@ -301,6 +317,7 @@ export const DEFAULT_LOCAL_CONFIG: LocalConfig = {
   blocoAssinaturaEstadosConhecidos: {},
   blocoAssinaturaUltimaChecagemOportunista: '',
   tarefasNotificadas: {},
+  historicoProcessosVisitados: [],
 }
 
 export interface StorageArea {
