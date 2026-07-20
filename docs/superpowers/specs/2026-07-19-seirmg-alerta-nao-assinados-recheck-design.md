@@ -2,6 +2,27 @@
 
 > Correção sobre o Lote Q (`docs/superpowers/specs/2026-07-12-seirmg-lote-q-alerta-documentos-nao-assinados-design.md`), fora do ciclo lote-a-lote formal — pedido direto do usuário.
 
+> **ATUALIZAÇÃO 2026-07-20:** a abordagem "reconsulta silenciosa" descrita abaixo (reler a mesma
+> `Document` sem recarregar) **não funcionou na prática** — o usuário confirmou que, sem um reload de
+> verdade, o elemento `anchorA{id}` (ícone de assinado, lido por `extrairDocumentosPendentes`) nunca
+> aparece no DOM, porque ele só existe por vir renderizado do servidor; o SEI não muta a árvore via
+> AJAX quando um documento é assinado. Esse mesmo comportamento já era conhecido no projeto (ver
+> `src/content-scripts/anotacao_registrar/index.ts`, que por isso força
+> `iframeArvore.contentWindow.reload()` depois de salvar uma anotação). A correção final força um
+> reload real do `#ifrArvore` no momento em que o alerta apareceria, espera o evento `load`, e só
+> então reconsulta `extrairDocumentosPendentes` — ver commit subsequente em
+> `src/content-scripts/procedimento_enviar/index.ts`. O texto abaixo é mantido como registro
+> histórico da tentativa anterior.
+
+> **ATUALIZAÇÃO 2026-07-20 (2):** o reload forçado no momento de escolher a unidade (atualização
+> acima) funcionou, mas o usuário achou a experiência ruim -- o reload acontecia bem no meio da
+> interação de escolher a unidade de destino. Movido pra um gatilho mais cedo: um novo content
+> script (`src/content-scripts/editor_montar/index.ts`) força o reload assim que a janela do editor
+> fecha (via `window.opener`, mesmo caminho que o próprio SEI usa nativamente pra sua atualização
+> "leve" da árvore). `procedimento_enviar/index.ts` voltou a só reler `ifrArvore.contentDocument`
+> (releitura da propriedade, não uma referência antiga capturada) no momento de escolher a unidade,
+> sem forçar reload ali -- ver `docs/superpowers/plans/2026-07-20-seirmg-reload-arvore-pos-assinatura.md`.
+
 ## Contexto
 
 O alerta de "documentos não assinados" (Lote Q) às vezes avisa sobre um documento que o usuário
