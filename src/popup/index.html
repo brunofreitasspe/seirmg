@@ -4,24 +4,103 @@
     <meta charset="UTF-8" />
     <title>SEIRMG</title>
     <style>
-      body { font-family: system-ui, sans-serif; width: 260px; padding: 12px; }
-      #status { font-weight: bold; }
-      #abrir-opcoes {
-        margin-top: 8px;
-        width: 100%;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        gap: 6px;
+      :root {
+        --bg: #ffffff;
+        --bg-subtle: #f4f7fb;
+        --border: #e2e7f0;
+        --text: #1a2233;
+        --text-muted: #667085;
+        --accent: #017fff;
+        --ok: #17875a;
+        --ok-soft: #e7f6ef;
+        --warn: #b5530a;
+        --warn-soft: #fdf1e6;
       }
-      #abrir-opcoes svg { flex-shrink: 0; }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #15181e;
+          --bg-subtle: #1c2029;
+          --border: #2b303c;
+          --text: #e8ebf2;
+          --text-muted: #98a1b3;
+          --accent: #4da3ff;
+          --ok: #34c48c;
+          --ok-soft: rgba(52, 196, 140, 0.14);
+          --warn: #f0a13c;
+          --warn-soft: rgba(240, 161, 60, 0.14);
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        width: 320px;
+        margin: 0;
+        padding: 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        background: var(--bg);
+        color: var(--text);
+        font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      }
+      .cabecalho { display: flex; align-items: center; gap: 8px; }
+      .cabecalho img { width: 20px; height: 20px; border-radius: 5px; }
+      .cabecalho span { font-size: 13px; font-weight: 700; letter-spacing: 0.01em; }
+
+      .status { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--ok-soft); }
+      .status.pendente { background: var(--warn-soft); }
+      .status-icone { flex-shrink: 0; width: 22px; height: 22px; border-radius: 999px; display: flex; align-items: center; justify-content: center; background: var(--ok); color: white; }
+      .status.pendente .status-icone { background: var(--warn); }
+      .status-icone svg { width: 13px; height: 13px; }
+      .status-texto { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+      .status-titulo { font-size: 12.5px; font-weight: 600; color: var(--text); }
+      .status-titulo.pendente-cor { color: var(--warn); }
+      .status-sub { font-size: 11.5px; color: var(--text-muted); }
+
+      #historico { display: none; flex-direction: column; gap: 6px; }
+      #historico.visivel { display: flex; }
+      .secao-rotulo { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); padding: 0 2px; }
+      .lista-recentes { display: flex; flex-direction: column; gap: 2px; }
+      .item-recente { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px; text-decoration: none; color: inherit; }
+      .item-recente:hover { background: var(--bg-subtle); }
+      .item-recente:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+      .item-marcador { flex-shrink: 0; width: 6px; height: 6px; border-radius: 999px; background: var(--accent); }
+      .item-texto { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 1px; }
+      .item-numero { font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .item-tipo { font-size: 11px; color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .item-seta { flex-shrink: 0; color: var(--text-muted); opacity: 0; transition: opacity 120ms ease; }
+      .item-recente:hover .item-seta { opacity: 1; }
+      .item-seta svg { width: 13px; height: 13px; display: block; }
+
+      .divisor { height: 1px; background: var(--border); margin: 0 2px; }
+
+      #abrir-opcoes { display: inline-flex; align-items: center; justify-content: center; gap: 7px; width: 100%; padding: 9px; border-radius: 8px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 12.5px; font-weight: 600; font-family: inherit; cursor: pointer; }
+      #abrir-opcoes:hover { background: var(--bg-subtle); border-color: var(--accent); color: var(--accent); }
+      #abrir-opcoes svg { width: 14px; height: 14px; flex-shrink: 0; }
     </style>
   </head>
   <body>
-    <div id="status">Carregando...</div>
-    <div id="contagem"></div>
+    <div class="cabecalho">
+      <img src="../assets/icons/icon-32.png" alt="" />
+      <span>SEIRMG</span>
+    </div>
+
+    <div id="status" class="status">
+      <div class="status-icone" id="status-icone"></div>
+      <div class="status-texto">
+        <span id="status-titulo" class="status-titulo">Carregando...</span>
+        <span id="status-sub" class="status-sub"></span>
+      </div>
+    </div>
+
+    <div id="historico">
+      <div class="secao-rotulo">Processos recentes</div>
+      <div id="lista-recentes" class="lista-recentes"></div>
+    </div>
+
+    <div class="divisor"></div>
+
     <button id="abrir-opcoes" type="button">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      <span id="icone-opcoes"></span>
       <span>Abrir opções</span>
     </button>
     <script type="module" src="./main.ts"></script>
