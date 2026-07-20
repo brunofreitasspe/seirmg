@@ -14,8 +14,13 @@ import {
   extrairInteressados,
   obterUnidadeAtual,
   extrairAtribuicao,
+  extrairNivelAcesso,
+  extrairAssuntos,
+  extrairObservacao,
+  extrairEspecificacao,
   type InteressadoExtraido,
   type DadosAtribuicao,
+  type NivelAcessoExtraido,
 } from '../../features/procedimento-visualizar/painelLateral'
 import { fetchText } from '../../lib/fetchViaBackground'
 import { createLocalConfigStore } from '../../lib/storage'
@@ -368,6 +373,50 @@ function renderizarInteressados(container: HTMLElement, interessados: Interessad
   container.appendChild(div)
 }
 
+function renderizarNivelAcesso(container: HTMLElement, dados: NivelAcessoExtraido): void {
+  container.appendChild(criarSeparador('Nível de Acesso'))
+  const p = document.createElement('p')
+  p.className = 'seirmg-nivel-acesso'
+  if (!dados.nivel) {
+    p.textContent = 'Não especificado.'
+  } else if (dados.hipoteseLegal) {
+    p.textContent = `${dados.nivel}: ${dados.hipoteseLegal}`
+  } else {
+    p.textContent = dados.nivel
+  }
+  container.appendChild(p)
+}
+
+function renderizarAssuntos(container: HTMLElement, assuntos: string[]): void {
+  container.appendChild(criarSeparador('Assuntos'))
+  const div = document.createElement('div')
+  div.id = 'seirmg-assuntos'
+
+  if (assuntos.length === 0) {
+    const p = document.createElement('p')
+    p.className = 'seirmg-assunto'
+    p.textContent = 'Nenhum assunto especificado.'
+    div.appendChild(p)
+  } else {
+    assuntos.forEach((assunto) => {
+      const p = document.createElement('p')
+      p.className = 'seirmg-assunto'
+      p.textContent = assunto
+      div.appendChild(p)
+    })
+  }
+
+  container.appendChild(div)
+}
+
+function renderizarTextoSimples(container: HTMLElement, titulo: string, classe: string, texto: string, vazio: string): void {
+  container.appendChild(criarSeparador(titulo))
+  const p = document.createElement('p')
+  p.className = classe
+  p.textContent = texto || vazio
+  container.appendChild(p)
+}
+
 function renderizarAtribuicao(container: HTMLElement, dados: DadosAtribuicao): void {
   container.appendChild(criarSeparador(dados.sigiloso ? 'Credencial para' : 'Atribuído para'))
   const div = document.createElement('div')
@@ -424,7 +473,11 @@ async function montarPainelTipoEInteressados(): Promise<void> {
   divTipo.appendChild(pTipo)
   container.appendChild(divTipo)
 
+  renderizarNivelAcesso(container, extrairNivelAcesso(doc))
+  renderizarTextoSimples(container, 'Especificação', 'seirmg-especificacao', extrairEspecificacao(doc), 'Sem especificação.')
+  renderizarAssuntos(container, extrairAssuntos(doc))
   renderizarInteressados(container, extrairInteressados(doc))
+  renderizarTextoSimples(container, 'Observação', 'seirmg-observacao', extrairObservacao(doc), 'Sem observação.')
 
   if (numero) {
     consultarDadosPlanka(numero)
