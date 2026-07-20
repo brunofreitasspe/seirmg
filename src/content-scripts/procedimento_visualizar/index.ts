@@ -39,6 +39,10 @@ import messageSquareIconSvg from 'lucide-static/icons/message-square.svg?raw'
 import tagsIconSvg from 'lucide-static/icons/tags.svg?raw'
 import usersIconSvg from 'lucide-static/icons/users.svg?raw'
 import userCheckIconSvg from 'lucide-static/icons/user-check.svg?raw'
+import pencilIconSvg from 'lucide-static/icons/pencil.svg?raw'
+import trash2IconSvg from 'lucide-static/icons/trash-2.svg?raw'
+import xIconSvg from 'lucide-static/icons/x.svg?raw'
+import checkIconSvg from 'lucide-static/icons/check.svg?raw'
 
 function ajustarElementosNativos(): void {
   try {
@@ -197,20 +201,17 @@ function montarPainelAnotacao(): void {
       const comAnotacao = document.createElement('div')
       comAnotacao.className = 'seirmg-anotacao'
 
-      const botoes = document.createElement('div')
-      const btnRemover = document.createElement('button')
-      btnRemover.type = 'button'
-      btnRemover.textContent = 'Remover'
-      const btnEditar = document.createElement('button')
-      btnEditar.type = 'button'
-      btnEditar.textContent = 'Editar'
-      botoes.append(btnRemover, btnEditar)
-      comAnotacao.appendChild(botoes)
-
       const pTexto = document.createElement('p')
       pTexto.className = 'seirmg-anotacao-texto'
       pTexto.textContent = dadosAtuais.texto
       comAnotacao.appendChild(pTexto)
+
+      const botoes = document.createElement('div')
+      botoes.className = 'seirmg-anotacao-acoes'
+      const btnEditar = criarBotaoAcao('Editar', pencilIconSvg)
+      const btnRemover = criarBotaoAcao('Remover', trash2IconSvg, 'seirmg-btn-acao-perigo')
+      botoes.append(btnEditar, btnRemover)
+      comAnotacao.appendChild(botoes)
 
       const divEditar = document.createElement('div')
       divEditar.style.display = 'none'
@@ -225,13 +226,12 @@ function montarPainelAnotacao(): void {
       lblPrioridade.textContent = 'Prioridade'
       divEditar.append(chkPrioridade, lblPrioridade)
 
-      const btnCancelar = document.createElement('button')
-      btnCancelar.type = 'button'
-      btnCancelar.textContent = 'Cancelar'
-      const btnSalvar = document.createElement('button')
-      btnSalvar.type = 'button'
-      btnSalvar.textContent = 'Salvar'
-      divEditar.append(btnCancelar, btnSalvar)
+      const rodapeEdicao = document.createElement('div')
+      rodapeEdicao.className = 'seirmg-anotacao-edicao-rodape'
+      const btnCancelar = criarBotaoAcao('Cancelar', xIconSvg)
+      const btnSalvar = criarBotaoAcao('Salvar', checkIconSvg, 'seirmg-btn-acao-primario')
+      rodapeEdicao.append(btnCancelar, btnSalvar)
+      divEditar.appendChild(rodapeEdicao)
       comAnotacao.appendChild(divEditar)
 
       divAnotacao.append(semAnotacao, comAnotacao)
@@ -260,7 +260,7 @@ function montarPainelAnotacao(): void {
       btnEditar.addEventListener('click', () => iniciarEdicao())
 
       btnCancelar.addEventListener('click', () => {
-        botoes.style.display = 'block'
+        botoes.style.display = 'flex'
         pTexto.style.display = 'block'
         divEditar.style.display = 'none'
         if (dadosAtuais.texto === '') {
@@ -357,6 +357,19 @@ function criarSecao(titulo: string, iconeSvg: string): { secao: HTMLDivElement; 
 
   secao.append(cabecalho, corpo)
   return { secao, corpo }
+}
+
+// Componente de botão único, compartilhado por Editar/Remover/Cancelar/Salvar (Anotações) -- mesmo
+// padding/tamanho/borda pros quatro, só variando cor por modificador (perigo/primario).
+function criarBotaoAcao(texto: string, iconeSvg: string, classesExtras = ''): HTMLButtonElement {
+  const botao = document.createElement('button')
+  botao.type = 'button'
+  botao.className = `seirmg-btn-acao ${classesExtras}`.trim()
+  const icone = document.createElement('span')
+  icone.className = 'seirmg-btn-acao-icone'
+  icone.innerHTML = iconeSvg
+  botao.append(icone, document.createTextNode(texto))
+  return botao
 }
 
 function criarIconeCopiar(sigla: string, ancora: HTMLElement): HTMLSpanElement {

@@ -629,6 +629,71 @@ p.seirmg-atribuido-para.seirmg-atribuido-para-mais {
   color: #667085;
 }
 
+.seirmg-anotacao-texto {
+  margin: 0;
+}
+
+.seirmg-anotacao-acoes,
+.seirmg-anotacao-edicao-rodape {
+  display: flex;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.seirmg-anotacao-edicao-rodape {
+  justify-content: flex-end;
+}
+
+.seirmg-btn-acao {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  border: 1px solid #e2e7f0;
+  background: #fff;
+  color: #667085;
+  cursor: pointer;
+}
+
+.seirmg-btn-acao:hover {
+  background: #f4f7fb;
+}
+
+.seirmg-btn-acao-icone {
+  display: inline-flex;
+  flex-shrink: 0;
+}
+
+.seirmg-btn-acao-icone svg {
+  width: 12px;
+  height: 12px;
+  display: block;
+}
+
+.seirmg-btn-acao-perigo {
+  color: #b3261e;
+  border-color: #f0c7c3;
+}
+
+.seirmg-btn-acao-perigo:hover {
+  background: #fdecec;
+  border-color: #b3261e;
+}
+
+.seirmg-btn-acao-primario {
+  background: var(--seirmg-accent-color);
+  border-color: var(--seirmg-accent-color);
+  color: #fff;
+}
+
+.seirmg-btn-acao-primario:hover {
+  opacity: 0.9;
+}
+
 #seirmg-dropzone-overlay {
   display: none;
   position: fixed;
