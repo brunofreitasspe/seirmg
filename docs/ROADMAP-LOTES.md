@@ -115,6 +115,19 @@
   `selAssuntos`, `txaObservacoes`, `txtDescricao`) baseados nos nomes de campo que o Sei Pro usa pra
   essa mesma tela, não confirmados contra HTML real.
 
+- **Histórico de processos visitados** — spec `docs/superpowers/specs/2026-07-20-seirmg-historico-processos-visitados-design.md`,
+  plano `docs/superpowers/plans/2026-07-20-seirmg-historico-processos-visitados.md`. Porta o "Histórico de
+  processos visitados" do Sei Pro (`seipro/pages/HISTORICOPROC.md`), mas mostrado no **popup da extensão**
+  (não num diálogo dentro da página do SEI como o original) — últimos 10 processos, mais recente primeiro,
+  revisitar move pro topo sem duplicar. Reaproveita o mesmo fetch que já alimenta o painel lateral da
+  árvore (item acima) — nenhuma chamada de rede nova. Atrás de um toggle desligado por padrão (Opções →
+  Processos). `SyncConfig.historicoProcessos.ativo` (toggle) e `LocalConfig.historicoProcessosVisitados`
+  (lista) usam nomes deliberadamente diferentes pra não confundir configuração com dado. Popup redesenhado
+  do zero (mockup aprovado antes de implementar:
+  https://claude.ai/code/artifact/6d22fd4b-5485-417e-bd69-bba38f8e34ac) — card de status com ícone
+  circular colorido (verde "tudo em dia"/laranja "pendências"), lista de recentes com marcador + seta ao
+  passar o mouse, largura 320px (era 260px). ⚠️ Pendente de validação manual numa instância SEI real.
+
 ## Roteiro (ordem sugerida)
 
 | # | Lote | Escopo | Fonte |
