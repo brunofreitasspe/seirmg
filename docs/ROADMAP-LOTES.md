@@ -113,7 +113,15 @@
   lápis do Sei Pro original), observações de todas as unidades (só a da unidade atual). ⚠️ **Pendente
   de validação manual numa instância SEI real** — seletores (`rdoNivelAcesso`, `selHipoteseLegal`,
   `selAssuntos`, `txaObservacoes`, `txtDescricao`) baseados nos nomes de campo que o Sei Pro usa pra
-  essa mesma tela, não confirmados contra HTML real.
+  essa mesma tela, não confirmados contra HTML real. **2026-07-20 (redesign visual, mockup aprovado antes
+  de implementar: https://claude.ai/code/artifact/c27a11ed-cba5-4530-8ae4-56fe94b13554):** o painel
+  inteiro (Anotações, Tipo do processo, Nível de Acesso, Especificação, Assuntos, Interessado(s),
+  Observação, Atribuído para/Credencial para) ganhou ícone (`lucide-static`) + rótulo em cada seção,
+  divisores sutis entre elas, badge colorido pro Nível de Acesso (verde/laranja/vermelho pra
+  Público/Restrito/Sigiloso), chip azul pra "Atribuído para" e botão de copiar que só aparece ao passar o
+  mouse num interessado — plano `docs/superpowers/plans/2026-07-20-seirmg-visual-painel-arvore.md`.
+  `criarSeparador` virou `criarSecao` (retorna `{ secao, corpo }`, cabeçalho com ícone já embutido);
+  nenhuma função de extração de dados mudou. Mesma paleta já usada no popup redesenhado (item acima).
 
 - **Histórico de processos visitados** — spec `docs/superpowers/specs/2026-07-20-seirmg-historico-processos-visitados-design.md`,
   plano `docs/superpowers/plans/2026-07-20-seirmg-historico-processos-visitados.md`. Porta o "Histórico de
