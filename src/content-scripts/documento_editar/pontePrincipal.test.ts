@@ -76,6 +76,37 @@ describe('criarPonteMainWorld', () => {
     ponte.destruir()
   })
 
+  it('continua tentando marcar o iframe quando o frameElement da instância ainda não está acessível na primeira tentativa', async () => {
+    document.body.innerHTML = '<iframe title="Corpo do Texto"></iframe>'
+    const frame = document.querySelector('iframe') as HTMLIFrameElement
+    const janela = criarJanelaFalsa()
+    let tentativasDeMarcar = 0
+    const instancia = {
+      ...criarInstanciaFalsa('corpo', true),
+      document: {
+        getBody: () => ({ $: { contentEditable: 'true' } as unknown as HTMLElement }),
+        getWindow: () => {
+          tentativasDeMarcar++
+          return { $: { frameElement: tentativasDeMarcar < 3 ? null : frame } as unknown as Window }
+        },
+      },
+    }
+    definirCkeditor(janela, { corpo: instancia })
+
+    const pronto = new Promise<DetalhePronto>((resolve) => {
+      janela.addEventListener(
+        EVENTO_PRONTO,
+        (evento) => resolve((evento as CustomEvent<DetalhePronto>).detail),
+        { once: true }
+      )
+    })
+
+    const ponte = criarPonteMainWorld(janela, 5, 10)
+    await pronto
+    expect(frame.getAttribute(ATRIBUTO_EDITOR_ALVO)).toBe('corpo')
+    ponte.destruir()
+  })
+
   it('anuncia a instância editável quando há mais de uma instância CKEditor', async () => {
     const janela = criarJanelaFalsa()
     definirCkeditor(janela, {

@@ -58,15 +58,18 @@ function obterInstanciaEditavel(janelaGlobal: Window): InstanciaCKEditor | null 
 // marcar aqui o iframe que o CKEditor realmente usa é confiável — ao contrário de
 // tentar re-descobrir esse iframe no isolated world a partir de texto visível
 // (title/label), que não tem nenhuma relação garantida com o nome da instância.
-function marcarIframeDaInstancia(instancia: InstanciaCKEditor): void {
+// Retorna false quando o iframe da instância ainda não está acessível (ex.: sendo reanexado ao DOM
+// pelo próprio SEI nesse instante) ou quando a instância nunca vai ter um (editor inline, fora do
+// escopo do Lote R) — tentarAnunciar usa o retorno pra decidir se continua tentando marcar antes de
+// anunciar a instância pronta.
+function marcarIframeDaInstancia(instancia: InstanciaCKEditor): boolean {
   try {
     const frame = instancia.document.getWindow().$.frameElement
-    if (frame instanceof HTMLIFrameElement) {
-      frame.setAttribute(ATRIBUTO_EDITOR_ALVO, instancia.name)
-    }
+    if (!(frame instanceof HTMLIFrameElement)) return false
+    frame.setAttribute(ATRIBUTO_EDITOR_ALVO, instancia.name)
+    return true
   } catch {
-    // Instância sem iframe acessível (ex.: editor inline, fora do escopo do Lote R)
-    // — ponteEditor.ts reporta isso na mensagem de erro em vez de travar aqui.
+    return false
   }
 }
 
@@ -169,11 +172,18 @@ export function criarPonteMainWorld(
     const instancia = obterInstanciaEditavel(janelaGlobal)
     if (instancia) {
       instanciaAtual = instancia
-      marcarIframeDaInstancia(instancia)
-      reanunciarPeriodicamente(reanunciosMax)
+      if (marcarIframeDaInstancia(instancia)) {
+        reanunciarPeriodicamente(reanunciosMax)
+        return
+      }
+    }
+    if (tentativasRestantes <= 0) {
+      // Esgotou as tentativas de marcar o iframe (ou nunca achou a instância) -- anuncia mesmo assim
+      // se já tiver alguma instância, pra não deixar o isolated world esperando pra sempre; o erro de
+      // "iframe não encontrado" (ponteEditor.ts) ainda pode aparecer, mas só depois de tentar de verdade.
+      if (instanciaAtual) reanunciarPeriodicamente(reanunciosMax)
       return
     }
-    if (tentativasRestantes <= 0) return
     temporizador = setTimeout(() => tentarAnunciar(tentativasRestantes - 1), intervaloMs)
   }
 
