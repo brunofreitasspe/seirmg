@@ -259,6 +259,7 @@ async function carregarAbaProcessos(): Promise<void> {
     const inputAlertaNaoAssinadosAtivo = document.getElementById(
       'processos-alerta-nao-assinados-ativo'
     ) as HTMLInputElement | null
+    const inputHistoricoAtivo = document.getElementById('processos-historico-ativo') as HTMLInputElement | null
     const status = document.getElementById('processos-status')
 
     if (inputPrazosAtivo) inputPrazosAtivo.checked = config.controleProcessos.prazos.ativo
@@ -281,6 +282,7 @@ async function carregarAbaProcessos(): Promise<void> {
     if (inputAlertaNaoAssinadosAtivo) {
       inputAlertaNaoAssinadosAtivo.checked = config.controleProcessos.alertaNaoAssinados.ativo
     }
+    if (inputHistoricoAtivo) inputHistoricoAtivo.checked = config.historicoProcessos?.ativo ?? false
 
     const containerCores = document.getElementById('processos-cores-lista')
     const listaCores = containerCores
@@ -352,6 +354,9 @@ async function carregarAbaProcessos(): Promise<void> {
           pontoControle: {
             ativo: inputPontoControleAtivo?.checked ?? true,
             regras: regrasPontoControle,
+          },
+          historicoProcessos: {
+            ativo: inputHistoricoAtivo?.checked ?? false,
           },
         }
         await store.set(atualizado)
