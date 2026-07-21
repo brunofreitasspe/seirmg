@@ -180,6 +180,21 @@
   usar o mesmo helper compartilhado (`dialogoFlutuante.ts` — painel branco arredondado, cabeçalho com
   ícone, botões `seirmg-btn-acao`). ⚠️ Pendente de validação manual numa instância SEI real.
 
+- **Início do Lote N — Exportar/Importar Favoritos (JSON) + Exportar CSV** — spec
+  `docs/superpowers/specs/2026-07-21-seirmg-favoritos-export-import-design.md`, plano
+  `docs/superpowers/plans/2026-07-21-seirmg-favoritos-export-import.md`. Escopo restrito por pedido do
+  usuário: só export/import de Favoritos, não o resto do Lote N (Kanban na home, marcar não visualizado/
+  urgente, upload múltiplo). Pedido original era replicar export/import de CSV do Sei Pro — investigação do
+  código-fonte real (`sei-pro-favoritos.js`/`sei-functions-pro.js`) mostrou que o Sei Pro só reimporta um
+  **JSON** de backup completo (nunca visto um exemplo real), e o CSV dele (ícone de download da tabela) não
+  tem importador nenhum, nem escapa `;`/aspas — decisão do usuário: abandonar a leitura do formato do Sei
+  Pro, usar formato próprio do SEIRMG (mesmo padrão já validado no Painel de Tarefas,
+  `features/tarefas/exportar.ts`). Três botões no cabeçalho do painel "★ Favoritos": exportar JSON (inclui
+  `ultimoSnapshot`, senão um favorito fechado restaurado noutro navegador ficaria vazio até o processo abrir
+  de novo), importar JSON (ignora, não sobrescreve, favoritos cujo número já existe), exportar CSV (lê direto
+  a `<table>` já renderizada na tela — mesma técnica do Sei Pro — com escape de campo de verdade, diferente
+  do original). ⚠️ Pendente de validação manual numa instância SEI real.
+
 ## Roteiro (ordem sugerida)
 
 | # | Lote | Escopo | Fonte |
