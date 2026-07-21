@@ -47,3 +47,13 @@ export function classificarPrazo(valor: number, config: ConfiguracaoLimites): 'a
   if (valor < config.critico) return 'critico'
   return null
 }
+
+export function formatarDiasRestantes(dias: number): string {
+  if (dias === 1) return 'Vence hoje'
+  if (dias > 1) {
+    const restantes = dias - 1
+    return `Vence em ${restantes} dia${restantes === 1 ? '' : 's'}`
+  }
+  const diasAtraso = 1 - dias
+  return `Venceu há ${diasAtraso} dia${diasAtraso === 1 ? '' : 's'}`
+}

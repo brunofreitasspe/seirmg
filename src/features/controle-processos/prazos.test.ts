@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calcularDiasAteVencimento, classificarPrazo, extrairTextoMarcador, formatarDataBr, isValidDate } from './prazos'
+import { calcularDiasAteVencimento, classificarPrazo, extrairTextoMarcador, formatarDataBr, formatarDiasRestantes, isValidDate } from './prazos'
 
 describe('extrairTextoMarcador', () => {
   it('extrai o texto entre as duas primeiras aspas simples', () => {
@@ -83,5 +83,27 @@ describe('formatarDataBr', () => {
 
   it('formata corretamente dia e mês de dois dígitos', () => {
     expect(formatarDataBr(new Date(2026, 10, 25))).toBe('25/11/2026')
+  })
+})
+
+describe('formatarDiasRestantes', () => {
+  it('mostra "Vence hoje" quando dias é 1 (convenção de calcularDiasAteVencimento)', () => {
+    expect(formatarDiasRestantes(1)).toBe('Vence hoje')
+  })
+
+  it('mostra "Vence em 1 dia" no singular', () => {
+    expect(formatarDiasRestantes(2)).toBe('Vence em 1 dia')
+  })
+
+  it('mostra "Vence em N dias" no plural', () => {
+    expect(formatarDiasRestantes(11)).toBe('Vence em 10 dias')
+  })
+
+  it('mostra "Venceu há 1 dia" no singular quando dias é 0', () => {
+    expect(formatarDiasRestantes(0)).toBe('Venceu há 1 dia')
+  })
+
+  it('mostra "Venceu há N dias" no plural quando bem negativo', () => {
+    expect(formatarDiasRestantes(-8)).toBe('Venceu há 9 dias')
   })
 })
