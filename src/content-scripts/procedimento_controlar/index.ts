@@ -2,6 +2,7 @@ import {
   calcularDiasAteVencimento,
   classificarPrazo,
   extrairTextoMarcador,
+  formatarDiasRestantes,
 } from '../../features/controle-processos/prazos'
 import { escolherCorProcesso, extrairEspecificacaoParaCor } from '../../features/controle-processos/corProcesso'
 import {
@@ -70,12 +71,14 @@ import {
   extrairFavoritoDaLinha,
   calcularOcultacaoPorFavorito,
   ordenarFavoritosPorData,
+  atualizarSnapshotsFavoritos,
 } from '../../features/controle-processos/favoritos'
-import type { FavoritoProcesso } from '../../lib/storage'
+import type { FavoritoProcesso, SnapshotFavorito } from '../../lib/storage'
 import starIconSvg from 'lucide-static/icons/star.svg?raw'
 import starOffIconSvg from 'lucide-static/icons/star-off.svg?raw'
 import flagIconSvg from 'lucide-static/icons/flag.svg?raw'
 import userIconSvg from 'lucide-static/icons/user.svg?raw'
+import clockIconSvg from 'lucide-static/icons/clock.svg?raw'
 import bookmarkPlusIconSvg from 'lucide-static/icons/bookmark-plus.svg?raw'
 import bookmarkMinusIconSvg from 'lucide-static/icons/bookmark-minus.svg?raw'
 
@@ -779,6 +782,27 @@ function obterControleDePrazoDaLinha(linha: Element): ControleDePrazoFavorito | 
   return { dataTexto: match[1], diasTexto: match[2], iconeHtml: link.innerHTML }
 }
 
+function capturarSnapshotDaLinha(linhaNativa: Element): SnapshotFavorito {
+  const prazo = obterControleDePrazoDaLinha(linhaNativa)
+  return {
+    prazoDataTexto: prazo?.dataTexto ?? null,
+    atribuicao: obterTextoAtribuido(linhaNativa),
+    marcadoresNomes: obterMarcadoresDaLinha(linhaNativa).map((marcador) => marcador.nome),
+  }
+}
+
+function construirSnapshotsPorNumero(
+  itens: FavoritoProcesso[],
+  linhasAbertas: Map<string, Element>
+): Map<string, SnapshotFavorito> {
+  const mapa = new Map<string, SnapshotFavorito>()
+  itens.forEach((item) => {
+    const linhaNativa = linhasAbertas.get(item.numero)
+    if (linhaNativa) mapa.set(item.numero, capturarSnapshotDaLinha(linhaNativa))
+  })
+  return mapa
+}
+
 function obterEspecificacaoDaLinha(linha: Element): string | undefined {
   const processo = linha.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')
   const onmouseover = processo?.getAttribute('onmouseover')
@@ -989,9 +1013,48 @@ function montarCelulaPrazo(linhaNativa: Element): HTMLTableCellElement {
   return td
 }
 
-function montarCelulaAtribuicao(linhaNativa: Element): HTMLTableCellElement {
+function montarCelulaMarcadoresCongelados(nomes: string[]): HTMLTableCellElement {
   const td = document.createElement('td')
-  const atribuicao = obterTextoAtribuido(linhaNativa)
+  if (nomes.length === 0) {
+    td.className = 'seirmg-favoritos-vazio'
+    td.textContent = '—'
+    return td
+  }
+  nomes.forEach((nome) => {
+    const pill = document.createElement('span')
+    pill.className = 'seirmg-favoritos-marcador'
+    pill.appendChild(criarIcone(flagIconSvg))
+    pill.appendChild(document.createTextNode(nome))
+    td.appendChild(pill)
+  })
+  return td
+}
+
+function montarCelulaPrazoCongelado(prazoDataTexto: string | null): HTMLTableCellElement {
+  const td = document.createElement('td')
+  if (!prazoDataTexto) {
+    td.className = 'seirmg-favoritos-vazio'
+    td.textContent = '—'
+    return td
+  }
+
+  const linhaData = document.createElement('div')
+  linhaData.className = 'seirmg-favoritos-prazo'
+  linhaData.appendChild(criarIcone(clockIconSvg))
+  linhaData.appendChild(document.createTextNode(prazoDataTexto))
+  td.appendChild(linhaData)
+
+  const dias = calcularDiasAteVencimento(prazoDataTexto, new Date())
+  const linhaDias = document.createElement('div')
+  linhaDias.className = 'seirmg-favoritos-prazo-data'
+  linhaDias.textContent = dias === null ? '' : formatarDiasRestantes(dias)
+  td.appendChild(linhaDias)
+
+  return td
+}
+
+function montarCelulaAtribuicao(atribuicao: string | null): HTMLTableCellElement {
+  const td = document.createElement('td')
   if (!atribuicao) {
     td.className = 'seirmg-favoritos-vazio'
     td.textContent = '—'
@@ -1022,18 +1085,18 @@ function montarLinhaPainelFavoritos(item: FavoritoProcesso, linhaNativa: Element
   const tr = document.createElement('tr')
   const especificacao = linhaNativa ? (obterEspecificacaoDaLinha(linhaNativa) ?? item.especificacao) : item.especificacao
 
-  if (!linhaNativa) {
-    const tdFechado = montarCelulaProcesso(item, false, especificacao)
-    tdFechado.colSpan = 4
-    tr.appendChild(tdFechado)
-    tr.appendChild(montarCelulaRemover(item))
-    return tr
+  tr.appendChild(montarCelulaProcesso(item, !!linhaNativa, especificacao))
+
+  if (linhaNativa) {
+    tr.appendChild(montarCelulaMarcadores(linhaNativa))
+    tr.appendChild(montarCelulaPrazo(linhaNativa))
+    tr.appendChild(montarCelulaAtribuicao(obterTextoAtribuido(linhaNativa)))
+  } else {
+    tr.appendChild(montarCelulaMarcadoresCongelados(item.ultimoSnapshot?.marcadoresNomes ?? []))
+    tr.appendChild(montarCelulaPrazoCongelado(item.ultimoSnapshot?.prazoDataTexto ?? null))
+    tr.appendChild(montarCelulaAtribuicao(item.ultimoSnapshot?.atribuicao ?? null))
   }
 
-  tr.appendChild(montarCelulaProcesso(item, true, especificacao))
-  tr.appendChild(montarCelulaMarcadores(linhaNativa))
-  tr.appendChild(montarCelulaPrazo(linhaNativa))
-  tr.appendChild(montarCelulaAtribuicao(linhaNativa))
   tr.appendChild(montarCelulaRemover(item))
   return tr
 }
@@ -1082,6 +1145,11 @@ function renderizarPainelFavoritos(): void {
 
     const tbody = document.createElement('tbody')
     const linhasAbertas = mapaLinhasAbertasNaPagina()
+    const snapshotsPorNumero = construirSnapshotsPorNumero(itensFavoritados, linhasAbertas)
+    const resultadoSnapshot = atualizarSnapshotsFavoritos(itensFavoritados, snapshotsPorNumero)
+    itensFavoritados = resultadoSnapshot.itens
+    if (resultadoSnapshot.mudou) persistirFavoritosAtualizados()
+
     ordenarFavoritosPorData(itensFavoritados).forEach((item) => {
       tbody.appendChild(montarLinhaPainelFavoritos(item, linhasAbertas.get(item.numero)))
     })
@@ -1123,6 +1191,23 @@ async function alternarFavorito(favorito: FavoritoProcesso): Promise<void> {
   } catch (error) {
     console.error('[SEIRMG] Falha ao alternar favorito:', error)
   }
+}
+
+function persistirFavoritosAtualizados(): void {
+  createSyncConfigStore()
+    .get()
+    .then((atual) =>
+      createSyncConfigStore().set({
+        ...atual,
+        controleProcessos: {
+          ...atual.controleProcessos,
+          favoritos: { ...atual.controleProcessos.favoritos, itens: itensFavoritados },
+        },
+      })
+    )
+    .catch((error) => {
+      console.error('[SEIRMG] Falha ao persistir snapshot de favoritos:', error)
+    })
 }
 
 interface EstadoOrdenacao {
