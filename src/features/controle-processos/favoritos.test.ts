@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest'
-import { calcularOcultacaoPorFavorito, extrairFavoritoDaLinha, ordenarFavoritosPorData } from './favoritos'
-import type { FavoritoProcesso } from '../../lib/storage'
+import {
+  atualizarSnapshotsFavoritos,
+  calcularOcultacaoPorFavorito,
+  extrairFavoritoDaLinha,
+  ordenarFavoritosPorData,
+  snapshotsIguais,
+} from './favoritos'
+import type { FavoritoProcesso, SnapshotFavorito } from '../../lib/storage'
 
 function criarLinhaComProcesso(html: string): Element {
   const doc = new DOMParser().parseFromString(`<table><tbody><tr>${html}</tr></tbody></table>`, 'text/html')
@@ -89,5 +95,80 @@ describe('ordenarFavoritosPorData', () => {
     const copia = [...itens]
     ordenarFavoritosPorData(itens)
     expect(itens).toEqual(copia)
+  })
+})
+
+describe('snapshotsIguais', () => {
+  const base: SnapshotFavorito = { prazoDataTexto: '15/08/2026', atribuicao: 'joao.silva', marcadoresNomes: ['Urgente'] }
+
+  it('retorna false quando o atual é undefined (força a primeira gravação)', () => {
+    expect(snapshotsIguais(undefined, base)).toBe(false)
+  })
+
+  it('retorna true quando os dois são idênticos', () => {
+    expect(snapshotsIguais(base, { ...base })).toBe(true)
+  })
+
+  it('retorna false quando prazoDataTexto difere', () => {
+    expect(snapshotsIguais(base, { ...base, prazoDataTexto: '20/08/2026' })).toBe(false)
+  })
+
+  it('retorna false quando atribuicao difere', () => {
+    expect(snapshotsIguais(base, { ...base, atribuicao: 'maria.souza' })).toBe(false)
+  })
+
+  it('retorna false quando marcadoresNomes difere em conteúdo', () => {
+    expect(snapshotsIguais(base, { ...base, marcadoresNomes: ['Concluído'] })).toBe(false)
+  })
+
+  it('retorna false quando marcadoresNomes difere em quantidade', () => {
+    expect(snapshotsIguais(base, { ...base, marcadoresNomes: ['Urgente', 'Concluído'] })).toBe(false)
+  })
+})
+
+describe('atualizarSnapshotsFavoritos', () => {
+  const item = (numero: string, ultimoSnapshot?: SnapshotFavorito): FavoritoProcesso => ({
+    numero,
+    link: null,
+    adicionadoEm: '2026-07-01T10:00:00.000Z',
+    ultimoSnapshot,
+  })
+
+  it('não muda item sem entrada correspondente no mapa', () => {
+    const itens = [item('HMMG.1')]
+    const resultado = atualizarSnapshotsFavoritos(itens, new Map())
+    expect(resultado.mudou).toBe(false)
+    expect(resultado.itens).toEqual(itens)
+  })
+
+  it('atualiza item cujo snapshot no mapa difere do atual', () => {
+    const novoSnapshot: SnapshotFavorito = { prazoDataTexto: '15/08/2026', atribuicao: 'joao.silva', marcadoresNomes: [] }
+    const itens = [item('HMMG.1')]
+    const resultado = atualizarSnapshotsFavoritos(itens, new Map([['HMMG.1', novoSnapshot]]))
+    expect(resultado.mudou).toBe(true)
+    expect(resultado.itens[0].ultimoSnapshot).toEqual(novoSnapshot)
+  })
+
+  it('não marca mudou quando o snapshot no mapa é igual ao já salvo', () => {
+    const snapshot: SnapshotFavorito = { prazoDataTexto: '15/08/2026', atribuicao: 'joao.silva', marcadoresNomes: [] }
+    const itens = [item('HMMG.1', snapshot)]
+    const resultado = atualizarSnapshotsFavoritos(itens, new Map([['HMMG.1', { ...snapshot }]]))
+    expect(resultado.mudou).toBe(false)
+    expect(resultado.itens).toEqual(itens)
+  })
+
+  it('trata uma lista com mistura de itens que mudam e não mudam', () => {
+    const snapshotIgual: SnapshotFavorito = { prazoDataTexto: '01/01/2026', atribuicao: null, marcadoresNomes: [] }
+    const snapshotNovo: SnapshotFavorito = { prazoDataTexto: '20/08/2026', atribuicao: 'carlos.lima', marcadoresNomes: ['Urgente'] }
+    const itens = [item('HMMG.1', snapshotIgual), item('HMMG.2'), item('HMMG.3')]
+    const mapa = new Map([
+      ['HMMG.1', { ...snapshotIgual }],
+      ['HMMG.2', snapshotNovo],
+    ])
+    const resultado = atualizarSnapshotsFavoritos(itens, mapa)
+    expect(resultado.mudou).toBe(true)
+    expect(resultado.itens[0].ultimoSnapshot).toEqual(snapshotIgual)
+    expect(resultado.itens[1].ultimoSnapshot).toEqual(snapshotNovo)
+    expect(resultado.itens[2].ultimoSnapshot).toBeUndefined()
   })
 })
