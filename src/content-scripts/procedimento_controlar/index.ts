@@ -157,6 +157,34 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     background: #fff4e0;
     border: 1px solid #f0d9a0;
     border-bottom: none;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .seirmg-favoritos-painel-acoes {
+    display: flex;
+    gap: 4px;
+  }
+  .seirmg-favoritos-btn-icone {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid #f0d9a0;
+    border-radius: 4px;
+    background: #fff;
+    color: #8a6d1f;
+    cursor: pointer;
+  }
+  .seirmg-favoritos-btn-icone:hover {
+    background: #fff4e0;
+  }
+  .seirmg-favoritos-btn-icone svg {
+    width: 13px;
+    height: 13px;
   }
   .seirmg-favoritos-badge {
     display: inline-block;
