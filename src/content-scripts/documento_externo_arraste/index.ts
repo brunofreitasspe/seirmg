@@ -1,3 +1,7 @@
+import uploadIconSvg from 'lucide-static/icons/upload.svg?raw'
+import loaderIconSvg from 'lucide-static/icons/loader-circle.svg?raw'
+import checkIconSvg from 'lucide-static/icons/check.svg?raw'
+import xIconSvg from 'lucide-static/icons/x.svg?raw'
 import {
   extrairUrlIncluirDocumento,
   extrairUrlDocumentoExterno,
@@ -9,6 +13,9 @@ import {
   extrairCamposFormularioDocumento,
   escolherOpcaoTipoDocumento,
   montarCorpoDocumentoExterno,
+  formatarMensagemEnviando,
+  formatarMensagemSucesso,
+  formatarListaFalhas,
 } from '../../features/procedimento-visualizar/dropzone'
 import { fetchText } from '../../lib/fetchViaBackground'
 import { createSyncConfigStore } from '../../lib/storage'
@@ -73,12 +80,80 @@ function formatarDataHojeDropzone(): string {
   return `${dia}/${mes}/${hoje.getFullYear()}`
 }
 
-function criarOverlayArraste(): HTMLDivElement {
-  const overlay = document.createElement('div')
-  overlay.id = 'seirmg-dropzone-overlay'
-  overlay.textContent = 'Arraste aqui para criar documento externo...'
-  document.body.appendChild(overlay)
-  return overlay
+type EstadoDropzone = 'arraste' | 'enviando' | 'sucesso' | 'erro'
+
+const ICONES_POR_ESTADO: Record<EstadoDropzone, string> = {
+  arraste: uploadIconSvg,
+  enviando: loaderIconSvg,
+  sucesso: checkIconSvg,
+  erro: xIconSvg,
+}
+
+interface OverlayDropzone {
+  raiz: HTMLDivElement
+  badge: HTMLDivElement
+  titulo: HTMLDivElement
+  sub: HTMLDivElement
+  falhas: HTMLDivElement
+  botaoFechar: HTMLButtonElement
+  botaoTentarNovamente: HTMLButtonElement
+}
+
+function criarOverlayArraste(): OverlayDropzone {
+  const raiz = document.createElement('div')
+  raiz.id = 'seirmg-dropzone-overlay'
+
+  const card = document.createElement('div')
+  card.className = 'seirmg-dropzone-card'
+
+  const badge = document.createElement('div')
+  badge.className = 'seirmg-dropzone-badge'
+
+  const titulo = document.createElement('div')
+  titulo.className = 'seirmg-dropzone-titulo'
+
+  const sub = document.createElement('div')
+  sub.className = 'seirmg-dropzone-sub'
+
+  const falhas = document.createElement('div')
+  falhas.className = 'seirmg-dropzone-falhas'
+
+  const acoes = document.createElement('div')
+  acoes.className = 'seirmg-dropzone-acoes'
+
+  const botaoFechar = document.createElement('button')
+  botaoFechar.type = 'button'
+  botaoFechar.className = 'seirmg-btn-acao'
+  botaoFechar.textContent = 'Fechar'
+
+  const botaoTentarNovamente = document.createElement('button')
+  botaoTentarNovamente.type = 'button'
+  botaoTentarNovamente.className = 'seirmg-btn-acao seirmg-btn-acao-primario'
+  botaoTentarNovamente.textContent = 'Tentar novamente'
+
+  acoes.append(botaoFechar, botaoTentarNovamente)
+  card.append(badge, titulo, sub, falhas, acoes)
+  raiz.append(card)
+  document.body.appendChild(raiz)
+
+  return { raiz, badge, titulo, sub, falhas, botaoFechar, botaoTentarNovamente }
+}
+
+function definirEstado(
+  overlay: OverlayDropzone,
+  estado: EstadoDropzone,
+  opcoes: { titulo: string; sub?: string; falhas?: string }
+): void {
+  overlay.raiz.dataset.state = estado
+  overlay.raiz.style.display = 'flex'
+  overlay.badge.innerHTML = ICONES_POR_ESTADO[estado]
+  overlay.titulo.textContent = opcoes.titulo
+  overlay.sub.textContent = opcoes.sub ?? ''
+  overlay.falhas.textContent = opcoes.falhas ?? ''
+}
+
+function esconderOverlay(overlay: OverlayDropzone): void {
+  overlay.raiz.style.display = 'none'
 }
 
 function contemArquivos(dataTransfer: DataTransfer | null): boolean {
@@ -88,6 +163,40 @@ function contemArquivos(dataTransfer: DataTransfer | null): boolean {
 function montarDropzone(): void {
   try {
     const overlay = criarOverlayArraste()
+    let enviando = false
+    let arquivosPendentes: File[] = []
+
+    function processarArquivos(arquivos: File[]): void {
+      enviando = true
+      definirEstado(overlay, 'enviando', {
+        titulo: formatarMensagemEnviando(arquivos.map((arquivo) => arquivo.name)),
+      })
+
+      Promise.allSettled(arquivos.map((arquivo) => criarDocumentoExternoPorArraste(arquivo)))
+        .then((resultados) => {
+          const falhas = arquivos.filter((_, indice) => resultados[indice]?.status === 'rejected')
+          const sucessos = arquivos.length - falhas.length
+
+          if (falhas.length === 0) {
+            arquivosPendentes = []
+            definirEstado(overlay, 'sucesso', { titulo: formatarMensagemSucesso(sucessos) })
+            setTimeout(() => location.reload(), 900)
+            return
+          }
+
+          arquivosPendentes = falhas
+          enviando = false
+          definirEstado(overlay, 'erro', {
+            titulo: 'Não foi possível incluir o documento',
+            sub: 'Verifique se o processo está aberto na sua unidade',
+            falhas: formatarListaFalhas(falhas.map((arquivo) => arquivo.name)),
+          })
+        })
+        .catch((error) => {
+          enviando = false
+          console.error('[SEIRMG] Falha ao finalizar criação de documentos por arraste:', error)
+        })
+    }
 
     window.addEventListener('dragover', (evento) => {
       evento.preventDefault()
@@ -95,41 +204,40 @@ function montarDropzone(): void {
 
     window.addEventListener('dragenter', (evento) => {
       evento.preventDefault()
-      if (!contemArquivos(evento.dataTransfer)) return
-      overlay.style.display = 'flex'
+      if (enviando || !contemArquivos(evento.dataTransfer)) return
+      definirEstado(overlay, 'arraste', {
+        titulo: 'Solte para incluir como documento externo',
+        sub: 'O arquivo será anexado ao processo aberto nesta unidade',
+      })
     })
 
     window.addEventListener('dragleave', (evento) => {
       evento.preventDefault()
-      if (evento.relatedTarget === null) overlay.style.display = 'none'
+      if (enviando) return
+      if (evento.relatedTarget === null) esconderOverlay(overlay)
     })
 
     window.addEventListener('drop', (evento) => {
       evento.preventDefault()
-      overlay.style.display = 'none'
-      if (!contemArquivos(evento.dataTransfer)) return
+      if (enviando || !contemArquivos(evento.dataTransfer)) {
+        esconderOverlay(overlay)
+        return
+      }
       const arquivos = Array.from(evento.dataTransfer?.files ?? [])
-      if (arquivos.length === 0) return
+      if (arquivos.length === 0) {
+        esconderOverlay(overlay)
+        return
+      }
+      processarArquivos(arquivos)
+    })
 
-      overlay.textContent = 'Criando documento(s)...'
-      overlay.style.display = 'flex'
+    overlay.botaoFechar.addEventListener('click', () => {
+      esconderOverlay(overlay)
+      location.reload()
+    })
 
-      Promise.allSettled(arquivos.map((arquivo) => criarDocumentoExternoPorArraste(arquivo)))
-        .then((resultados) => {
-          overlay.style.display = 'none'
-          const falhas = arquivos.filter((_, indice) => resultados[indice]?.status === 'rejected')
-          if (falhas.length > 0) {
-            alert(
-              `Ocorreu um erro ao incluir documento externo com o(s) seguinte(s) anexo(s): ${falhas
-                .map((arquivo) => arquivo.name)
-                .join(', ')}. Verifique se o processo encontra-se aberto na unidade.`
-            )
-          }
-          location.reload()
-        })
-        .catch((error) => {
-          console.error('[SEIRMG] Falha ao finalizar criação de documentos por arraste:', error)
-        })
+    overlay.botaoTentarNovamente.addEventListener('click', () => {
+      if (arquivosPendentes.length > 0) processarArquivos(arquivosPendentes)
     })
   } catch (error) {
     console.error('[SEIRMG] Falha ao montar dropzone:', error)
