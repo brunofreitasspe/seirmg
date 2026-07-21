@@ -73,6 +73,12 @@ import {
   ordenarFavoritosPorData,
   atualizarSnapshotsFavoritos,
 } from '../../features/controle-processos/favoritos'
+import {
+  montarExportacaoFavoritos,
+  parseImportacaoFavoritos,
+  favoritosImportadosParaAdicionar,
+  montarLinhaCsv,
+} from '../../features/controle-processos/favoritosExportar'
 import type { FavoritoProcesso, SnapshotFavorito } from '../../lib/storage'
 import starIconSvg from 'lucide-static/icons/star.svg?raw'
 import starOffIconSvg from 'lucide-static/icons/star-off.svg?raw'
@@ -81,6 +87,9 @@ import userIconSvg from 'lucide-static/icons/user.svg?raw'
 import clockIconSvg from 'lucide-static/icons/clock.svg?raw'
 import bookmarkPlusIconSvg from 'lucide-static/icons/bookmark-plus.svg?raw'
 import bookmarkMinusIconSvg from 'lucide-static/icons/bookmark-minus.svg?raw'
+import downloadIconSvg from 'lucide-static/icons/download.svg?raw'
+import uploadIconSvg from 'lucide-static/icons/upload.svg?raw'
+import fileSpreadsheetIconSvg from 'lucide-static/icons/file-spreadsheet.svg?raw'
 
 const IDS_TABELAS = ['#tblProcessosDetalhado', '#tblProcessosGerados', '#tblProcessosRecebidos']
 
@@ -1129,6 +1138,115 @@ function montarLinhaPainelFavoritos(item: FavoritoProcesso, linhaNativa: Element
   return tr
 }
 
+function criarBotaoIconeFavoritos(titulo: string, iconeSvg: string): HTMLButtonElement {
+  const botao = document.createElement('button')
+  botao.type = 'button'
+  botao.className = 'seirmg-favoritos-btn-icone'
+  botao.title = titulo
+  botao.innerHTML = iconeSvg
+  return botao
+}
+
+function textoCelulaParaCsv(celula: HTMLTableCellElement): string {
+  const filhos = Array.from(celula.children)
+  if (filhos.length === 0) return celula.textContent?.trim() ?? ''
+  return filhos
+    .map((filho) => filho.textContent?.trim() ?? '')
+    .filter(Boolean)
+    .join(' ')
+}
+
+function exportarFavoritosJson(): void {
+  const exportacao = montarExportacaoFavoritos(itensFavoritados, chrome.runtime.getManifest().version, new Date())
+  const blob = new Blob([JSON.stringify(exportacao, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'favoritos-seirmg.json'
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+function importarFavoritosJson(arquivo: File): void {
+  const leitor = new FileReader()
+  leitor.onload = (evento) => {
+    const conteudo = evento.target?.result
+    if (typeof conteudo !== 'string') return
+
+    const exportacao = parseImportacaoFavoritos(conteudo)
+    if (!exportacao) {
+      window.alert('Arquivo inválido.')
+      return
+    }
+
+    const novos = favoritosImportadosParaAdicionar(exportacao, itensFavoritados)
+    const ignorados = exportacao.favoritos.length - novos.length
+    itensFavoritados = [...itensFavoritados, ...novos]
+    persistirFavoritosAtualizados()
+    aplicarFiltroFavoritoEmTodasAsTabelas()
+    atualizarTodasAsEstrelas()
+    renderizarPainelFavoritos()
+    window.alert(
+      `${novos.length} favorito(s) importado(s).` +
+        (ignorados > 0 ? ` ${ignorados} já existia(m) e foi(ram) ignorado(s).` : '')
+    )
+  }
+  leitor.readAsText(arquivo)
+}
+
+function exportarFavoritosCsv(): void {
+  const tabela = document.querySelector<HTMLTableElement>('#seirmg-favoritos-painel table')
+  if (!tabela) return
+
+  const cabecalhos = Array.from(tabela.querySelectorAll('thead th')).map((th) => th.textContent?.trim() ?? '')
+  const linhas = [montarLinhaCsv(cabecalhos)]
+  tabela.querySelectorAll('tbody tr').forEach((tr) => {
+    const celulas = Array.from(tr.querySelectorAll('td')).map((td) => textoCelulaParaCsv(td as HTMLTableCellElement))
+    linhas.push(montarLinhaCsv(celulas))
+  })
+
+  const blob = new Blob(['﻿', linhas.join('\r\n')], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'favoritos-seirmg.csv'
+  link.click()
+  URL.revokeObjectURL(url)
+}
+
+function montarCabecalhoPainelFavoritos(): HTMLDivElement {
+  const cabecalho = document.createElement('div')
+  cabecalho.className = 'seirmg-favoritos-painel-titulo'
+
+  const titulo = document.createElement('span')
+  titulo.textContent = `★ Favoritos (${itensFavoritados.length} registro${itensFavoritados.length === 1 ? '' : 's'})`
+
+  const acoes = document.createElement('div')
+  acoes.className = 'seirmg-favoritos-painel-acoes'
+
+  const btnExportarJson = criarBotaoIconeFavoritos('Exportar favoritos (JSON)', downloadIconSvg)
+  const btnImportarJson = criarBotaoIconeFavoritos('Importar favoritos (JSON)', uploadIconSvg)
+  const btnExportarCsv = criarBotaoIconeFavoritos('Exportar favoritos (CSV)', fileSpreadsheetIconSvg)
+
+  const inputImportar = document.createElement('input')
+  inputImportar.type = 'file'
+  inputImportar.accept = 'application/json'
+  inputImportar.style.display = 'none'
+
+  btnExportarJson.addEventListener('click', exportarFavoritosJson)
+  btnExportarCsv.addEventListener('click', exportarFavoritosCsv)
+  btnImportarJson.addEventListener('click', () => inputImportar.click())
+  inputImportar.addEventListener('change', () => {
+    const arquivo = inputImportar.files?.[0]
+    if (arquivo) importarFavoritosJson(arquivo)
+    inputImportar.value = ''
+  })
+
+  acoes.append(btnExportarJson, btnImportarJson, btnExportarCsv, inputImportar)
+  cabecalho.append(titulo, acoes)
+  return cabecalho
+}
+
 function renderizarPainelFavoritos(): void {
   try {
     document.getElementById('seirmg-favoritos-painel')?.remove()
@@ -1142,10 +1260,7 @@ function renderizarPainelFavoritos(): void {
     painel.id = 'seirmg-favoritos-painel'
     painel.className = 'seirmg-favoritos-painel'
 
-    const titulo = document.createElement('div')
-    titulo.className = 'seirmg-favoritos-painel-titulo'
-    titulo.textContent = `★ Favoritos (${itensFavoritados.length} registro${itensFavoritados.length === 1 ? '' : 's'})`
-    painel.appendChild(titulo)
+    painel.appendChild(montarCabecalhoPainelFavoritos())
 
     const tabela = document.createElement('table')
     tabela.className = 'infraTable'
