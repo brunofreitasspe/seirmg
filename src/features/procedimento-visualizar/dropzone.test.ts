@@ -12,6 +12,9 @@ import {
   extrairCamposFormularioDocumento,
   escolherOpcaoTipoDocumento,
   montarCorpoDocumentoExterno,
+  formatarMensagemEnviando,
+  formatarMensagemSucesso,
+  formatarListaFalhas,
 } from './dropzone'
 
 function montarDocumento(html: string): Document {
@@ -228,5 +231,35 @@ describe('montarCorpoDocumentoExterno', () => {
   it('escapa acentos no nome do documento (padrão ISO-8859-1)', () => {
     const corpo = montarCorpoDocumentoExterno(campos, '5', CONFIG_BASE, 'relatório', 'hdn', '10/07/2026')
     expect(corpo).toContain('txtNumero=relat%F3rio')
+  })
+})
+
+describe('formatarMensagemEnviando', () => {
+  it('menciona o nome do arquivo quando há só um', () => {
+    expect(formatarMensagemEnviando(['relatorio.pdf'])).toBe('Enviando relatorio.pdf')
+  })
+
+  it('menciona a quantidade quando há mais de um arquivo', () => {
+    expect(formatarMensagemEnviando(['a.pdf', 'b.pdf', 'c.pdf'])).toBe('Enviando 3 arquivos')
+  })
+})
+
+describe('formatarMensagemSucesso', () => {
+  it('usa singular para 1 documento', () => {
+    expect(formatarMensagemSucesso(1)).toBe('Documento incluído com sucesso')
+  })
+
+  it('usa plural com a quantidade para mais de 1 documento', () => {
+    expect(formatarMensagemSucesso(3)).toBe('3 documentos incluídos com sucesso')
+  })
+})
+
+describe('formatarListaFalhas', () => {
+  it('junta os nomes com vírgula', () => {
+    expect(formatarListaFalhas(['a.pdf', 'b.pdf'])).toBe('a.pdf, b.pdf')
+  })
+
+  it('retorna string vazia para lista vazia', () => {
+    expect(formatarListaFalhas([])).toBe('')
   })
 })

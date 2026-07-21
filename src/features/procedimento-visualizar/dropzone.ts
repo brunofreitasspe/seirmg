@@ -171,3 +171,17 @@ export function montarCorpoDocumentoExterno(
     .map(([chave, valor]) => `${chave}=${escapeComponentAnotacao(valor)}`)
     .join('&')
 }
+
+export function formatarMensagemEnviando(nomesArquivos: string[]): string {
+  if (nomesArquivos.length === 1) return `Enviando ${nomesArquivos[0]}`
+  return `Enviando ${nomesArquivos.length} arquivos`
+}
+
+export function formatarMensagemSucesso(quantidade: number): string {
+  if (quantidade === 1) return 'Documento incluído com sucesso'
+  return `${quantidade} documentos incluídos com sucesso`
+}
+
+export function formatarListaFalhas(nomesArquivos: string[]): string {
+  return nomesArquivos.join(', ')
+}
