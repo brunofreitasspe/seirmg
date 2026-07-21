@@ -63,11 +63,18 @@ export interface AgrupamentoConfig {
   criterio: CriterioAgrupamento
 }
 
+export interface SnapshotFavorito {
+  prazoDataTexto: string | null
+  atribuicao: string | null
+  marcadoresNomes: string[]
+}
+
 export interface FavoritoProcesso {
   numero: string
   link: string | null
   adicionadoEm: string
   especificacao?: string
+  ultimoSnapshot?: SnapshotFavorito
 }
 
 export interface FavoritosConfig {
