@@ -36,4 +36,9 @@ describe('candidatoANumeroSei', () => {
     expect(candidatoANumeroSei('123456')).toBe(true)
     expect(candidatoANumeroSei('12345')).toBe(false)
   })
+
+  it('retorna true no limite máximo exato (25 dígitos) e falso um acima dele', () => {
+    expect(candidatoANumeroSei('1'.repeat(25))).toBe(true)
+    expect(candidatoANumeroSei('1'.repeat(26))).toBe(false)
+  })
 })
