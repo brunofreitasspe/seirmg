@@ -9,6 +9,17 @@ import claudeIconSvg from '@lobehub/icons-static-svg/icons/claude-color.svg?raw'
 import sparklesIconSvg from 'lucide-static/icons/sparkles.svg?raw'
 import { criarClienteEditor, type EditorSEI } from './ponteEditor'
 import { escaparHtml } from './dom'
+// Estáticos de propósito, não `await import(...)`: confirmado ao vivo numa instância SEI
+// real (2026-07-24) que um `import()` dinâmico feito de DENTRO de um content script já
+// carregado (mesmo esse content script tendo sido carregado via `chrome.runtime.getURL`,
+// truque que o próprio CRXJS usa só pro primeiro carregamento) resolve o caminho relativo
+// contra a origem da PÁGINA, não da extensão — o Chrome tentava buscar
+// `corretorOrtografico-*.js`/`formatacaoBasica-*.js` em `https://<host-do-sei>/assets/...`
+// e caía em 404. Import estático elimina o problema por completo: o código entra direto
+// no mesmo bundle que o CRXJS já carrega certinho, sem nenhum import aninhado depois.
+import { iniciarCorretorOrtografico } from './corretorOrtografico'
+import { iniciarFormatacaoBasica } from './formatacaoBasica'
+import { iniciarReferenciaLink } from './referenciaLink'
 
 const ESTILO_PAINEL_IA = `
   #seirmg-botao-ia {
@@ -629,17 +640,14 @@ async function bootstrap(): Promise<void> {
     }
 
     if (config.corretorOrtografico.ativo) {
-      const { iniciarCorretorOrtografico } = await import('./corretorOrtografico')
       await iniciarCorretorOrtografico(editor, config.corretorOrtografico)
     }
 
     if (formatacaoBasica.ativo) {
-      const { iniciarFormatacaoBasica } = await import('./formatacaoBasica')
       await iniciarFormatacaoBasica(editor, formatacaoBasica)
     }
 
     if (referenciaLink.ativo) {
-      const { iniciarReferenciaLink } = await import('./referenciaLink')
       iniciarReferenciaLink(clienteEditorGlobal, editor)
     }
   } catch (error) {
