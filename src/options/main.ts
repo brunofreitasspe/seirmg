@@ -402,6 +402,9 @@ async function carregarAbaEditor(): Promise<void> {
     const inputFormatacaoBasicaAtalhos = document.getElementById(
       'editor-formatacao-basica-atalhos'
     ) as HTMLTextAreaElement | null
+    const inputReferenciaLinkAtivo = document.getElementById(
+      'editor-referencia-link-ativo'
+    ) as HTMLInputElement | null
 
     // Configs salvas antes do Lote I não têm esse campo — createSyncConfigStore().get()
     // não faz merge profundo com o default, só retorna o objeto salvo como está.
@@ -422,6 +425,9 @@ async function carregarAbaEditor(): Promise<void> {
     if (inputFormatacaoBasicaAtalhos) {
       inputFormatacaoBasicaAtalhos.value = formatarAtalhos(formatacaoBasica.atalhos)
     }
+    if (inputReferenciaLinkAtivo) {
+      inputReferenciaLinkAtivo.checked = config.referenciaLink.ativo
+    }
 
     document.getElementById('editor-salvar')?.addEventListener('click', async () => {
       try {
@@ -439,6 +445,9 @@ async function carregarAbaEditor(): Promise<void> {
             ...formatacaoBasica,
             ativo: inputFormatacaoBasicaAtivo?.checked ?? false,
             atalhos: parsearAtalhos(inputFormatacaoBasicaAtalhos?.value ?? ''),
+          },
+          referenciaLink: {
+            ativo: inputReferenciaLinkAtivo?.checked ?? false,
           },
         }
         await store.set(atualizado)
