@@ -307,4 +307,22 @@ describe('iniciarFormatacaoBasica', () => {
 
     expect(toolbox.querySelectorAll('.seirmg-cke-button').length).toBeGreaterThanOrEqual(6)
   })
+
+  it('quando uma nova toolbox aparece depois (ex.: a do corpo, criada pelo CKEditor só no primeiro clique nela), recebe o mesmo conjunto de botões — reproduz ao vivo: os ícones ficavam presos na toolbox inicial e sumiam pra sempre quando o foco mudava pro corpo', async () => {
+    const { iframe, toolbox: toolboxInicial } = montarToolboxFalsa()
+    const editor = criarEditorFalso(iframe)
+
+    await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
+    expect(toolboxInicial.querySelectorAll('.seirmg-cke-button').length).toBeGreaterThanOrEqual(6)
+
+    const containerCorpo = document.createElement('div')
+    containerCorpo.className = 'cke cke_reset_all cke_editor_txaEditor_174'
+    containerCorpo.innerHTML = '<span class="cke_toolbox"></span>'
+    document.body.appendChild(containerCorpo)
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    const toolboxCorpo = containerCorpo.querySelector('.cke_toolbox') as HTMLElement
+    expect(toolboxCorpo.querySelectorAll('.seirmg-cke-button').length).toBeGreaterThanOrEqual(6)
+  })
 })

@@ -36,14 +36,12 @@ const ESTILO_BOTOES = `
   }
 `
 
-// Confirmado ao vivo numa instância SEI real: as 5 instâncias de CKEditor da tela
-// (cabeçalho/título/data/corpo/rodapé) compartilham UMA única barra de ferramentas
-// (CKEditor 4 "sharedSpaces") — ela fica dentro do container da instância que a
-// hospeda (a primeira criada), não dentro do container da instância editável. Por
-// isso `iframe.closest('.cke')` acha o container certo da instância editável, mas
-// não tem `.cke_toolbox` lá dentro — a barra real está em outro container. Como só
-// existe uma barra compartilhada na página inteira, buscar direto no documento
-// (sem escopar pelo container do iframe) é o jeito confiável de achá-la.
+// Acha QUALQUER `.cke_toolbox` já presente no documento pra injetar os botões o quanto
+// antes (mesmo que não seja ainda a do corpo — `observarNovasToolboxes`, mais abaixo,
+// cobre as que aparecerem depois, inclusive a do corpo). `iframe.closest('.cke')`
+// normalmente não serve aqui: a toolbox da instância editável costuma só ser criada
+// pelo CKEditor quando o usuário clica nela pela primeira vez, então escopar a busca
+// só ao container do iframe travaria a espera até esse clique acontecer.
 function localizarToolbox(iframe: HTMLIFrameElement): HTMLElement | null {
   return iframe.ownerDocument.querySelector<HTMLElement>('.cke_toolbox')
 }
@@ -296,16 +294,8 @@ function registrarAtalhos(editor: EditorSEI, atalhos: AtalhoParagrafo[]): void {
   })
 }
 
-export async function iniciarFormatacaoBasica(
-  editor: EditorSEI,
-  config: FormatacaoBasicaConfig,
-  intervaloMs = 200,
-  tentativasMax = 30
-): Promise<void> {
-  const toolbox = await aguardarToolbox(editor.iframe, intervaloMs, tentativasMax)
-  injetarEstiloSeAusente(document, 'seirmg-estilo-botoes-formatacao', ESTILO_BOTOES)
-
-  const botoes = [
+function montarConjuntoBotoes(editor: EditorSEI): HTMLElement[] {
+  return [
     ...montarBotoesAlinhamento(editor),
     ...montarBotoesFonte(editor),
     montarBotaoCopiarFormatacao(editor),
@@ -316,7 +306,59 @@ export async function iniciarFormatacaoBasica(
     montarBotaoNotaRodape(editor),
     montarBotaoLatex(editor),
   ]
-  botoes.forEach((botao) => toolbox.appendChild(botao))
+}
+
+// Injeta um conjunto NOVO de botões (não reaproveita nós de outra toolbox — um elemento
+// só pode ter um pai) nessa toolbox específica, a menos que ela já tenha os nossos.
+function injetarBotoesSeAusente(toolbox: HTMLElement, editor: EditorSEI): void {
+  if (toolbox.querySelector('.seirmg-cke-button')) return
+  montarConjuntoBotoes(editor).forEach((botao) => toolbox.appendChild(botao))
+}
+
+// Confirmado ao vivo numa instância SEI real (2026-07-23): a tela de edição de
+// documento tem VÁRIOS containers `.cke` com `.cke_toolbox` (um por instância de
+// CKEditor — cabeçalho/título/data/corpo/rodapé), não uma única barra genuinamente
+// compartilhada como se assumia antes. No carregamento da página só a toolbox de uma
+// instância (não necessariamente a do corpo) existe/está populada; a do corpo costuma
+// só ganhar seus próprios botões nativos quando o usuário clica nela pela primeira vez
+// (criação sob demanda pelo CKEditor). Injetar só na primeira toolbox encontrada prende
+// os botões da extensão nessa instância inicial — que fica com layout colapsado
+// (0x0, mas ainda no DOM) assim que o foco muda pra outra instância, sumindo pra sempre.
+// A correção: continuar observando o documento inteiro e, sempre que uma nova
+// `.cke_toolbox` aparecer (inclusive a do corpo, criada depois do primeiro clique),
+// injetar o mesmo conjunto de botões nela também — não importa qual instância acaba
+// "ativa" visualmente, os botões já estão presentes nela.
+//
+// Só um observer fica ativo por vez (desconecta o anterior antes de criar um novo, de
+// forma síncrona) — evita vazamento se a função for chamada mais de uma vez na mesma
+// página, e também descarta qualquer mutação já enfileirada pelo observer anterior
+// (`disconnect()` limpa a fila de registros pendentes) antes que ela dispare com um
+// `editor` que não é mais o atual.
+let observadorToolboxAtual: MutationObserver | undefined
+
+function observarNovasToolboxes(editor: EditorSEI): void {
+  observadorToolboxAtual?.disconnect()
+
+  const observer = new MutationObserver(() => {
+    document.querySelectorAll<HTMLElement>('.cke_toolbox').forEach((toolbox) => injetarBotoesSeAusente(toolbox, editor))
+  })
+  observer.observe(document.body, { childList: true, subtree: true })
+  observadorToolboxAtual = observer
+}
+
+export async function iniciarFormatacaoBasica(
+  editor: EditorSEI,
+  config: FormatacaoBasicaConfig,
+  intervaloMs = 200,
+  tentativasMax = 30
+): Promise<void> {
+  // Registrado antes de qualquer `await` — desconecta sincronamente o observer de uma
+  // chamada anterior antes que ele possa reagir a mutações desta nova chamada.
+  observarNovasToolboxes(editor)
+
+  const toolboxInicial = await aguardarToolbox(editor.iframe, intervaloMs, tentativasMax)
+  injetarEstiloSeAusente(document, 'seirmg-estilo-botoes-formatacao', ESTILO_BOTOES)
+  injetarBotoesSeAusente(toolboxInicial, editor)
 
   registrarAtalhos(editor, config.atalhos)
 }
