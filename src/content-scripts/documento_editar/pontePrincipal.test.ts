@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { criarPonteMainWorld } from './pontePrincipal'
-import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
-import type { DetalheComando, DetalhePronto, DetalheResposta } from './protocolo'
+import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA, EVENTO_SELECAO_MUDOU } from './protocolo'
+import type { DetalheComando, DetalhePronto, DetalheResposta, DetalheSelecaoMudou } from './protocolo'
 
 function criarJanelaFalsa(): Window {
   return new EventTarget() as unknown as Window
@@ -109,6 +109,58 @@ describe('criarPonteMainWorld', () => {
     // estável do CKEditor) -- o listener de selectionChange só deve ser registrado uma vez,
     // não uma vez por tentativa até marcarIframeDaInstancia ter sucesso.
     expect(instancia.on).toHaveBeenCalledTimes(1)
+    ponte.destruir()
+  })
+
+  it('dispara EVENTO_SELECAO_MUDOU com o texto selecionado quando o CKEditor emite selectionChange', async () => {
+    const janela = criarJanelaFalsa()
+    const instancia = criarInstanciaFalsa('corpo', true)
+    instancia.getSelection = () => ({
+      getSelectedText: () => '7294607',
+      getStartElement: (): unknown => null,
+    })
+    definirCkeditor(janela, { corpo: instancia })
+    const ponte = criarPonteMainWorld(janela, 10, 5)
+
+    const selecaoMudou = new Promise<DetalheSelecaoMudou>((resolve) => {
+      janela.addEventListener(
+        EVENTO_SELECAO_MUDOU,
+        (evento) => resolve((evento as CustomEvent<DetalheSelecaoMudou>).detail),
+        { once: true }
+      )
+    })
+
+    const callbackSelectionChange = instancia.on.mock.calls.find(([evento]) => evento === 'selectionChange')?.[1] as
+      | (() => void)
+      | undefined
+    expect(callbackSelectionChange).toBeDefined()
+    callbackSelectionChange?.()
+
+    await expect(selecaoMudou).resolves.toEqual({ texto: '7294607' })
+    ponte.destruir()
+  })
+
+  it('dispara EVENTO_SELECAO_MUDOU com texto vazio quando não há seleção no momento do selectionChange', async () => {
+    const janela = criarJanelaFalsa()
+    const instancia = criarInstanciaFalsa('corpo', true)
+    instancia.getSelection = (() => null) as unknown as typeof instancia.getSelection
+    definirCkeditor(janela, { corpo: instancia })
+    const ponte = criarPonteMainWorld(janela, 10, 5)
+
+    const selecaoMudou = new Promise<DetalheSelecaoMudou>((resolve) => {
+      janela.addEventListener(
+        EVENTO_SELECAO_MUDOU,
+        (evento) => resolve((evento as CustomEvent<DetalheSelecaoMudou>).detail),
+        { once: true }
+      )
+    })
+
+    const callbackSelectionChange = instancia.on.mock.calls.find(([evento]) => evento === 'selectionChange')?.[1] as
+      | (() => void)
+      | undefined
+    callbackSelectionChange?.()
+
+    await expect(selecaoMudou).resolves.toEqual({ texto: '' })
     ponte.destruir()
   })
 
