@@ -168,11 +168,12 @@ padrão de `injetarEstilos()` já usado em `documento_editar/index.ts`.
 
 ## Configuração
 
-Novo campo em `SyncConfig`: `referenciaLink: { ativo: boolean }`, default `ativo: true` — ao
-contrário de Ferramentas de IA (precisa de chave de API) e Corretor Ortográfico (dicionário
-grande, pode pesar no carregamento), este recurso não tem custo de setup nem dependência externa, e
-o fetch só roda a partir de um clique explícito do usuário (ver Riscos abaixo), então pode vir
-ligado por padrão. Toggle correspondente na tela de Opções, mesma seção do editor de documentos.
+Novo campo em `SyncConfig`: `referenciaLink: { ativo: boolean }`, default `ativo: false` — mesma
+convenção já usada por todo recurso opcional/aditivo deste projeto (Ferramentas de IA, Corretor
+Ortográfico, Formatação Básica, Tarefas, Histórico de Processos todos default `false`, opt-in via
+Opções), mesmo este recurso não tendo custo de setup: o comportamento do ícone da extensão muda de
+forma visível (deixa de abrir sempre o popup), então é melhor o usuário ligar deliberadamente do que
+ser surpreendido. Toggle correspondente na tela de Opções, mesma seção do editor de documentos.
 
 ## Riscos e validação
 
