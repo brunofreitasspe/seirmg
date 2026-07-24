@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { fetchText } from './result'
+import { fetchText, fetchFinalUrl } from './result'
 
 function bufferDe(texto: string): ArrayBuffer {
   return new TextEncoder().encode(texto).buffer
@@ -51,6 +51,33 @@ describe('fetchText', () => {
   it('retorna erro quando a requisição estoura o timeout', async () => {
     vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
     const resultado = await fetchText('https://exemplo.br', { timeoutMs: 10 })
+    expect(resultado.ok).toBe(false)
+  })
+})
+
+describe('fetchFinalUrl', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('retorna ok com a URL final da resposta (depois de seguir redirecionamentos)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({ ok: true, url: 'https://exemplo.br/destino?id_procedimento=123' })
+    )
+    const resultado = await fetchFinalUrl('https://exemplo.br/pesquisa')
+    expect(resultado).toEqual({ ok: true, data: 'https://exemplo.br/destino?id_procedimento=123' })
+  })
+
+  it('retorna erro quando a resposta HTTP não é ok', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }))
+    const resultado = await fetchFinalUrl('https://exemplo.br/pesquisa')
+    expect(resultado).toEqual({ ok: false, error: 'HTTP 404' })
+  })
+
+  it('retorna erro quando a requisição estoura o timeout', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(() => {})))
+    const resultado = await fetchFinalUrl('https://exemplo.br/pesquisa', { timeoutMs: 10 })
     expect(resultado.ok).toBe(false)
   })
 })
