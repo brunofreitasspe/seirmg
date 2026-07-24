@@ -105,6 +105,10 @@ describe('criarPonteMainWorld', () => {
     const ponte = criarPonteMainWorld(janela, 5, 10)
     await pronto
     expect(frame.getAttribute(ATRIBUTO_EDITOR_ALVO)).toBe('corpo')
+    // A mesma instância é retornada em cada tentativa de tentarAnunciar (registro global
+    // estável do CKEditor) -- o listener de selectionChange só deve ser registrado uma vez,
+    // não uma vez por tentativa até marcarIframeDaInstancia ter sucesso.
+    expect(instancia.on).toHaveBeenCalledTimes(1)
     ponte.destruir()
   })
 

@@ -178,8 +178,10 @@ export function criarPonteMainWorld(
   function tentarAnunciar(tentativasRestantes: number): void {
     const instancia = obterInstanciaEditavel(janelaGlobal)
     if (instancia) {
-      instanciaAtual = instancia
-      instancia.on('selectionChange', () => dispararSelecaoMudou(janelaGlobal, instancia))
+      if (instanciaAtual !== instancia) {
+        instanciaAtual = instancia
+        instancia.on('selectionChange', () => dispararSelecaoMudou(janelaGlobal, instancia))
+      }
       if (marcarIframeDaInstancia(instancia)) {
         reanunciarPeriodicamente(reanunciosMax)
         return
