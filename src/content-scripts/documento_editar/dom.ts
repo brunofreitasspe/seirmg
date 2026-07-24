@@ -5,3 +5,9 @@ export function injetarEstiloSeAusente(documentoAlvo: Document, id: string, css:
   estilo.textContent = css
   documentoAlvo.head.appendChild(estilo)
 }
+
+export function escaparHtml(texto: string): string {
+  const div = document.createElement('div')
+  div.textContent = texto
+  return div.innerHTML
+}

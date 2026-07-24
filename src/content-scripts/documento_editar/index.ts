@@ -8,6 +8,7 @@ import geminiIconSvg from '@lobehub/icons-static-svg/icons/gemini-color.svg?raw'
 import claudeIconSvg from '@lobehub/icons-static-svg/icons/claude-color.svg?raw'
 import sparklesIconSvg from 'lucide-static/icons/sparkles.svg?raw'
 import { criarClienteEditor, type EditorSEI } from './ponteEditor'
+import { escaparHtml } from './dom'
 
 const ESTILO_PAINEL_IA = `
   #seirmg-botao-ia {
@@ -301,12 +302,6 @@ function montarHtmlModos(): string {
     const ativo = id === estadoAtual.modo ? ' ativo' : ''
     return `<div class="seirmg-ia-modo${ativo}" data-acao="modo" data-modo="${id}">${rotulo}</div>`
   }).join('')
-}
-
-function escaparHtml(texto: string): string {
-  const div = document.createElement('div')
-  div.textContent = texto
-  return div.innerHTML
 }
 
 function montarHtmlResposta(): string {
