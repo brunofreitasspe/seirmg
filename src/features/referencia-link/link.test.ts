@@ -14,6 +14,14 @@ describe('extrairIdDoUrl', () => {
   it('retorna null quando a URL é inválida', () => {
     expect(extrairIdDoUrl('::não é url::', 'id_procedimento')).toBeNull()
   })
+
+  it('retorna null quando o valor do parâmetro contém caracteres não numéricos', () => {
+    expect(
+      extrairIdDoUrl('https://exemplo.br/sei/controlador.php?acao=x&id_documento=123%3Cscript%3E', 'id_documento')
+    ).toBeNull()
+    expect(extrairIdDoUrl('https://exemplo.br/sei/controlador.php?acao=x&id_procedimento=abc', 'id_procedimento')).toBeNull()
+    expect(extrairIdDoUrl('https://exemplo.br/sei/controlador.php?acao=x&id_procedimento=123-456', 'id_procedimento')).toBeNull()
+  })
 })
 
 describe('construirLinkResultado', () => {
@@ -41,5 +49,18 @@ describe('construirLinkResultado', () => {
   it('retorna null quando a URL final não tem nenhum dos dois parâmetros (número não encontrado)', () => {
     const url = 'https://exemplo.br/sei/controlador.php?acao=procedimento_pesquisar&id_protocolo=0'
     expect(construirLinkResultado(url)).toBeNull()
+  })
+
+  it('retorna null quando id_documento não é numérico e não há id_procedimento válido', () => {
+    const url = 'https://exemplo.br/sei/controlador.php?acao=x&id_documento=123%3Cscript%3E'
+    expect(construirLinkResultado(url)).toBeNull()
+  })
+
+  it('recorre a id_procedimento quando id_documento não é numérico mas id_procedimento é válido', () => {
+    const url = 'https://exemplo.br/sei/controlador.php?acao=x&id_documento=abc&id_procedimento=20637997'
+    expect(construirLinkResultado(url)).toEqual({
+      href: 'controlador.php?acao=procedimento_trabalhar&id_procedimento=20637997',
+      tipo: 'processo',
+    })
   })
 })

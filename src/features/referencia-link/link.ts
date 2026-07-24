@@ -1,6 +1,7 @@
 export function extrairIdDoUrl(url: string, chave: 'id_procedimento' | 'id_documento'): string | null {
   try {
-    return new URL(url).searchParams.get(chave)
+    const valor = new URL(url).searchParams.get(chave)
+    return valor && /^\d+$/.test(valor) ? valor : null
   } catch {
     return null
   }

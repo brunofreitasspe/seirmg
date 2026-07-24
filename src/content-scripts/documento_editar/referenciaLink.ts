@@ -56,8 +56,12 @@ async function converterSelecaoEmLink(editor: EditorSEI): Promise<void> {
 }
 
 export function iniciarReferenciaLink(cliente: ClienteEditor, editor: EditorSEI): void {
+  let ativoAtual = false
+
   cliente.aoMudarSelecao((texto) => {
     const ativo = candidatoANumeroSei(texto)
+    if (ativo === ativoAtual) return
+    ativoAtual = ativo
     chrome.runtime.sendMessage({ type: TIPO_LINK_SELECAO_ESTADO, ativo }).catch((error) => {
       console.error('[SEIRMG] Falha ao avisar estado de seleção de link:', error)
     })
