@@ -1,6 +1,6 @@
-import { fetchText, type FetchWithTimeoutOptions, type Result } from '../lib/result'
+import { fetchText, fetchFinalUrl, type FetchWithTimeoutOptions, type Result } from '../lib/result'
 import { createLocalConfigStore } from '../lib/storage'
-import { ehPaginaDeLogin, calcularEsperaPosNavegacao, circuitBreakerAberto } from '../lib/sessionGate'
+import { ehPaginaDeLogin, ehUrlDeLogin, calcularEsperaPosNavegacao, circuitBreakerAberto } from '../lib/sessionGate'
 import { notificarSessaoInvalida } from './notifications/notify'
 
 const ATRASO_POS_NAVEGACAO_MS = 1500
@@ -70,6 +70,35 @@ export function fetchTextComGate(
 
       const resultado = await fetchText(url, options)
       if (resultado.ok && ehPaginaDeLogin(resultado.data)) {
+        await abrirCircuitBreaker()
+        return { ok: false, error: 'Sessão do SEI inválida (tela de login detectada)' }
+      }
+
+      return resultado
+    } catch (error) {
+      return { ok: false, error: error instanceof Error ? error.message : String(error) }
+    }
+  })
+}
+
+export function fetchFinalUrlComGate(
+  url: string,
+  options: FetchWithTimeoutOptions = {}
+): Promise<Result<string>> {
+  return serializar(async () => {
+    try {
+      const config = await createLocalConfigStore().get()
+      const agoraIso = new Date().toISOString()
+
+      if (circuitBreakerAberto(config.sessaoInvalidaAte, agoraIso)) {
+        return { ok: false, error: 'Sessão do SEI inválida — chamadas de fundo pausadas temporariamente' }
+      }
+
+      const espera = calcularEsperaPosNavegacao(config.ultimaNavegacaoRealSei, agoraIso, ATRASO_POS_NAVEGACAO_MS)
+      if (espera > 0) await aguardar(espera)
+
+      const resultado = await fetchFinalUrl(url, options)
+      if (resultado.ok && ehUrlDeLogin(resultado.data)) {
         await abrirCircuitBreaker()
         return { ok: false, error: 'Sessão do SEI inválida (tela de login detectada)' }
       }

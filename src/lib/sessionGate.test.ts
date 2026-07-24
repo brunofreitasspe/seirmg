@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ehPaginaDeLogin, calcularEsperaPosNavegacao, circuitBreakerAberto } from './sessionGate'
+import { ehPaginaDeLogin, ehUrlDeLogin, calcularEsperaPosNavegacao, circuitBreakerAberto } from './sessionGate'
 
 describe('ehPaginaDeLogin', () => {
   it('retorna true quando o HTML contém o formulário de login', () => {
@@ -8,6 +8,18 @@ describe('ehPaginaDeLogin', () => {
 
   it('retorna false quando o HTML não contém o formulário de login', () => {
     expect(ehPaginaDeLogin('<html><body><table id="tblProcessosDetalhado"></table></body></html>')).toBe(false)
+  })
+})
+
+describe('ehUrlDeLogin', () => {
+  it('retorna true quando a URL final aponta para a tela de login', () => {
+    expect(ehUrlDeLogin('https://exemplo.br/sei/login.php?sigla_sistema=SEI')).toBe(true)
+  })
+
+  it('retorna false quando a URL final é uma página normal do SEI', () => {
+    expect(
+      ehUrlDeLogin('https://exemplo.br/sei/controlador.php?acao=procedimento_trabalhar&id_procedimento=123')
+    ).toBe(false)
   })
 })
 
