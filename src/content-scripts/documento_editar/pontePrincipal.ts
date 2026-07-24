@@ -1,5 +1,5 @@
-import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
-import type { DescritorEstiloTexto, DetalheComando, DetalheResposta, DetalhePronto, TipoComando } from './protocolo'
+import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA, EVENTO_SELECAO_MUDOU } from './protocolo'
+import type { DescritorEstiloTexto, DetalheComando, DetalheResposta, DetalhePronto, DetalheSelecaoMudou, TipoComando } from './protocolo'
 
 interface ElementoCKEditor {
   setAttribute: (nome: string, valor: string) => void
@@ -26,6 +26,7 @@ interface InstanciaCKEditor {
   fire: (evento: string) => void
   applyStyle: (estilo: unknown) => void
   execCommand: (nome: string) => void
+  on: (evento: string, callback: () => void) => void
 }
 
 interface JanelaComCKEditor {
@@ -133,6 +134,12 @@ function executarComando(
   }
 }
 
+function dispararSelecaoMudou(janelaGlobal: Window, instancia: InstanciaCKEditor): void {
+  const texto = instancia.getSelection?.()?.getSelectedText() ?? ''
+  const detalhe: DetalheSelecaoMudou = { texto }
+  janelaGlobal.dispatchEvent(new CustomEvent(EVENTO_SELECAO_MUDOU, { detail: detalhe }))
+}
+
 export interface PonteMainWorld {
   destruir: () => void
 }
@@ -172,6 +179,7 @@ export function criarPonteMainWorld(
     const instancia = obterInstanciaEditavel(janelaGlobal)
     if (instancia) {
       instanciaAtual = instancia
+      instancia.on('selectionChange', () => dispararSelecaoMudou(janelaGlobal, instancia))
       if (marcarIframeDaInstancia(instancia)) {
         reanunciarPeriodicamente(reanunciosMax)
         return

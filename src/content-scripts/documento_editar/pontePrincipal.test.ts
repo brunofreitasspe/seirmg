@@ -24,6 +24,7 @@ function criarInstanciaFalsa(nome: string, editavel: boolean, frameElement: HTML
     fire: vi.fn(),
     applyStyle: vi.fn(),
     execCommand: vi.fn(),
+    on: vi.fn(),
   }
 }
 
