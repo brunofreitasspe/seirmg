@@ -609,7 +609,14 @@ async function bootstrap(): Promise<void> {
     // Configs salvas antes do Lote I não têm esse campo — createSyncConfigStore().get()
     // não faz merge profundo com o default, só retorna o objeto salvo como está.
     const formatacaoBasica = config.formatacaoBasica ?? DEFAULT_SYNC_CONFIG.formatacaoBasica
-    if (!config.ferramentasIA.ativo && !config.corretorOrtografico.ativo && !formatacaoBasica.ativo) return
+    if (
+      !config.ferramentasIA.ativo &&
+      !config.corretorOrtografico.ativo &&
+      !formatacaoBasica.ativo &&
+      !config.referenciaLink.ativo
+    ) {
+      return
+    }
 
     const editor = await clienteEditorGlobal.aguardarEditorPronto()
 
@@ -626,6 +633,11 @@ async function bootstrap(): Promise<void> {
     if (formatacaoBasica.ativo) {
       const { iniciarFormatacaoBasica } = await import('./formatacaoBasica')
       await iniciarFormatacaoBasica(editor, formatacaoBasica)
+    }
+
+    if (config.referenciaLink.ativo) {
+      const { iniciarReferenciaLink } = await import('./referenciaLink')
+      iniciarReferenciaLink(clienteEditorGlobal, editor)
     }
   } catch (error) {
     console.error('[SEIRMG] Falha ao inicializar recursos do editor de documentos:', error)
