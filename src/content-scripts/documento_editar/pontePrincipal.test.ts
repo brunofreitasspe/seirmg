@@ -291,66 +291,78 @@ describe('criarPonteMainWorld', () => {
   })
 
   // Usa a `window` real (não `criarJanelaFalsa()`) porque a interceptação precisa de
-  // `document.addEventListener`/`prompt`/`setTimeout` de verdade, que a janela falsa (um
-  // `EventTarget` puro, usada só pra disparar os eventos da ponte) não tem. Só um teste
-  // (com dois cliques em sequência, mudando a seleção mockada entre eles) em vez de dois
-  // testes separados: `interceptarBotaoLinkSei` só instala o listener de clique uma vez por
-  // `window` (guarda por `WeakSet` em nível de módulo, pra não empilhar listener duplicado
-  // se o comando for enviado mais de uma vez) -- um segundo teste chamando o comando de novo
-  // contra a mesma `window` real não instalaria um segundo listener, e o listener do primeiro
-  // teste continuaria vivo (não há remoção em `destruir()`), então dois testes concorreriam
-  // pelo mesmo clique.
-  it('intercepta o clique no botão nativo "Inserir Link SEI": pré-preenche o prompt só quando a seleção atual é um número candidato', async () => {
+  // `document.getElementById`/`setTimeout` de verdade, que a janela falsa (um `EventTarget`
+  // puro, usada só pra disparar os eventos da ponte) não tem. `definirCkeditor` (helper deste
+  // arquivo) não expõe `on`/`dialog`, então esse teste monta seu próprio objeto `CKEDITOR`
+  // falso, incluindo esses dois -- mirando a API real usada pelo Sei Pro em produção
+  // (`CKEDITOR.on('dialogDefinition', ...)` + `CKEDITOR.dialog.getCurrent()`).
+  it('intercepta o diálogo nativo "linkseiDialog": preenche o campo protocolo e clica OK só quando a seleção é um número candidato', async () => {
     const instancia = criarInstanciaFalsa('corpo', true)
     let textoSelecionado = '0011035-79.2020.8.13.0079'
     instancia.getSelection = () => ({
       getSelectedText: () => textoSelecionado,
       getStartElement: (): unknown => null,
     })
-    definirCkeditor(window, { corpo: instancia })
+
+    const manipuladoresDialogDefinition: Array<(ev: { data: { name: string; definition: { onShow?: () => void } } }) => void> = []
+    const setValueProtocolo = vi.fn()
+    const elementoBotaoOk = document.createElement('button')
+    elementoBotaoOk.id = 'seirmg-teste-botao-ok'
+    document.body.appendChild(elementoBotaoOk)
+    const cliqueOk = vi.fn()
+    elementoBotaoOk.addEventListener('click', cliqueOk)
+
+    const dialogoAtual = {
+      getContentElement: (pagina: string, elemento: string) =>
+        pagina === 'general' && elemento === 'protocolo' ? { setValue: setValueProtocolo } : null,
+      getButton: (id: string) => (id === 'ok' ? { domId: 'seirmg-teste-botao-ok' } : null),
+    }
+
+    ;(window as unknown as { CKEDITOR: unknown }).CKEDITOR = {
+      instances: { corpo: instancia },
+      style: EstiloFalso,
+      on: (evento: string, callback: (ev: { data: { name: string; definition: { onShow?: () => void } } }) => void) => {
+        if (evento === 'dialogDefinition') manipuladoresDialogDefinition.push(callback)
+      },
+      dialog: { getCurrent: () => dialogoAtual },
+    }
+
     const ponte = criarPonteMainWorld(window, 10, 5)
     await new Promise<void>((resolve) => window.addEventListener(EVENTO_PRONTO, () => resolve(), { once: true }))
 
     const comando: DetalheComando = { id: '1', tipo: 'ativarInterceptacaoLinkSei', args: [] }
     window.dispatchEvent(new CustomEvent(EVENTO_COMANDO, { detail: comando }))
 
-    const botao = document.createElement('button')
-    botao.className = 'cke_button cke_button__linksei'
-    document.body.appendChild(botao)
+    expect(manipuladoresDialogDefinition).toHaveLength(1)
 
-    const promptOriginal = window.prompt
     try {
-      const promptSubstituto = vi.fn().mockReturnValue('ok')
-      window.prompt = promptSubstituto
+      // Diálogo de outro nome: ignorado, `onShow` nem é sobrescrito.
+      const definicaoOutroDialogo: { name: string; onShow?: () => void } = { name: 'outroDialogo' }
+      manipuladoresDialogDefinition[0]({ data: { name: 'outroDialogo', definition: definicaoOutroDialogo } })
+      expect(definicaoOutroDialogo.onShow).toBeUndefined()
 
-      botao.click()
+      // linkseiDialog com número candidato selecionado: preenche e clica OK.
+      const definicaoLinkSei: { name: string; onShow?: () => void } = { name: 'linkseiDialog' }
+      manipuladoresDialogDefinition[0]({ data: { name: 'linkseiDialog', definition: definicaoLinkSei } })
+      expect(definicaoLinkSei.onShow).toBeDefined()
 
-      // Durante o clique síncrono, `window.prompt` já deve estar sobrescrito.
-      expect(window.prompt).not.toBe(promptSubstituto)
-      expect(window.prompt('Informe o link ou processo')).toBe('ok')
-      expect(promptSubstituto).toHaveBeenCalledWith('Informe o link ou processo', '00110357920208130079')
+      definicaoLinkSei.onShow?.()
+      await new Promise((resolve) => setTimeout(resolve, 150))
 
-      // `setTimeout(0)` restaura o prompt original (pode ser uma versão `.bind()`-ada dele,
-      // pra evitar "illegal invocation" em navegadores de verdade -- por isso comparamos
-      // comportamento, chamando de novo, em vez de identidade de referência) depois que a
-      // pilha síncrona do clique termina.
-      await new Promise((resolve) => setTimeout(resolve, 0))
-      promptSubstituto.mockClear()
-      window.prompt('outra mensagem qualquer')
-      expect(promptSubstituto).toHaveBeenCalledWith('outra mensagem qualquer')
+      expect(setValueProtocolo).toHaveBeenCalledWith('00110357920208130079')
+      expect(cliqueOk).toHaveBeenCalledTimes(1)
 
-      // Sem número candidato selecionado, o prompt nativo não deve ser tocado.
+      // Sem número candidato selecionado: não preenche nem clica.
       textoSelecionado = 'texto qualquer sem número'
-      const promptSubstituto2 = vi.fn().mockReturnValue('ok2')
-      window.prompt = promptSubstituto2
+      setValueProtocolo.mockClear()
+      cliqueOk.mockClear()
 
-      botao.click()
-      await new Promise((resolve) => setTimeout(resolve, 0))
+      definicaoLinkSei.onShow?.()
+      await new Promise((resolve) => setTimeout(resolve, 150))
 
-      expect(window.prompt).toBe(promptSubstituto2)
-      expect(promptSubstituto2).not.toHaveBeenCalled()
+      expect(setValueProtocolo).not.toHaveBeenCalled()
+      expect(cliqueOk).not.toHaveBeenCalled()
     } finally {
-      window.prompt = promptOriginal
       delete (window as unknown as { CKEDITOR?: unknown }).CKEDITOR
       ponte.destruir()
     }
