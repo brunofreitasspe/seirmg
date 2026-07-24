@@ -1,7 +1,6 @@
 export const EVENTO_PRONTO = 'seirmg:editor-pronto'
 export const EVENTO_COMANDO = 'seirmg:comando-editor'
 export const EVENTO_RESPOSTA = 'seirmg:resposta-editor'
-export const EVENTO_SELECAO_MUDOU = 'seirmg:selecao-editor-mudou'
 
 // O título dos iframes de campo do SEI (Cabeçalho/Título/Data/Corpo do Texto/Rodapé)
 // é um rótulo fixo da UI do SEI, não tem relação com o nome da instância CKEditor
@@ -18,6 +17,7 @@ export type TipoComando =
   | 'getTextoCompleto'
   | 'aplicarClasseParagrafo'
   | 'aplicarEstiloTexto'
+  | 'ativarInterceptacaoLinkSei'
 
 export interface DetalheComando {
   id: string
@@ -33,10 +33,6 @@ export interface DetalheResposta {
 
 export interface DetalhePronto {
   nome: string
-}
-
-export interface DetalheSelecaoMudou {
-  texto: string
 }
 
 export interface DescritorEstiloTexto {

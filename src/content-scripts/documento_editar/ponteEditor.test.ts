@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { criarClienteEditor } from './ponteEditor'
-import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA, EVENTO_SELECAO_MUDOU } from './protocolo'
+import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
 import type { DetalheComando, DetalheResposta } from './protocolo'
 
 function responderComando(
@@ -123,16 +123,18 @@ describe('criarClienteEditor', () => {
     await expect(editor.aplicarEstiloTexto({ fontSizePx: 16 })).resolves.toBeUndefined()
   })
 
-  it('aoMudarSelecao chama o ouvinte com o texto do evento e permite cancelar', () => {
+  it('ativarInterceptacaoLinkSei envia o comando e resolve quando não há erro', async () => {
+    document.body.innerHTML = `<iframe title="Corpo do Texto" ${ATRIBUTO_EDITOR_ALVO}="linksei"></iframe>`
     cliente = criarClienteEditor(window)
-    const chamadas: string[] = []
-    const cancelar = cliente.aoMudarSelecao((texto) => chamadas.push(texto))
+    pararDeResponder = responderComando(window, (detalhe) => {
+      expect(detalhe.tipo).toBe('ativarInterceptacaoLinkSei')
+      expect(detalhe.args).toEqual([])
+      return { resultado: null, erro: null }
+    })
 
-    window.dispatchEvent(new CustomEvent(EVENTO_SELECAO_MUDOU, { detail: { texto: 'abc' } }))
-    expect(chamadas).toEqual(['abc'])
+    window.dispatchEvent(new CustomEvent(EVENTO_PRONTO, { detail: { nome: 'linksei' } }))
+    const editor = await cliente.aguardarEditorPronto(document)
 
-    cancelar()
-    window.dispatchEvent(new CustomEvent(EVENTO_SELECAO_MUDOU, { detail: { texto: 'def' } }))
-    expect(chamadas).toEqual(['abc'])
+    await expect(editor.ativarInterceptacaoLinkSei()).resolves.toBeUndefined()
   })
 })

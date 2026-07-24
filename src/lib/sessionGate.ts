@@ -2,10 +2,6 @@ export function ehPaginaDeLogin(html: string): boolean {
   return html.includes('frmLogin')
 }
 
-export function ehUrlDeLogin(url: string): boolean {
-  return url.includes('login.php')
-}
-
 export function calcularEsperaPosNavegacao(
   ultimaNavegacaoIso: string | undefined,
   agoraIso: string,

@@ -6,11 +6,13 @@ export interface FetchWithTimeoutOptions extends RequestInit {
 
 const TIMEOUT = Symbol('timeout')
 
-async function corridaComTimeout<T>(
-  fetchPromise: Promise<Result<T>>,
-  controller: AbortController,
-  timeoutMs: number
-): Promise<Result<T>> {
+export async function fetchText(
+  url: string,
+  options: FetchWithTimeoutOptions = {}
+): Promise<Result<string>> {
+  const { timeoutMs = 8000, ...init } = options
+  const controller = new AbortController()
+
   let timeoutId: ReturnType<typeof setTimeout> | undefined
   const timeoutPromise = new Promise<typeof TIMEOUT>((resolve) => {
     timeoutId = setTimeout(() => {
@@ -18,22 +20,6 @@ async function corridaComTimeout<T>(
       resolve(TIMEOUT)
     }, timeoutMs)
   })
-
-  try {
-    const resultado = await Promise.race([fetchPromise, timeoutPromise])
-    if (resultado === TIMEOUT) return { ok: false, error: 'Timeout' }
-    return resultado
-  } finally {
-    clearTimeout(timeoutId)
-  }
-}
-
-export async function fetchText(
-  url: string,
-  options: FetchWithTimeoutOptions = {}
-): Promise<Result<string>> {
-  const { timeoutMs = 8000, ...init } = options
-  const controller = new AbortController()
 
   const fetchPromise = (async (): Promise<Result<string>> => {
     try {
@@ -57,31 +43,13 @@ export async function fetchText(
     }
   })()
 
-  return corridaComTimeout(fetchPromise, controller, timeoutMs)
-}
-
-// Usada quando só a URL final (depois de redirecionamentos do próprio SEI) importa, não o corpo
-// da resposta -- caso da Pesquisa Rápida do SEI, que redireciona pra
-// controlador.php?...&id_procedimento=... ou &id_documento=....
-export async function fetchFinalUrl(
-  url: string,
-  options: FetchWithTimeoutOptions = {}
-): Promise<Result<string>> {
-  const { timeoutMs = 8000, ...init } = options
-  const controller = new AbortController()
-
-  const fetchPromise = (async (): Promise<Result<string>> => {
-    try {
-      const response = await fetch(url, { ...init, signal: controller.signal })
-      if (!response.ok) {
-        return { ok: false, error: `HTTP ${response.status}` }
-      }
-      return { ok: true, data: response.url }
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error)
-      return { ok: false, error: message }
+  try {
+    const result = await Promise.race([fetchPromise, timeoutPromise])
+    if (result === TIMEOUT) {
+      return { ok: false, error: 'Timeout' }
     }
-  })()
-
-  return corridaComTimeout(fetchPromise, controller, timeoutMs)
+    return result
+  } finally {
+    clearTimeout(timeoutId)
+  }
 }

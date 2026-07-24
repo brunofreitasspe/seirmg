@@ -1,12 +1,5 @@
-import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA, EVENTO_SELECAO_MUDOU } from './protocolo'
-import type {
-  DescritorEstiloTexto,
-  DetalheComando,
-  DetalhePronto,
-  DetalheResposta,
-  DetalheSelecaoMudou,
-  TipoComando,
-} from './protocolo'
+import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
+import type { DescritorEstiloTexto, DetalheComando, DetalhePronto, DetalheResposta, TipoComando } from './protocolo'
 
 export interface EditorSEI {
   obterTextoSelecionado: () => Promise<string>
@@ -15,6 +8,7 @@ export interface EditorSEI {
   inserirTexto: (texto: string) => Promise<void>
   aplicarClasseParagrafo: (classe: string) => Promise<void>
   aplicarEstiloTexto: (estilo: DescritorEstiloTexto) => Promise<void>
+  ativarInterceptacaoLinkSei: () => Promise<void>
   corpo: HTMLElement
   documento: Document
   janela: Window
@@ -27,7 +21,6 @@ export interface EditorSEI {
 
 export interface ClienteEditor {
   aguardarEditorPronto: (documentoGlobal?: Document) => Promise<EditorSEI>
-  aoMudarSelecao: (ouvinte: (texto: string) => void) => () => void
   destruir: () => void
 }
 
@@ -38,12 +31,6 @@ export function criarClienteEditor(janelaGlobal: Window, timeoutComandoMs = TIME
   const pendentes = new Map<string, (resposta: DetalheResposta) => void>()
   let ultimoPronto: DetalhePronto | null = null
   const aguardandoPronto: Array<(detalhe: DetalhePronto) => void> = []
-  const ouvintesSelecao = new Set<(texto: string) => void>()
-
-  function tratarSelecaoMudou(evento: Event): void {
-    const detalhe = (evento as CustomEvent<DetalheSelecaoMudou>).detail
-    ouvintesSelecao.forEach((ouvinte) => ouvinte(detalhe.texto))
-  }
 
   function tratarResposta(evento: Event): void {
     const detalhe = (evento as CustomEvent<DetalheResposta>).detail
@@ -61,7 +48,6 @@ export function criarClienteEditor(janelaGlobal: Window, timeoutComandoMs = TIME
 
   janelaGlobal.addEventListener(EVENTO_RESPOSTA, tratarResposta)
   janelaGlobal.addEventListener(EVENTO_PRONTO, tratarPronto)
-  janelaGlobal.addEventListener(EVENTO_SELECAO_MUDOU, tratarSelecaoMudou)
 
   function obterDetalhePronto(): Promise<DetalhePronto> {
     if (ultimoPronto) return Promise.resolve(ultimoPronto)
@@ -121,6 +107,7 @@ export function criarClienteEditor(janelaGlobal: Window, timeoutComandoMs = TIME
         enviarComando('aplicarClasseParagrafo', [classe]).then(() => undefined),
       aplicarEstiloTexto: (estilo: DescritorEstiloTexto) =>
         enviarComando('aplicarEstiloTexto', [estilo]).then(() => undefined),
+      ativarInterceptacaoLinkSei: () => enviarComando('ativarInterceptacaoLinkSei', []).then(() => undefined),
     }
   }
 
@@ -138,15 +125,9 @@ export function criarClienteEditor(janelaGlobal: Window, timeoutComandoMs = TIME
 
   return {
     aguardarEditorPronto,
-    aoMudarSelecao(ouvinte: (texto: string) => void): () => void {
-      ouvintesSelecao.add(ouvinte)
-      return () => ouvintesSelecao.delete(ouvinte)
-    },
     destruir(): void {
       janelaGlobal.removeEventListener(EVENTO_RESPOSTA, tratarResposta)
       janelaGlobal.removeEventListener(EVENTO_PRONTO, tratarPronto)
-      janelaGlobal.removeEventListener(EVENTO_SELECAO_MUDOU, tratarSelecaoMudou)
-      ouvintesSelecao.clear()
     },
   }
 }

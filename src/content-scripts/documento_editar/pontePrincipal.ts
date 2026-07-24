@@ -1,5 +1,6 @@
-import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA, EVENTO_SELECAO_MUDOU } from './protocolo'
-import type { DescritorEstiloTexto, DetalheComando, DetalheResposta, DetalhePronto, DetalheSelecaoMudou, TipoComando } from './protocolo'
+import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
+import type { DescritorEstiloTexto, DetalheComando, DetalheResposta, DetalhePronto, TipoComando } from './protocolo'
+import { candidatoANumeroSei, extrairDigitos } from '../../features/referencia-link/numero'
 
 interface ElementoCKEditor {
   setAttribute: (nome: string, valor: string) => void
@@ -26,7 +27,6 @@ interface InstanciaCKEditor {
   fire: (evento: string) => void
   applyStyle: (estilo: unknown) => void
   execCommand: (nome: string) => void
-  on: (evento: string, callback: () => void) => void
 }
 
 interface JanelaComCKEditor {
@@ -129,15 +129,49 @@ function executarComando(
     case 'aplicarEstiloTexto':
       aplicarEstiloTexto(janelaGlobal, instancia, args[0] as DescritorEstiloTexto)
       return null
+    case 'ativarInterceptacaoLinkSei':
+      interceptarBotaoLinkSei(janelaGlobal, instancia)
+      return null
     default:
       return null
   }
 }
 
-function dispararSelecaoMudou(janelaGlobal: Window, instancia: InstanciaCKEditor): void {
-  const texto = instancia.getSelection?.()?.getSelectedText() ?? ''
-  const detalhe: DetalheSelecaoMudou = { texto }
-  janelaGlobal.dispatchEvent(new CustomEvent(EVENTO_SELECAO_MUDOU, { detail: detalhe }))
+const SELETOR_BOTAO_LINK_SEI = '.cke_button__linksei'
+const janelasComInterceptacaoLinkSei = new WeakSet<Window>()
+
+// O SEI já tem um botão nativo no editor ("Inserir um Link para processo ou documento do
+// SEI!", plugin `linksei`) que abre um `window.prompt()` pedindo o número e já cria o link
+// certo sozinho -- confirmado ao vivo (2026-07-24) que digitar/colar o número nessa caixa
+// funciona. Em vez de reimplementar a busca/criação do link (que o próprio SEI já faz),
+// interceptamos só esse clique especifico (fase de captura, roda antes do onclick nativo do
+// botão) e, se já houver um número candidato selecionado no editor, pré-preenchemos o
+// prompt nativo com ele -- sobrescrevendo `window.prompt` só durante essa única chamada
+// síncrona (o `setTimeout(0)` restaura o original assim que a pilha de chamadas do clique
+// termina, o que só acontece depois que o usuário fecha o prompt, já que `prompt()` bloqueia
+// a thread).
+function interceptarBotaoLinkSei(janelaGlobal: Window, instancia: InstanciaCKEditor): void {
+  if (janelasComInterceptacaoLinkSei.has(janelaGlobal)) return
+  janelasComInterceptacaoLinkSei.add(janelaGlobal)
+
+  janelaGlobal.document.addEventListener(
+    'click',
+    (evento) => {
+      const alvo = evento.target
+      if (!(alvo instanceof Element) || !alvo.closest(SELETOR_BOTAO_LINK_SEI)) return
+
+      const textoSelecionado = instancia.getSelection?.()?.getSelectedText() ?? ''
+      if (!candidatoANumeroSei(textoSelecionado)) return
+
+      const digitos = extrairDigitos(textoSelecionado)
+      const promptOriginal = janelaGlobal.prompt.bind(janelaGlobal)
+      janelaGlobal.prompt = (mensagem?: string) => promptOriginal(mensagem, digitos)
+      janelaGlobal.setTimeout(() => {
+        janelaGlobal.prompt = promptOriginal
+      }, 0)
+    },
+    true
+  )
 }
 
 export interface PonteMainWorld {
@@ -178,10 +212,7 @@ export function criarPonteMainWorld(
   function tentarAnunciar(tentativasRestantes: number): void {
     const instancia = obterInstanciaEditavel(janelaGlobal)
     if (instancia) {
-      if (instanciaAtual !== instancia) {
-        instanciaAtual = instancia
-        instancia.on('selectionChange', () => dispararSelecaoMudou(janelaGlobal, instancia))
-      }
+      instanciaAtual = instancia
       if (marcarIframeDaInstancia(instancia)) {
         reanunciarPeriodicamente(reanunciosMax)
         return

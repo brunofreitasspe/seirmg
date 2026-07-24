@@ -1,8 +1,7 @@
 import { processarItensBlocoAssinatura } from './blocoAssinaturaPipeline'
-import { fetchTextComGate, fetchFinalUrlComGate, registrarNavegacaoReal, abrirCircuitBreaker } from './sessionGate'
+import { fetchTextComGate, registrarNavegacaoReal, abrirCircuitBreaker } from './sessionGate'
 import { fetchText } from '../lib/result'
 import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
-import { TIPO_LINK_SELECAO_ESTADO, TIPO_LINK_SELECAO_CONVERTER, TIPO_FETCH_SEI_FINAL_URL } from '../lib/mensagensLink'
 import {
   NOTIFICATION_ID_PREFIX,
   NOTIFICATION_ID_LEMBRETE_BLOCO_ASSINATURA,
@@ -54,18 +53,6 @@ interface MensagemFetchIA {
 
 interface MensagemTelaLoginDetectada {
   type: 'seirmg:tela-login-detectada'
-}
-
-interface MensagemFetchSeiFinalUrl {
-  type: typeof TIPO_FETCH_SEI_FINAL_URL
-  url: string
-  method?: string
-  body?: string
-}
-
-interface MensagemLinkSelecaoEstado {
-  type: typeof TIPO_LINK_SELECAO_ESTADO
-  ativo: boolean
 }
 
 function ehMensagemItensBloco(mensagem: unknown): mensagem is MensagemItensBloco {
@@ -121,22 +108,6 @@ function ehMensagemTelaLoginDetectada(mensagem: unknown): mensagem is MensagemTe
     typeof mensagem === 'object' &&
     mensagem !== null &&
     (mensagem as { type?: unknown }).type === 'seirmg:tela-login-detectada'
-  )
-}
-
-function ehMensagemFetchSeiFinalUrl(mensagem: unknown): mensagem is MensagemFetchSeiFinalUrl {
-  return (
-    typeof mensagem === 'object' &&
-    mensagem !== null &&
-    (mensagem as { type?: unknown }).type === TIPO_FETCH_SEI_FINAL_URL
-  )
-}
-
-function ehMensagemLinkSelecaoEstado(mensagem: unknown): mensagem is MensagemLinkSelecaoEstado {
-  return (
-    typeof mensagem === 'object' &&
-    mensagem !== null &&
-    (mensagem as { type?: unknown }).type === TIPO_LINK_SELECAO_ESTADO
   )
 }
 
@@ -252,36 +223,6 @@ chrome.runtime.onMessage.addListener((mensagem) => {
   if (!ehMensagemTelaLoginDetectada(mensagem)) return
   abrirCircuitBreaker().catch((error) => {
     console.error('[SEIRMG] Falha ao abrir circuit breaker após detectar tela de login na aba real:', error)
-  })
-})
-
-const POPUP_PADRAO_ICONE = 'src/popup/index.html'
-
-chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
-  if (!ehMensagemFetchSeiFinalUrl(mensagem)) return false
-  fetchFinalUrlComGate(mensagem.url, {
-    method: mensagem.method,
-    body: mensagem.body !== undefined ? new URLSearchParams(mensagem.body) : undefined,
-    headers: mensagem.body !== undefined ? { 'Content-Type': 'application/x-www-form-urlencoded' } : undefined,
-  })
-    .then(responder)
-    .catch((error) => responder({ ok: false, error: String(error) }))
-  return true
-})
-
-chrome.runtime.onMessage.addListener((mensagem, remetente) => {
-  if (!ehMensagemLinkSelecaoEstado(mensagem) || !remetente.tab?.id) return
-  chrome.action
-    .setPopup({ tabId: remetente.tab.id, popup: mensagem.ativo ? '' : POPUP_PADRAO_ICONE })
-    .catch((error) => {
-      console.error('[SEIRMG] Falha ao alternar popup do ícone da extensão:', error)
-    })
-})
-
-chrome.action.onClicked.addListener((tab) => {
-  if (!tab.id) return
-  chrome.tabs.sendMessage(tab.id, { type: TIPO_LINK_SELECAO_CONVERTER }).catch((error) => {
-    console.error('[SEIRMG] Falha ao avisar a aba pra converter seleção em link:', error)
   })
 })
 

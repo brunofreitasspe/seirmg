@@ -648,7 +648,7 @@ async function bootstrap(): Promise<void> {
     }
 
     if (referenciaLink.ativo) {
-      iniciarReferenciaLink(clienteEditorGlobal, editor)
+      iniciarReferenciaLink(editor)
     }
   } catch (error) {
     console.error('[SEIRMG] Falha ao inicializar recursos do editor de documentos:', error)

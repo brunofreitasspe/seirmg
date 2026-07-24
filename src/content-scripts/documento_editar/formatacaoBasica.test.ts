@@ -19,6 +19,7 @@ function criarEditorFalso(iframe: HTMLIFrameElement): EditorSEI {
     inserirTexto: vi.fn().mockResolvedValue(undefined),
     aplicarClasseParagrafo: vi.fn().mockResolvedValue(undefined),
     aplicarEstiloTexto: vi.fn().mockResolvedValue(undefined),
+    ativarInterceptacaoLinkSei: vi.fn().mockResolvedValue(undefined),
     corpo: document.createElement('body'),
     documento: document,
     janela: window,

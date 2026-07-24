@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { criarPonteMainWorld } from './pontePrincipal'
-import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA, EVENTO_SELECAO_MUDOU } from './protocolo'
-import type { DetalheComando, DetalhePronto, DetalheResposta, DetalheSelecaoMudou } from './protocolo'
+import { ATRIBUTO_EDITOR_ALVO, EVENTO_COMANDO, EVENTO_PRONTO, EVENTO_RESPOSTA } from './protocolo'
+import type { DetalheComando, DetalhePronto, DetalheResposta } from './protocolo'
 
 function criarJanelaFalsa(): Window {
   return new EventTarget() as unknown as Window
@@ -24,7 +24,6 @@ function criarInstanciaFalsa(nome: string, editavel: boolean, frameElement: HTML
     fire: vi.fn(),
     applyStyle: vi.fn(),
     execCommand: vi.fn(),
-    on: vi.fn(),
   }
 }
 
@@ -105,62 +104,6 @@ describe('criarPonteMainWorld', () => {
     const ponte = criarPonteMainWorld(janela, 5, 10)
     await pronto
     expect(frame.getAttribute(ATRIBUTO_EDITOR_ALVO)).toBe('corpo')
-    // A mesma instância é retornada em cada tentativa de tentarAnunciar (registro global
-    // estável do CKEditor) -- o listener de selectionChange só deve ser registrado uma vez,
-    // não uma vez por tentativa até marcarIframeDaInstancia ter sucesso.
-    expect(instancia.on).toHaveBeenCalledTimes(1)
-    ponte.destruir()
-  })
-
-  it('dispara EVENTO_SELECAO_MUDOU com o texto selecionado quando o CKEditor emite selectionChange', async () => {
-    const janela = criarJanelaFalsa()
-    const instancia = criarInstanciaFalsa('corpo', true)
-    instancia.getSelection = () => ({
-      getSelectedText: () => '7294607',
-      getStartElement: (): unknown => null,
-    })
-    definirCkeditor(janela, { corpo: instancia })
-    const ponte = criarPonteMainWorld(janela, 10, 5)
-
-    const selecaoMudou = new Promise<DetalheSelecaoMudou>((resolve) => {
-      janela.addEventListener(
-        EVENTO_SELECAO_MUDOU,
-        (evento) => resolve((evento as CustomEvent<DetalheSelecaoMudou>).detail),
-        { once: true }
-      )
-    })
-
-    const callbackSelectionChange = instancia.on.mock.calls.find(([evento]) => evento === 'selectionChange')?.[1] as
-      | (() => void)
-      | undefined
-    expect(callbackSelectionChange).toBeDefined()
-    callbackSelectionChange?.()
-
-    await expect(selecaoMudou).resolves.toEqual({ texto: '7294607' })
-    ponte.destruir()
-  })
-
-  it('dispara EVENTO_SELECAO_MUDOU com texto vazio quando não há seleção no momento do selectionChange', async () => {
-    const janela = criarJanelaFalsa()
-    const instancia = criarInstanciaFalsa('corpo', true)
-    instancia.getSelection = (() => null) as unknown as typeof instancia.getSelection
-    definirCkeditor(janela, { corpo: instancia })
-    const ponte = criarPonteMainWorld(janela, 10, 5)
-
-    const selecaoMudou = new Promise<DetalheSelecaoMudou>((resolve) => {
-      janela.addEventListener(
-        EVENTO_SELECAO_MUDOU,
-        (evento) => resolve((evento as CustomEvent<DetalheSelecaoMudou>).detail),
-        { once: true }
-      )
-    })
-
-    const callbackSelectionChange = instancia.on.mock.calls.find(([evento]) => evento === 'selectionChange')?.[1] as
-      | (() => void)
-      | undefined
-    callbackSelectionChange?.()
-
-    await expect(selecaoMudou).resolves.toEqual({ texto: '' })
     ponte.destruir()
   })
 
@@ -345,5 +288,71 @@ describe('criarPonteMainWorld', () => {
     expect(instancia.execCommand).toHaveBeenCalledWith('underline')
     expect(instancia.applyStyle).not.toHaveBeenCalled()
     ponte.destruir()
+  })
+
+  // Usa a `window` real (não `criarJanelaFalsa()`) porque a interceptação precisa de
+  // `document.addEventListener`/`prompt`/`setTimeout` de verdade, que a janela falsa (um
+  // `EventTarget` puro, usada só pra disparar os eventos da ponte) não tem. Só um teste
+  // (com dois cliques em sequência, mudando a seleção mockada entre eles) em vez de dois
+  // testes separados: `interceptarBotaoLinkSei` só instala o listener de clique uma vez por
+  // `window` (guarda por `WeakSet` em nível de módulo, pra não empilhar listener duplicado
+  // se o comando for enviado mais de uma vez) -- um segundo teste chamando o comando de novo
+  // contra a mesma `window` real não instalaria um segundo listener, e o listener do primeiro
+  // teste continuaria vivo (não há remoção em `destruir()`), então dois testes concorreriam
+  // pelo mesmo clique.
+  it('intercepta o clique no botão nativo "Inserir Link SEI": pré-preenche o prompt só quando a seleção atual é um número candidato', async () => {
+    const instancia = criarInstanciaFalsa('corpo', true)
+    let textoSelecionado = '0011035-79.2020.8.13.0079'
+    instancia.getSelection = () => ({
+      getSelectedText: () => textoSelecionado,
+      getStartElement: (): unknown => null,
+    })
+    definirCkeditor(window, { corpo: instancia })
+    const ponte = criarPonteMainWorld(window, 10, 5)
+    await new Promise<void>((resolve) => window.addEventListener(EVENTO_PRONTO, () => resolve(), { once: true }))
+
+    const comando: DetalheComando = { id: '1', tipo: 'ativarInterceptacaoLinkSei', args: [] }
+    window.dispatchEvent(new CustomEvent(EVENTO_COMANDO, { detail: comando }))
+
+    const botao = document.createElement('button')
+    botao.className = 'cke_button cke_button__linksei'
+    document.body.appendChild(botao)
+
+    const promptOriginal = window.prompt
+    try {
+      const promptSubstituto = vi.fn().mockReturnValue('ok')
+      window.prompt = promptSubstituto
+
+      botao.click()
+
+      // Durante o clique síncrono, `window.prompt` já deve estar sobrescrito.
+      expect(window.prompt).not.toBe(promptSubstituto)
+      expect(window.prompt('Informe o link ou processo')).toBe('ok')
+      expect(promptSubstituto).toHaveBeenCalledWith('Informe o link ou processo', '00110357920208130079')
+
+      // `setTimeout(0)` restaura o prompt original (pode ser uma versão `.bind()`-ada dele,
+      // pra evitar "illegal invocation" em navegadores de verdade -- por isso comparamos
+      // comportamento, chamando de novo, em vez de identidade de referência) depois que a
+      // pilha síncrona do clique termina.
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      promptSubstituto.mockClear()
+      window.prompt('outra mensagem qualquer')
+      expect(promptSubstituto).toHaveBeenCalledWith('outra mensagem qualquer')
+
+      // Sem número candidato selecionado, o prompt nativo não deve ser tocado.
+      textoSelecionado = 'texto qualquer sem número'
+      const promptSubstituto2 = vi.fn().mockReturnValue('ok2')
+      window.prompt = promptSubstituto2
+
+      botao.click()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+
+      expect(window.prompt).toBe(promptSubstituto2)
+      expect(promptSubstituto2).not.toHaveBeenCalled()
+    } finally {
+      window.prompt = promptOriginal
+      delete (window as unknown as { CKEDITOR?: unknown }).CKEDITOR
+      ponte.destruir()
+    }
   })
 })
