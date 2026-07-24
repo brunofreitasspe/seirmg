@@ -161,6 +161,10 @@ export interface FormatacaoBasicaConfig {
   atalhos: AtalhoParagrafo[]
 }
 
+export interface ReferenciaLinkConfig {
+  ativo: boolean
+}
+
 export type PrioridadeTarefa = 'baixa' | 'media' | 'alta'
 
 export interface Tarefa {
@@ -193,6 +197,7 @@ export interface SyncConfig {
   ferramentasIA: FerramentasIAConfig
   corretorOrtografico: CorretorOrtograficoConfig
   formatacaoBasica: FormatacaoBasicaConfig
+  referenciaLink: ReferenciaLinkConfig
   tarefas: TarefasConfig
   historicoProcessos: HistoricoProcessosConfig
 }
@@ -307,6 +312,9 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
   formatacaoBasica: {
     ativo: false,
     atalhos: [],
+  },
+  referenciaLink: {
+    ativo: false,
   },
   tarefas: {
     ativo: false,
