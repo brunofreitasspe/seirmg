@@ -164,76 +164,38 @@ const NOME_DIALOGO_LINK_SEI = 'linkseiDialog'
 const ATRASO_PREENCHIMENTO_DIALOGO_MS = 100
 const janelasComInterceptacaoLinkSei = new WeakSet<Window>()
 
-// DEBUG TEMPORÁRIO (investigação ao vivo 2026-07-24) -- banner visível na tela (não
-// console), pra achar em qual etapa a interceptação do diálogo linksei está falhando.
-function mostrarDebugLinkSei(linhas: string[]): void {
-  let banner = document.getElementById('seirmg-debug-linksei')
-  if (!banner) {
-    banner = document.createElement('div')
-    banner.id = 'seirmg-debug-linksei'
-    banner.style.cssText =
-      'position:fixed;bottom:8px;left:8px;z-index:999999;background:#000;color:#0f0;' +
-      'font:11px monospace;padding:6px 10px;border-radius:6px;max-width:460px;white-space:pre-wrap;'
-    document.body.appendChild(banner)
-  }
-  banner.textContent = linhas.join('\n')
-}
-
 // O botão "Inserir um Link para processo ou documento do SEI!" abre um diálogo NATIVO do
-// CKEditor (`linkseiDialog`, plugin `linksei`) -- não um `window.prompt()` (tentativa
-// anterior, incorreta). Confirmado lendo o código de produção do Sei Pro
-// (`sei-functions-pro.js`/`updateDialogDefinitionPro`, `sei-pro-editor.js`/
-// `insertProtocoloOnBox`): ele usa `CKEDITOR.on('dialogDefinition', ...)` -- evento global,
-// dispara pra QUALQUER diálogo definido em QUALQUER instância -- pra sobrescrever o
-// `onShow` do diálogo `linkseiDialog` especificamente, preenche o campo `protocolo` com o
-// texto selecionado (via `getContentElement('general', 'protocolo').setValue(...)`, API
-// padrão de diálogo do CKEditor 4) depois de um `setTimeout` curto (o campo só existe no DOM
-// depois que o diálogo termina de renderizar) e, se o campo tinha algo, já clica no botão OK
-// sozinho (`getButton('ok').domId` + `.click()`) -- reproduzido aqui da mesma forma, restrito
-// a quando a seleção parece mesmo um número (`candidatoANumeroSei`).
+// CKEditor (`linkseiDialog`, plugin `linksei`) -- não um `window.prompt()`. Confirmado lendo
+// o código de produção do Sei Pro (`sei-functions-pro.js`/`updateDialogDefinitionPro`,
+// `sei-pro-editor.js`/`insertProtocoloOnBox`): ele usa `CKEDITOR.on('dialogDefinition', ...)`
+// -- evento global, dispara pra QUALQUER diálogo definido em QUALQUER instância -- pra
+// sobrescrever o `onShow` do diálogo `linkseiDialog` especificamente, preenche o campo
+// `protocolo` com o texto selecionado (via `getContentElement('general',
+// 'protocolo').setValue(...)`, API padrão de diálogo do CKEditor 4) depois de um `setTimeout`
+// curto (o campo só existe no DOM depois que o diálogo termina de renderizar) e, se o campo
+// tinha algo, já clica no botão OK sozinho (`getButton('ok').domId` + `.click()`) --
+// reproduzido aqui da mesma forma, restrito a quando a seleção parece mesmo um número
+// (`candidatoANumeroSei`). Confirmado funcionando ao vivo numa instância SEI real (2026-07-24).
 function interceptarDialogLinkSei(janelaGlobal: Window, instancia: InstanciaCKEditor): void {
   const ckeditor = (janelaGlobal as unknown as JanelaComCKEditor).CKEDITOR
-  mostrarDebugLinkSei([
-    `[DEBUG linksei] ativarInterceptacaoLinkSei chamado`,
-    `CKEDITOR.on disponível? ${typeof ckeditor?.on === 'function'}`,
-    `já instalado antes: ${janelasComInterceptacaoLinkSei.has(janelaGlobal)}`,
-  ])
-
   if (!ckeditor || janelasComInterceptacaoLinkSei.has(janelaGlobal)) return
   janelasComInterceptacaoLinkSei.add(janelaGlobal)
 
-  let contagemDialogos = 0
-
   ckeditor.on('dialogDefinition', (ev) => {
-    contagemDialogos += 1
-    const nomeDialogo = ev.data.name
-    mostrarDebugLinkSei([`[DEBUG linksei] dialogDefinition disparado: "${nomeDialogo}" (total: ${contagemDialogos})`])
-    if (nomeDialogo !== NOME_DIALOGO_LINK_SEI) return
+    if (ev.data.name !== NOME_DIALOGO_LINK_SEI) return
 
     ev.data.definition.onShow = () => {
       const textoSelecionado = instancia.getSelection?.()?.getSelectedText() ?? ''
-      const candidato = candidatoANumeroSei(textoSelecionado)
-      mostrarDebugLinkSei([
-        `[DEBUG linksei] linkseiDialog abriu`,
-        `seleção: "${textoSelecionado}" (len ${textoSelecionado.length})`,
-        `candidato: ${candidato}`,
-      ])
-      if (!candidato) return
+      if (!candidatoANumeroSei(textoSelecionado)) return
 
       janelaGlobal.setTimeout(() => {
         const dialogo = ckeditor.dialog.getCurrent()
         const campoProtocolo = dialogo?.getContentElement('general', 'protocolo')
-        mostrarDebugLinkSei([
-          `[DEBUG linksei] preenchendo diálogo`,
-          `dialogo atual? ${!!dialogo}`,
-          `campo protocolo achado? ${!!campoProtocolo}`,
-        ])
         if (!campoProtocolo) return
 
         campoProtocolo.setValue(extrairDigitos(textoSelecionado))
         const botaoOk = dialogo?.getButton('ok')
         const elementoBotaoOk = botaoOk ? janelaGlobal.document.getElementById(botaoOk.domId) : null
-        mostrarDebugLinkSei([`[DEBUG linksei] campo preenchido, clicando OK`, `botão OK achado? ${!!elementoBotaoOk}`])
         elementoBotaoOk?.click()
       }, ATRASO_PREENCHIMENTO_DIALOGO_MS)
     }
