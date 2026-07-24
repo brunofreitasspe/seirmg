@@ -609,11 +609,14 @@ async function bootstrap(): Promise<void> {
     // Configs salvas antes do Lote I não têm esse campo — createSyncConfigStore().get()
     // não faz merge profundo com o default, só retorna o objeto salvo como está.
     const formatacaoBasica = config.formatacaoBasica ?? DEFAULT_SYNC_CONFIG.formatacaoBasica
+    // Configs salvas antes deste lote (referenciaLink) também não têm esse campo — mesmo
+    // problema do formatacaoBasica acima.
+    const referenciaLink = config.referenciaLink ?? DEFAULT_SYNC_CONFIG.referenciaLink
     if (
       !config.ferramentasIA.ativo &&
       !config.corretorOrtografico.ativo &&
       !formatacaoBasica.ativo &&
-      !config.referenciaLink.ativo
+      !referenciaLink.ativo
     ) {
       return
     }
@@ -635,7 +638,7 @@ async function bootstrap(): Promise<void> {
       await iniciarFormatacaoBasica(editor, formatacaoBasica)
     }
 
-    if (config.referenciaLink.ativo) {
+    if (referenciaLink.ativo) {
       const { iniciarReferenciaLink } = await import('./referenciaLink')
       iniciarReferenciaLink(clienteEditorGlobal, editor)
     }

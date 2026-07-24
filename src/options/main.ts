@@ -409,6 +409,9 @@ async function carregarAbaEditor(): Promise<void> {
     // Configs salvas antes do Lote I não têm esse campo — createSyncConfigStore().get()
     // não faz merge profundo com o default, só retorna o objeto salvo como está.
     const formatacaoBasica = config.formatacaoBasica ?? DEFAULT_SYNC_CONFIG.formatacaoBasica
+    // Configs salvas antes deste lote (referenciaLink) também não têm esse campo — mesmo
+    // problema do formatacaoBasica acima.
+    const referenciaLink = config.referenciaLink ?? DEFAULT_SYNC_CONFIG.referenciaLink
 
     if (inputAtivo) inputAtivo.checked = config.documentoExterno.ativo
     if (selectFormato) selectFormato.value = config.documentoExterno.formato
@@ -426,7 +429,7 @@ async function carregarAbaEditor(): Promise<void> {
       inputFormatacaoBasicaAtalhos.value = formatarAtalhos(formatacaoBasica.atalhos)
     }
     if (inputReferenciaLinkAtivo) {
-      inputReferenciaLinkAtivo.checked = config.referenciaLink.ativo
+      inputReferenciaLinkAtivo.checked = referenciaLink.ativo
     }
 
     document.getElementById('editor-salvar')?.addEventListener('click', async () => {
