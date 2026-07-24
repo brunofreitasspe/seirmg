@@ -1,6 +1,31 @@
 import type { FavoritoProcesso, SnapshotFavorito } from '../../lib/storage'
 import { extrairEspecificacaoParaExibicao } from './especificacao'
 
+export function extrairHrefDaLinha(linha: Element): string | null {
+  return linha.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')?.getAttribute('href') ?? null
+}
+
+// O link salvo no favorito é capturado uma vez, com o `infra_hash` válido só pro
+// contexto (unidade/sessão) daquele momento. Confirmado ao vivo (2026-07-23): clicar
+// nesse link depois do processo sair da caixa (fechado) faz o SEI tratar o hash como
+// inválido e forçar deslogamento da sessão — não é um link quebrado comum. A mesma
+// action sem `infra_hash` nenhum já é usada e funciona (popup/main.ts, histórico de
+// processos visitados), então reconstruir o link só com `id_procedimento` é a forma
+// segura de abrir um favorito fechado sem arriscar reusar um hash desatualizado.
+export function extrairIdProcedimentoDoLink(link: string | null): string | null {
+  if (!link) return null
+  try {
+    return new URL(link, 'https://seirmg.invalid/').searchParams.get('id_procedimento')
+  } catch {
+    return null
+  }
+}
+
+export function construirLinkSeguro(link: string | null): string | null {
+  const id = extrairIdProcedimentoDoLink(link)
+  return id ? `controlador.php?acao=procedimento_trabalhar&id_procedimento=${id}` : null
+}
+
 export function extrairFavoritoDaLinha(linha: Element, agoraIso: string): FavoritoProcesso | null {
   const processo = linha.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')
   const numero = processo?.textContent?.trim()

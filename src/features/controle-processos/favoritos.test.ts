@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   atualizarSnapshotsFavoritos,
   calcularOcultacaoPorFavorito,
+  construirLinkSeguro,
   extrairFavoritoDaLinha,
+  extrairHrefDaLinha,
+  extrairIdProcedimentoDoLink,
   ordenarFavoritosPorData,
   snapshotsIguais,
 } from './favoritos'
@@ -57,6 +60,53 @@ describe('extrairFavoritoDaLinha', () => {
   it('deixa especificação indefinida quando a linha não tem onmouseover', () => {
     const linha = criarLinhaComProcesso('<td><a class="processoVisualizado" href="x">HMMG.2025.00005-5</a></td>')
     expect(extrairFavoritoDaLinha(linha, '2026-07-10T10:00:00.000Z')?.especificacao).toBeUndefined()
+  })
+})
+
+describe('extrairHrefDaLinha', () => {
+  it('extrai o href atual da linha, igual extrairFavoritoDaLinha', () => {
+    const linha = criarLinhaComProcesso(
+      '<td><a class="processoVisualizado" href="controlador.php?acao=x&id_procedimento=1">HMMG.1</a></td>'
+    )
+    expect(extrairHrefDaLinha(linha)).toBe('controlador.php?acao=x&id_procedimento=1')
+  })
+
+  it('retorna null quando a linha não tem elemento de processo', () => {
+    const linha = criarLinhaComProcesso('<td>sem link</td>')
+    expect(extrairHrefDaLinha(linha)).toBeNull()
+  })
+})
+
+describe('extrairIdProcedimentoDoLink', () => {
+  it('extrai id_procedimento de um link completo com infra_hash', () => {
+    const link =
+      'controlador.php?acao=procedimento_trabalhar&acao_origem=procedimento_controlar&id_procedimento=20637997&infra_unidade_atual=110002133&infra_hash=abc123'
+    expect(extrairIdProcedimentoDoLink(link)).toBe('20637997')
+  })
+
+  it('retorna null quando o link é null', () => {
+    expect(extrairIdProcedimentoDoLink(null)).toBeNull()
+  })
+
+  it('retorna null quando o link não tem id_procedimento', () => {
+    expect(extrairIdProcedimentoDoLink('controlador.php?acao=x')).toBeNull()
+  })
+
+  it('retorna null quando o link não é uma URL válida', () => {
+    expect(extrairIdProcedimentoDoLink('::não é url::')).toBeNull()
+  })
+})
+
+describe('construirLinkSeguro', () => {
+  it('reconstrói o link só com id_procedimento, sem infra_hash nem infra_unidade_atual', () => {
+    const link =
+      'controlador.php?acao=procedimento_trabalhar&acao_origem=procedimento_controlar&id_procedimento=20637997&infra_unidade_atual=110002133&infra_hash=abc123'
+    expect(construirLinkSeguro(link)).toBe('controlador.php?acao=procedimento_trabalhar&id_procedimento=20637997')
+  })
+
+  it('retorna null quando não dá pra extrair id_procedimento', () => {
+    expect(construirLinkSeguro(null)).toBeNull()
+    expect(construirLinkSeguro('controlador.php?acao=x')).toBeNull()
   })
 })
 

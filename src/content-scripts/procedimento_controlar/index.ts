@@ -69,6 +69,8 @@ import { montarEstiloPlanka, montarConteudoCardPlanka, type RespostaConsultaPlan
 import { limparTokenPlanka } from '../shared/plankaToken'
 import {
   extrairFavoritoDaLinha,
+  extrairHrefDaLinha,
+  construirLinkSeguro,
   calcularOcultacaoPorFavorito,
   ordenarFavoritosPorData,
   atualizarSnapshotsFavoritos,
@@ -961,15 +963,20 @@ function referenciaParaPainel(): ReferenciaPainel | null {
   return tabela ? { elemento: tabela, comoFilho: false } : null
 }
 
-function montarCelulaProcesso(item: FavoritoProcesso, aberto: boolean, especificacao: string | undefined): HTMLTableCellElement {
+function montarCelulaProcesso(
+  numero: string,
+  href: string | null,
+  aberto: boolean,
+  especificacao: string | undefined
+): HTMLTableCellElement {
   const td = document.createElement('td')
-  if (item.link) {
+  if (href) {
     const link = document.createElement('a')
-    link.href = item.link
-    link.textContent = item.numero
+    link.href = href
+    link.textContent = numero
     td.appendChild(link)
   } else {
-    td.appendChild(document.createTextNode(item.numero))
+    td.appendChild(document.createTextNode(numero))
   }
 
   const detalhes = document.createElement('div')
@@ -1122,7 +1129,13 @@ function montarLinhaPainelFavoritos(item: FavoritoProcesso, linhaNativa: Element
   const tr = document.createElement('tr')
   const especificacao = linhaNativa ? (obterEspecificacaoDaLinha(linhaNativa) ?? item.especificacao) : item.especificacao
 
-  tr.appendChild(montarCelulaProcesso(item, !!linhaNativa, especificacao))
+  // Com o processo aberto na caixa, o href vem fresco da linha nativa (válido pra sessão/
+  // unidade atual). Fechado, o link salvo pode ter um `infra_hash` preso ao contexto de
+  // quando foi favoritado — usar o link reconstruído sem hash evita o SEI tratar como
+  // inválido e forçar deslogamento (ver comentário em favoritos.ts).
+  const href = (linhaNativa ? extrairHrefDaLinha(linhaNativa) : null) ?? construirLinkSeguro(item.link)
+
+  tr.appendChild(montarCelulaProcesso(item.numero, href, !!linhaNativa, especificacao))
 
   if (linhaNativa) {
     tr.appendChild(montarCelulaMarcadores(linhaNativa))
