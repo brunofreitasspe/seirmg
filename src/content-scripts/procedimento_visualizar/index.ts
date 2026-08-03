@@ -567,7 +567,7 @@ async function montarPainelTipoEInteressados(): Promise<void> {
   divTipo.appendChild(pTipo)
   container.appendChild(secaoTipo)
 
-  registrarHistoricoVisita(numero, tipo).catch((error) => {
+  const historicoVisitaFeito = registrarHistoricoVisita(numero, tipo).catch((error) => {
     console.error('[SEIRMG] Falha ao registrar processo no histórico:', error)
   })
 
@@ -575,9 +575,11 @@ async function montarPainelTipoEInteressados(): Promise<void> {
   const especificacao = extrairEspecificacao(doc)
   renderizarTextoSimples(container, 'Especificação', 'seirmg-especificacao', especificacao, 'Sem especificação.', fileTextIconSvg)
 
-  registrarEventoAcesso(numero, tipo, especificacao).catch((error) => {
-    console.error('[SEIRMG] Falha ao registrar evento de acesso no Dashboard:', error)
-  })
+  historicoVisitaFeito
+    .then(() => registrarEventoAcesso(numero, tipo, especificacao))
+    .catch((error) => {
+      console.error('[SEIRMG] Falha ao registrar evento de acesso no Dashboard:', error)
+    })
 
   renderizarAssuntos(container, extrairAssuntos(doc))
   renderizarInteressados(container, extrairInteressados(doc))
