@@ -2955,15 +2955,32 @@ function numerosSelecionadosEmLote(): string[] {
 
 const CHAVE_SESSAO_CONCLUIDOS_PENDENTES = 'seirmg-concluir-lote-pendente'
 
+// Janela de validade dos candidatos estagiados: generosa o bastante pra cobrir o round-trip real de
+// confirmar-e-voltar (que acontece em poucos segundos), estreita o bastante pra excluir "voltou pra essa
+// tela sem relação nenhuma minutos depois" -- ver comentário abaixo sobre o motivo do timestamp.
+const JANELA_VALIDADE_CONCLUIDOS_PENDENTES_MS = 120000
+
+interface CandidatosConcluidoEmLotePendentes {
+  numeros: string[]
+  expiraEm: number
+}
+
 // Concluir Processo em lote sempre passa pelo confirm() próprio do SEIRMG (montarConfirmarAntesDeConcluir,
 // que reescreve o onclick nativo) -- esse onclick roda no mundo principal da página, então não dá pra
 // saber daqui (mundo isolado) se o usuário confirmou ou cancelou o diálogo. Por isso o clique só marca os
 // processos selecionados como "candidatos" (sessionStorage, sobrevive à navegação de volta que a própria
 // ação de concluir dispara); a confirmação de verdade acontece no próximo carregamento desta mesma tela,
 // comparando quais desses números sumiram da listagem -- só esses são registrados como concluídos de fato.
+// O timestamp de expiração evita que um candidato estagiado (usuário cancelou o diálogo, ou nunca
+// confirmou) seja erroneamente validado num carregamento futuro sem relação nenhuma com essa ação
+// (troca de unidade, paginação, reabrir a aba depois).
 function estagiarCandidatosConcluidoEmLote(numeros: string[]): void {
   if (numeros.length === 0) return
-  sessionStorage.setItem(CHAVE_SESSAO_CONCLUIDOS_PENDENTES, JSON.stringify(numeros))
+  const payload: CandidatosConcluidoEmLotePendentes = {
+    numeros,
+    expiraEm: Date.now() + JANELA_VALIDADE_CONCLUIDOS_PENDENTES_MS,
+  }
+  sessionStorage.setItem(CHAVE_SESSAO_CONCLUIDOS_PENDENTES, JSON.stringify(payload))
 }
 
 function numerosPresentesNasTabelas(): Set<string> {
@@ -2978,25 +2995,36 @@ function numerosPresentesNasTabelas(): Set<string> {
   return numeros
 }
 
-function verificarCandidatosConcluidoEmLote(): void {
+function verificarCandidatosConcluidoEmLote(): Promise<void> {
   const bruto = sessionStorage.getItem(CHAVE_SESSAO_CONCLUIDOS_PENDENTES)
-  if (!bruto) return
+  if (!bruto) return Promise.resolve()
   sessionStorage.removeItem(CHAVE_SESSAO_CONCLUIDOS_PENDENTES)
 
-  let candidatosBrutos: unknown
+  let payload: unknown
   try {
-    candidatosBrutos = JSON.parse(bruto)
+    payload = JSON.parse(bruto)
   } catch {
-    return
+    return Promise.resolve()
   }
-  if (!Array.isArray(candidatosBrutos)) return
-  const candidatos = candidatosBrutos.filter((item): item is string => typeof item === 'string')
-  if (candidatos.length === 0) return
+  if (
+    typeof payload !== 'object' ||
+    payload === null ||
+    !Array.isArray((payload as { numeros?: unknown }).numeros) ||
+    typeof (payload as { expiraEm?: unknown }).expiraEm !== 'number'
+  ) {
+    return Promise.resolve()
+  }
+
+  const { numeros: numerosBrutos, expiraEm } = payload as CandidatosConcluidoEmLotePendentes
+  if (Date.now() > expiraEm) return Promise.resolve()
+
+  const candidatos = numerosBrutos.filter((item): item is string => typeof item === 'string')
+  if (candidatos.length === 0) return Promise.resolve()
 
   const presentes = numerosPresentesNasTabelas()
   const concluidos = candidatos.filter((numero) => !presentes.has(numero))
 
-  registrarEventosConcluidoEmLote(concluidos).catch((error) => {
+  return registrarEventosConcluidoEmLote(concluidos).catch((error) => {
     console.error('[SEIRMG] Falha ao registrar eventos de conclusão em lote no Dashboard:', error)
   })
 }
@@ -3064,6 +3092,13 @@ async function bootstrap(): Promise<void> {
   }
 }
 
-bootstrap()
+// verificarCandidatosConcluidoEmLote faz seu próprio read-modify-write (rápido, sem rede) de
+// LocalConfig.historicoEventos; bootstrap() dispara verificarBlocoAssinaturaOportunisticamente() sem
+// aguardar, que faz um read-modify-write (lento, com round-trip de rede) da mesma LocalConfig. Sequenciar
+// aqui garante que a verificação de conclusão em lote sempre termine e persista ANTES do bootstrap
+// começar seu próprio ciclo de leitura -- do contrário a escrita mais lenta do bloco de assinatura
+// poderia usar um snapshot desatualizado de localConfig e sobrescrever (perder) os eventos recém-gravados.
+verificarCandidatosConcluidoEmLote().finally(() => {
+  bootstrap()
+})
 instalarCapturaEventoConcluidoEmLote()
-verificarCandidatosConcluidoEmLote()
