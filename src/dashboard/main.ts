@@ -272,7 +272,7 @@ function montarBadgePrazo(dias: number, config: { alerta: number; critico: numbe
   }
   const classificacao = classificarPrazo(dias, config)
   badge.classList.add(classificacao === 'critico' ? 'badge-critico' : 'badge-alerta')
-  badge.textContent = `${classificacao === 'critico' ? 'Crítico' : 'Alerta'} · ${dias} dia(s)`
+  badge.textContent = `${classificacao === 'critico' ? 'Crítico' : 'Alerta'} · ${formatarDiasRestantes(dias)}`
   return badge
 }
 
@@ -386,7 +386,7 @@ async function renderizarTarefas(): Promise<void> {
 
   const config = await createSyncConfigStore().get()
   const grupos = agruparPorUrgencia(config.tarefas.itens, new Date())
-  const pendentes = [...ordenarDentroDoGrupo(grupos.atrasadas), ...ordenarDentroDoGrupo(grupos.hoje), ...ordenarDentroDoGrupo(grupos.proximas)]
+  const pendentes = [...grupos.atrasadas, ...grupos.hoje, ...grupos.proximas]
 
   view.innerHTML = ''
 
@@ -413,7 +413,7 @@ async function renderizarTarefas(): Promise<void> {
     tabela.appendChild(thead)
 
     const tbody = document.createElement('tbody')
-    grupos.atrasadas.forEach((tarefa) => tbody.appendChild(montarLinhaTarefa(tarefa, 'vencida')))
+    ordenarDentroDoGrupo(grupos.atrasadas).forEach((tarefa) => tbody.appendChild(montarLinhaTarefa(tarefa, 'vencida')))
     ordenarDentroDoGrupo(grupos.hoje).forEach((tarefa) => tbody.appendChild(montarLinhaTarefa(tarefa)))
     ordenarDentroDoGrupo(grupos.proximas).forEach((tarefa) => tbody.appendChild(montarLinhaTarefa(tarefa)))
     tabela.appendChild(tbody)

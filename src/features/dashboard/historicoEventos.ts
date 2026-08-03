@@ -27,12 +27,20 @@ export function calcularMetricas(eventos: EventoHistorico[]): Record<TipoEventoH
   return metricas
 }
 
+function chaveDataLocal(ocorridoEmIso: string): string {
+  const data = new Date(ocorridoEmIso)
+  const ano = data.getFullYear()
+  const mes = String(data.getMonth() + 1).padStart(2, '0')
+  const dia = String(data.getDate()).padStart(2, '0')
+  return `${ano}-${mes}-${dia}`
+}
+
 export function agruparPorDia(eventos: EventoHistorico[]): Array<{ data: string; eventos: EventoHistorico[] }> {
   const grupos: Array<{ data: string; eventos: EventoHistorico[] }> = []
   const indicePorData = new Map<string, number>()
 
   eventos.forEach((evento) => {
-    const data = evento.ocorridoEm.slice(0, 10)
+    const data = chaveDataLocal(evento.ocorridoEm)
     const indice = indicePorData.get(data)
     if (indice === undefined) {
       indicePorData.set(data, grupos.length)

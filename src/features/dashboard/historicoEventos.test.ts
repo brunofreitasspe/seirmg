@@ -65,11 +65,11 @@ describe('calcularMetricas', () => {
 })
 
 describe('agruparPorDia', () => {
-  it('agrupa por data (yyyy-mm-dd), preservando a ordem de chegada dentro do grupo', () => {
+  it('agrupa por data local (yyyy-mm-dd), preservando a ordem de chegada dentro do grupo', () => {
     const eventos = [
-      evento('acesso', '0001', '2026-08-01T10:00:00.000Z'),
-      evento('enviado', '0002', '2026-08-01T14:00:00.000Z'),
-      evento('documento', '0003', '2026-08-02T09:00:00.000Z'),
+      evento('acesso', '0001', new Date(2026, 7, 1, 10, 0).toISOString()),
+      evento('enviado', '0002', new Date(2026, 7, 1, 14, 0).toISOString()),
+      evento('documento', '0003', new Date(2026, 7, 2, 9, 0).toISOString()),
     ]
     expect(agruparPorDia(eventos)).toEqual([
       { data: '2026-08-01', eventos: [eventos[0], eventos[1]] },

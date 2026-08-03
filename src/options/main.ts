@@ -158,7 +158,7 @@ async function carregarAbaGeral(): Promise<void> {
       inputTarefasAtivo.checked = config.tarefas.ativo
     }
     if (inputDashboardAtivo) {
-      inputDashboardAtivo.checked = config.dashboard.ativo
+      inputDashboardAtivo.checked = config.dashboard?.ativo ?? false
     }
 
     document.getElementById('geral-salvar')?.addEventListener('click', async () => {

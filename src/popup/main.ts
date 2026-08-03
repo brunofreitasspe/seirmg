@@ -89,7 +89,7 @@ async function render(): Promise<void> {
 
     const syncConfig = await createSyncConfigStore().get()
     const botaoDashboard = document.getElementById('abrir-dashboard') as HTMLButtonElement | null
-    if (botaoDashboard && syncConfig.dashboard.ativo) {
+    if (botaoDashboard && syncConfig.dashboard?.ativo) {
       botaoDashboard.style.display = ''
       const iconeDashboard = document.getElementById('icone-dashboard')
       if (iconeDashboard) iconeDashboard.innerHTML = layoutDashboardIconSvg

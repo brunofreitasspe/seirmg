@@ -8,19 +8,19 @@ export interface Intervalo {
 
 function inicioDoDia(data: Date): Date {
   const copia = new Date(data)
-  copia.setUTCHours(0, 0, 0, 0)
+  copia.setHours(0, 0, 0, 0)
   return copia
 }
 
 function fimDoDia(data: Date): Date {
   const copia = new Date(data)
-  copia.setUTCHours(23, 59, 59, 999)
+  copia.setHours(23, 59, 59, 999)
   return copia
 }
 
 function subtrairDias(data: Date, dias: number): Date {
   const copia = new Date(data)
-  copia.setUTCDate(copia.getUTCDate() - dias)
+  copia.setDate(copia.getDate() - dias)
   return copia
 }
 
@@ -37,10 +37,10 @@ export function calcularIntervalo(periodo: Periodo, agora: Date): Intervalo {
     case '90dias':
       return { inicio: inicioDoDia(subtrairDias(agora, 89)), fim, rotulo: 'Últimos 90 dias' }
     case 'ano': {
-      const ano = agora.getUTCFullYear()
+      const ano = agora.getFullYear()
       return {
-        inicio: new Date(Date.UTC(ano, 0, 1, 0, 0, 0, 0)),
-        fim: new Date(Date.UTC(ano, 11, 31, 23, 59, 59, 999)),
+        inicio: new Date(ano, 0, 1, 0, 0, 0, 0),
+        fim: new Date(ano, 11, 31, 23, 59, 59, 999),
         rotulo: `Ano ${ano}`,
       }
     }

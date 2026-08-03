@@ -67,7 +67,8 @@ async function registrarEventoEnviado(): Promise<void> {
   const syncConfig = await createSyncConfigStore().get()
   if (!syncConfig.dashboard?.ativo) return
 
-  const numero = obterNumeroProcesso(document)
+  const arvoreDoc = obterIframeArvore()?.contentDocument
+  const numero = obterNumeroProcesso(arvoreDoc ?? document)
   if (!numero) return
 
   const localStore = createLocalConfigStore()
