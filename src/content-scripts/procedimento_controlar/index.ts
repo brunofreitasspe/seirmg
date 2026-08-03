@@ -67,7 +67,9 @@ import { EVENTO_CLIQUE_ATRIBUICAO_RAPIDA } from './protocoloAtribuicaoRapida'
 import type { DetalheCliqueAtribuicaoRapida } from './protocoloAtribuicaoRapida'
 import { fetchText } from '../../lib/fetchViaBackground'
 import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
-import type { ControleProcessosConfig, SyncConfig } from '../../lib/storage'
+import type { ControleProcessosConfig, SyncConfig, EventoHistorico } from '../../lib/storage'
+import { ehLinkConcluirEmLote } from '../../features/dashboard/concluirProcesso'
+import { registrarEvento } from '../../features/dashboard/historicoEventos'
 import { montarCorpoVerificacaoLote, extrairEncontrados } from '../../features/planka/lote'
 import { tokenValido } from '../../features/planka/token'
 import { montarEstiloPlanka, montarConteudoCardPlanka, type RespostaConsultaPlanka } from '../shared/plankaCard'
@@ -2920,6 +2922,49 @@ function montarAtribuicaoRapida(): void {
   }
 }
 
+async function registrarEventosConcluidoEmLote(numeros: string[]): Promise<void> {
+  if (numeros.length === 0) return
+
+  const syncConfig = await createSyncConfigStore().get()
+  if (!syncConfig.dashboard?.ativo) return
+
+  const localStore = createLocalConfigStore()
+  const localConfig = await localStore.get()
+  let historicoEventos = localConfig.historicoEventos ?? []
+  const agora = new Date().toISOString()
+  numeros.forEach((numero) => {
+    const novo: EventoHistorico = { tipo: 'concluido', numero, ocorridoEm: agora }
+    historicoEventos = registrarEvento(historicoEventos, novo)
+  })
+  await localStore.set({ ...localConfig, historicoEventos })
+}
+
+function numerosSelecionadosEmLote(): string[] {
+  const numeros: string[] = []
+  IDS_TABELAS.forEach((idTabela) => {
+    linhasDaTabela(idTabela).forEach((linha) => {
+      const checkbox = linha.querySelector<HTMLInputElement>('input.infraCheckbox, input[type="checkbox"]')
+      if (!checkbox?.checked) return
+      const processo = linha.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')
+      const numero = processo?.textContent?.trim()
+      if (numero) numeros.push(numero)
+    })
+  })
+  return numeros
+}
+
+function instalarCapturaEventoConcluidoEmLote(): void {
+  document.addEventListener('click', (evento) => {
+    if (!(evento.target instanceof Element)) return
+    const link = evento.target.closest('a[onclick]')
+    if (!link || !ehLinkConcluirEmLote(link.getAttribute('onclick'))) return
+
+    registrarEventosConcluidoEmLote(numerosSelecionadosEmLote()).catch((error) => {
+      console.error('[SEIRMG] Falha ao registrar eventos de conclusão em lote no Dashboard:', error)
+    })
+  })
+}
+
 async function bootstrap(): Promise<void> {
   try {
     injetarEstilos()
@@ -2974,3 +3019,4 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap()
+instalarCapturaEventoConcluidoEmLote()

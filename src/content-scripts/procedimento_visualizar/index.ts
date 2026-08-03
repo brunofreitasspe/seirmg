@@ -27,6 +27,7 @@ import { fetchText } from '../../lib/fetchViaBackground'
 import { createLocalConfigStore, createSyncConfigStore, type HistoricoProcessoEntry, type EventoHistorico } from '../../lib/storage'
 import { registrarProcessoVisitado } from '../../features/procedimento-visualizar/historico'
 import { registrarEvento } from '../../features/dashboard/historicoEventos'
+import { ehLinkConcluirIndividual } from '../../features/dashboard/concluirProcesso'
 import { tokenValido } from '../../features/planka/token'
 import { montarEstiloPlanka, montarConteudoCardPlanka, type RespostaConsultaPlanka } from '../shared/plankaCard'
 import { limparTokenPlanka } from '../shared/plankaToken'
@@ -142,6 +143,31 @@ async function registrarEventoAcesso(numero: string | null, tipoProcesso: string
   }
   const historicoEventos = registrarEvento(localConfig.historicoEventos ?? [], novo)
   await localStore.set({ ...localConfig, historicoEventos })
+}
+
+async function registrarEventoConcluido(numero: string): Promise<void> {
+  const syncConfig = await createSyncConfigStore().get()
+  if (!syncConfig.dashboard?.ativo) return
+
+  const localStore = createLocalConfigStore()
+  const localConfig = await localStore.get()
+  const novo: EventoHistorico = { tipo: 'concluido', numero, ocorridoEm: new Date().toISOString() }
+  const historicoEventos = registrarEvento(localConfig.historicoEventos ?? [], novo)
+  await localStore.set({ ...localConfig, historicoEventos })
+}
+
+function instalarCapturaEventoConcluidoIndividual(): void {
+  document.addEventListener('click', (evento) => {
+    if (!(evento.target instanceof Element)) return
+    const link = evento.target.closest('a[onclick]')
+    if (!link || !ehLinkConcluirIndividual(link.getAttribute('onclick'))) return
+
+    const numero = obterNumeroProcesso(document)
+    if (!numero) return
+    registrarEventoConcluido(numero).catch((error) => {
+      console.error('[SEIRMG] Falha ao registrar evento de conclusão no Dashboard:', error)
+    })
+  })
 }
 
 function alterarTitulo(): void {
@@ -642,3 +668,4 @@ function bootstrap(): void {
 }
 
 bootstrap()
+instalarCapturaEventoConcluidoIndividual()
