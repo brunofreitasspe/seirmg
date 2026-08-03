@@ -3,7 +3,7 @@ import type { EventoHistorico, FavoritoProcesso } from '../lib/storage'
 import { filtrarPorPeriodo, calcularMetricas, agruparPorDia } from '../features/dashboard/historicoEventos'
 import { calcularIntervalo, type Periodo } from '../features/dashboard/periodo'
 import { montarCsvHistorico, montarHtmlRelatorio } from '../features/dashboard/relatorio'
-import { ordenarFavoritosPorData, construirLinkSeguro } from '../features/controle-processos/favoritos'
+import { ordenarFavoritosPorData, extrairIdProcedimentoDoLink } from '../features/controle-processos/favoritos'
 import {
   montarCelulaMarcadoresCongelados,
   montarCelulaPrazoCongelado,
@@ -193,13 +193,13 @@ function montarCelulaProcessoFavorito(item: FavoritoProcesso): HTMLTableCellElem
   return td
 }
 
-function montarCelulaAbrirFavorito(item: FavoritoProcesso): HTMLTableCellElement {
+function montarCelulaAbrirFavorito(item: FavoritoProcesso, baseUrlSei: string | undefined): HTMLTableCellElement {
   const td = document.createElement('td')
-  const url = construirLinkSeguro(item.link)
-  if (url) {
+  const id = extrairIdProcedimentoDoLink(item.link)
+  if (id && baseUrlSei) {
     const link = document.createElement('a')
     link.className = 'link-abrir'
-    link.href = url
+    link.href = `${baseUrlSei}/controlador.php?acao=procedimento_trabalhar&id_procedimento=${id}`
     link.target = '_blank'
     link.rel = 'noopener noreferrer'
     link.textContent = 'Abrir ↗'
@@ -213,6 +213,7 @@ async function renderizarFavoritos(): Promise<void> {
   if (!view) return
 
   const config = await createSyncConfigStore().get()
+  const localConfig = await createLocalConfigStore().get()
   const itens = ordenarFavoritosPorData(config.controleProcessos.favoritos.itens)
 
   view.innerHTML = ''
@@ -246,7 +247,7 @@ async function renderizarFavoritos(): Promise<void> {
       tr.appendChild(montarCelulaMarcadoresCongelados(item.ultimoSnapshot?.marcadoresNomes ?? []))
       tr.appendChild(montarCelulaPrazoCongelado(item.ultimoSnapshot?.prazoDataTexto ?? null))
       tr.appendChild(montarCelulaAtribuicao(item.ultimoSnapshot?.atribuicao ?? null))
-      tr.appendChild(montarCelulaAbrirFavorito(item))
+      tr.appendChild(montarCelulaAbrirFavorito(item, localConfig.baseUrlSei))
       tbody.appendChild(tr)
     })
     tabela.appendChild(tbody)
