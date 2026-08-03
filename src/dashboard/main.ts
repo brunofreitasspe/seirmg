@@ -10,6 +10,8 @@ import {
   montarCelulaAtribuicao,
 } from '../features/controle-processos/favoritosRender'
 import { calcularDiasAteVencimento, classificarPrazo, formatarDiasRestantes } from '../features/controle-processos/prazos'
+import { agruparPorUrgencia, ordenarDentroDoGrupo } from '../features/tarefas/urgencia'
+import type { Tarefa } from '../lib/storage'
 
 const ROTULOS_TIPO: Record<EventoHistorico['tipo'], string> = {
   acesso: 'Acesso',
@@ -348,3 +350,75 @@ async function renderizarPrazos(): Promise<void> {
 }
 
 renderizarPrazos().catch((error) => console.error('[SEIRMG] Falha ao renderizar Prazos:', error))
+
+const ROTULOS_PRIORIDADE: Record<Tarefa['prioridade'], string> = { alta: 'Alta', media: 'Média', baixa: 'Baixa' }
+
+function montarLinhaTarefa(tarefa: Tarefa, vencidaLabel?: string): HTMLTableRowElement {
+  const tr = document.createElement('tr')
+
+  const tdTitulo = document.createElement('td')
+  tdTitulo.textContent = tarefa.titulo
+  tr.appendChild(tdTitulo)
+
+  const tdProcesso = document.createElement('td')
+  tdProcesso.textContent = tarefa.processo || '—'
+  tr.appendChild(tdProcesso)
+
+  const tdVencimento = document.createElement('td')
+  tdVencimento.textContent = tarefa.vencimento ? `${tarefa.vencimento}${vencidaLabel ? ` (${vencidaLabel})` : ''}` : '—'
+  tr.appendChild(tdVencimento)
+
+  const tdPrioridade = document.createElement('td')
+  const badge = document.createElement('span')
+  badge.className = `prioridade prioridade-${tarefa.prioridade}`
+  badge.textContent = ROTULOS_PRIORIDADE[tarefa.prioridade]
+  tdPrioridade.appendChild(badge)
+  tr.appendChild(tdPrioridade)
+
+  return tr
+}
+
+async function renderizarTarefas(): Promise<void> {
+  const view = document.getElementById('view-tarefas')
+  if (!view) return
+
+  const config = await createSyncConfigStore().get()
+  const grupos = agruparPorUrgencia(config.tarefas.itens, new Date())
+  const pendentes = [...ordenarDentroDoGrupo(grupos.atrasadas), ...ordenarDentroDoGrupo(grupos.hoje), ...ordenarDentroDoGrupo(grupos.proximas)]
+
+  view.innerHTML = ''
+
+  const header = document.createElement('div')
+  header.className = 'secao-header'
+  const titulo = document.createElement('h2')
+  titulo.textContent = 'Tarefas pendentes'
+  header.appendChild(titulo)
+  view.appendChild(header)
+
+  const painel = document.createElement('div')
+  painel.className = 'painel-lista'
+
+  if (pendentes.length === 0) {
+    const vazio = document.createElement('div')
+    vazio.className = 'vazio'
+    vazio.textContent = 'Nenhuma tarefa pendente.'
+    painel.appendChild(vazio)
+  } else {
+    const tabela = document.createElement('table')
+    tabela.className = 'tabela-dash'
+    const thead = document.createElement('thead')
+    thead.innerHTML = '<tr><th>Título</th><th>Processo</th><th>Vencimento</th><th>Prioridade</th></tr>'
+    tabela.appendChild(thead)
+
+    const tbody = document.createElement('tbody')
+    grupos.atrasadas.forEach((tarefa) => tbody.appendChild(montarLinhaTarefa(tarefa, 'vencida')))
+    ordenarDentroDoGrupo(grupos.hoje).forEach((tarefa) => tbody.appendChild(montarLinhaTarefa(tarefa)))
+    ordenarDentroDoGrupo(grupos.proximas).forEach((tarefa) => tbody.appendChild(montarLinhaTarefa(tarefa)))
+    tabela.appendChild(tbody)
+    painel.appendChild(tabela)
+  }
+
+  view.appendChild(painel)
+}
+
+renderizarTarefas().catch((error) => console.error('[SEIRMG] Falha ao renderizar Tarefas:', error))
