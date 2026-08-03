@@ -2953,15 +2953,61 @@ function numerosSelecionadosEmLote(): string[] {
   return numeros
 }
 
+const CHAVE_SESSAO_CONCLUIDOS_PENDENTES = 'seirmg-concluir-lote-pendente'
+
+// Concluir Processo em lote sempre passa pelo confirm() próprio do SEIRMG (montarConfirmarAntesDeConcluir,
+// que reescreve o onclick nativo) -- esse onclick roda no mundo principal da página, então não dá pra
+// saber daqui (mundo isolado) se o usuário confirmou ou cancelou o diálogo. Por isso o clique só marca os
+// processos selecionados como "candidatos" (sessionStorage, sobrevive à navegação de volta que a própria
+// ação de concluir dispara); a confirmação de verdade acontece no próximo carregamento desta mesma tela,
+// comparando quais desses números sumiram da listagem -- só esses são registrados como concluídos de fato.
+function estagiarCandidatosConcluidoEmLote(numeros: string[]): void {
+  if (numeros.length === 0) return
+  sessionStorage.setItem(CHAVE_SESSAO_CONCLUIDOS_PENDENTES, JSON.stringify(numeros))
+}
+
+function numerosPresentesNasTabelas(): Set<string> {
+  const numeros = new Set<string>()
+  IDS_TABELAS.forEach((idTabela) => {
+    linhasDaTabela(idTabela).forEach((linha) => {
+      const processo = linha.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')
+      const numero = processo?.textContent?.trim()
+      if (numero) numeros.add(numero)
+    })
+  })
+  return numeros
+}
+
+function verificarCandidatosConcluidoEmLote(): void {
+  const bruto = sessionStorage.getItem(CHAVE_SESSAO_CONCLUIDOS_PENDENTES)
+  if (!bruto) return
+  sessionStorage.removeItem(CHAVE_SESSAO_CONCLUIDOS_PENDENTES)
+
+  let candidatosBrutos: unknown
+  try {
+    candidatosBrutos = JSON.parse(bruto)
+  } catch {
+    return
+  }
+  if (!Array.isArray(candidatosBrutos)) return
+  const candidatos = candidatosBrutos.filter((item): item is string => typeof item === 'string')
+  if (candidatos.length === 0) return
+
+  const presentes = numerosPresentesNasTabelas()
+  const concluidos = candidatos.filter((numero) => !presentes.has(numero))
+
+  registrarEventosConcluidoEmLote(concluidos).catch((error) => {
+    console.error('[SEIRMG] Falha ao registrar eventos de conclusão em lote no Dashboard:', error)
+  })
+}
+
 function instalarCapturaEventoConcluidoEmLote(): void {
   document.addEventListener('click', (evento) => {
     if (!(evento.target instanceof Element)) return
     const link = evento.target.closest('a[onclick]')
     if (!link || !ehLinkConcluirEmLote(link.getAttribute('onclick'))) return
 
-    registrarEventosConcluidoEmLote(numerosSelecionadosEmLote()).catch((error) => {
-      console.error('[SEIRMG] Falha ao registrar eventos de conclusão em lote no Dashboard:', error)
-    })
+    estagiarCandidatosConcluidoEmLote(numerosSelecionadosEmLote())
   })
 }
 
@@ -3020,3 +3066,4 @@ async function bootstrap(): Promise<void> {
 
 bootstrap()
 instalarCapturaEventoConcluidoEmLote()
+verificarCandidatosConcluidoEmLote()
