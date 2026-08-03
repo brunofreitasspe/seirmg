@@ -24,8 +24,9 @@ import {
   type NivelAcessoExtraido,
 } from '../../features/procedimento-visualizar/painelLateral'
 import { fetchText } from '../../lib/fetchViaBackground'
-import { createLocalConfigStore, createSyncConfigStore, type HistoricoProcessoEntry } from '../../lib/storage'
+import { createLocalConfigStore, createSyncConfigStore, type HistoricoProcessoEntry, type EventoHistorico } from '../../lib/storage'
 import { registrarProcessoVisitado } from '../../features/procedimento-visualizar/historico'
+import { registrarEvento } from '../../features/dashboard/historicoEventos'
 import { tokenValido } from '../../features/planka/token'
 import { montarEstiloPlanka, montarConteudoCardPlanka, type RespostaConsultaPlanka } from '../shared/plankaCard'
 import { limparTokenPlanka } from '../shared/plankaToken'
@@ -122,6 +123,25 @@ async function registrarHistoricoVisita(numero: string | null, tipo: string): Pr
   }
   const historico = registrarProcessoVisitado(localConfig.historicoProcessosVisitados ?? [], novo)
   await localStore.set({ ...localConfig, historicoProcessosVisitados: historico })
+}
+
+async function registrarEventoAcesso(numero: string | null, tipoProcesso: string, especificacao: string): Promise<void> {
+  if (!numero) return
+
+  const syncConfig = await createSyncConfigStore().get()
+  if (!syncConfig.dashboard?.ativo) return
+
+  const localStore = createLocalConfigStore()
+  const localConfig = await localStore.get()
+  const novo: EventoHistorico = {
+    tipo: 'acesso',
+    numero,
+    tipoProcesso,
+    especificacao,
+    ocorridoEm: new Date().toISOString(),
+  }
+  const historicoEventos = registrarEvento(localConfig.historicoEventos ?? [], novo)
+  await localStore.set({ ...localConfig, historicoEventos })
 }
 
 function alterarTitulo(): void {
@@ -552,7 +572,13 @@ async function montarPainelTipoEInteressados(): Promise<void> {
   })
 
   renderizarNivelAcesso(container, extrairNivelAcesso(doc))
-  renderizarTextoSimples(container, 'Especificação', 'seirmg-especificacao', extrairEspecificacao(doc), 'Sem especificação.', fileTextIconSvg)
+  const especificacao = extrairEspecificacao(doc)
+  renderizarTextoSimples(container, 'Especificação', 'seirmg-especificacao', especificacao, 'Sem especificação.', fileTextIconSvg)
+
+  registrarEventoAcesso(numero, tipo, especificacao).catch((error) => {
+    console.error('[SEIRMG] Falha ao registrar evento de acesso no Dashboard:', error)
+  })
+
   renderizarAssuntos(container, extrairAssuntos(doc))
   renderizarInteressados(container, extrairInteressados(doc))
   renderizarTextoSimples(container, 'Observação', 'seirmg-observacao', extrairObservacao(doc), 'Sem observação.', messageSquareIconSvg)
