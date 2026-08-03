@@ -139,6 +139,7 @@ async function carregarAbaGeral(): Promise<void> {
       'geral-cargos-adicionais'
     ) as HTMLInputElement | null
     const inputTarefasAtivo = document.getElementById('geral-tarefas-ativo') as HTMLInputElement | null
+    const inputDashboardAtivo = document.getElementById('geral-dashboard-ativo') as HTMLInputElement | null
     const status = document.getElementById('geral-status')
 
     if (inputSelecaoMassa) {
@@ -155,6 +156,9 @@ async function carregarAbaGeral(): Promise<void> {
     }
     if (inputTarefasAtivo) {
       inputTarefasAtivo.checked = config.tarefas.ativo
+    }
+    if (inputDashboardAtivo) {
+      inputDashboardAtivo.checked = config.dashboard.ativo
     }
 
     document.getElementById('geral-salvar')?.addEventListener('click', async () => {
@@ -179,6 +183,9 @@ async function carregarAbaGeral(): Promise<void> {
           tarefas: {
             ...config.tarefas,
             ativo: inputTarefasAtivo?.checked ?? false,
+          },
+          dashboard: {
+            ativo: inputDashboardAtivo?.checked ?? false,
           },
         }
         await store.set(atualizado)
