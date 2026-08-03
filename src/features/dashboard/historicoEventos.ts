@@ -16,8 +16,6 @@ export function filtrarPorPeriodo(eventos: EventoHistorico[], inicio: Date, fim:
   })
 }
 
-const TIPOS: TipoEventoHistorico[] = ['acesso', 'enviado', 'documento', 'assinatura', 'concluido']
-
 export function calcularMetricas(eventos: EventoHistorico[]): Record<TipoEventoHistorico, number> {
   const metricas = { acesso: 0, enviado: 0, documento: 0, assinatura: 0, concluido: 0 } as Record<
     TipoEventoHistorico,
