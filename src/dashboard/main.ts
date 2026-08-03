@@ -1,8 +1,14 @@
-import { createLocalConfigStore } from '../lib/storage'
-import type { EventoHistorico } from '../lib/storage'
+import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
+import type { EventoHistorico, FavoritoProcesso } from '../lib/storage'
 import { filtrarPorPeriodo, calcularMetricas, agruparPorDia } from '../features/dashboard/historicoEventos'
 import { calcularIntervalo, type Periodo } from '../features/dashboard/periodo'
 import { montarCsvHistorico, montarHtmlRelatorio } from '../features/dashboard/relatorio'
+import { ordenarFavoritosPorData, construirLinkSeguro } from '../features/controle-processos/favoritos'
+import {
+  montarCelulaMarcadoresCongelados,
+  montarCelulaPrazoCongelado,
+  montarCelulaAtribuicao,
+} from '../features/controle-processos/favoritosRender'
 
 const ROTULOS_TIPO: Record<EventoHistorico['tipo'], string> = {
   acesso: 'Acesso',
@@ -173,3 +179,81 @@ document.querySelectorAll('.tab-btn').forEach((botao) => {
     if (aba) ativarAba(aba)
   })
 })
+
+function montarCelulaProcessoFavorito(item: FavoritoProcesso): HTMLTableCellElement {
+  const td = document.createElement('td')
+  td.textContent = item.numero
+  if (item.especificacao) {
+    const especificacao = document.createElement('div')
+    especificacao.style.color = 'var(--seirmg-text-muted)'
+    especificacao.style.fontSize = '11.5px'
+    especificacao.textContent = item.especificacao
+    td.appendChild(especificacao)
+  }
+  return td
+}
+
+function montarCelulaAbrirFavorito(item: FavoritoProcesso): HTMLTableCellElement {
+  const td = document.createElement('td')
+  const url = construirLinkSeguro(item.link)
+  if (url) {
+    const link = document.createElement('a')
+    link.className = 'link-abrir'
+    link.href = url
+    link.target = '_blank'
+    link.rel = 'noopener noreferrer'
+    link.textContent = 'Abrir ↗'
+    td.appendChild(link)
+  }
+  return td
+}
+
+async function renderizarFavoritos(): Promise<void> {
+  const view = document.getElementById('view-favoritos')
+  if (!view) return
+
+  const config = await createSyncConfigStore().get()
+  const itens = ordenarFavoritosPorData(config.controleProcessos.favoritos.itens)
+
+  view.innerHTML = ''
+
+  const header = document.createElement('div')
+  header.className = 'secao-header'
+  const titulo = document.createElement('h2')
+  titulo.textContent = `★ Favoritos (${itens.length})`
+  header.appendChild(titulo)
+  view.appendChild(header)
+
+  const painel = document.createElement('div')
+  painel.className = 'painel-lista'
+
+  if (itens.length === 0) {
+    const vazio = document.createElement('div')
+    vazio.className = 'vazio'
+    vazio.textContent = 'Nenhum processo favoritado ainda.'
+    painel.appendChild(vazio)
+  } else {
+    const tabela = document.createElement('table')
+    tabela.className = 'tabela-dash'
+    const thead = document.createElement('thead')
+    thead.innerHTML = '<tr><th>Processo</th><th>Marcadores</th><th>Prazo</th><th>Atribuição</th><th></th></tr>'
+    tabela.appendChild(thead)
+
+    const tbody = document.createElement('tbody')
+    itens.forEach((item) => {
+      const tr = document.createElement('tr')
+      tr.appendChild(montarCelulaProcessoFavorito(item))
+      tr.appendChild(montarCelulaMarcadoresCongelados(item.ultimoSnapshot?.marcadoresNomes ?? []))
+      tr.appendChild(montarCelulaPrazoCongelado(item.ultimoSnapshot?.prazoDataTexto ?? null))
+      tr.appendChild(montarCelulaAtribuicao(item.ultimoSnapshot?.atribuicao ?? null))
+      tr.appendChild(montarCelulaAbrirFavorito(item))
+      tbody.appendChild(tr)
+    })
+    tabela.appendChild(tbody)
+    painel.appendChild(tabela)
+  }
+
+  view.appendChild(painel)
+}
+
+renderizarFavoritos().catch((error) => console.error('[SEIRMG] Falha ao renderizar Favoritos:', error))
