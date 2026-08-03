@@ -1,9 +1,10 @@
-import { createLocalConfigStore, type HistoricoProcessoEntry } from '../lib/storage'
+import { createLocalConfigStore, createSyncConfigStore, type HistoricoProcessoEntry } from '../lib/storage'
 import checkIconSvg from 'lucide-static/icons/check.svg?raw'
 import alertIconSvg from 'lucide-static/icons/triangle-alert.svg?raw'
 import infoIconSvg from 'lucide-static/icons/info.svg?raw'
 import externalLinkIconSvg from 'lucide-static/icons/external-link.svg?raw'
 import settingsIconSvg from 'lucide-static/icons/settings.svg?raw'
+import layoutDashboardIconSvg from 'lucide-static/icons/layout-dashboard.svg?raw'
 
 function montarItemHistorico(entrada: HistoricoProcessoEntry, baseUrlSei: string): HTMLAnchorElement {
   const item = document.createElement('a')
@@ -85,6 +86,17 @@ function renderizarStatus(consulta: ConsultaBlocos): void {
 async function render(): Promise<void> {
   try {
     const localConfig = await createLocalConfigStore().get()
+
+    const syncConfig = await createSyncConfigStore().get()
+    const botaoDashboard = document.getElementById('abrir-dashboard') as HTMLButtonElement | null
+    if (botaoDashboard && syncConfig.dashboard.ativo) {
+      botaoDashboard.style.display = ''
+      const iconeDashboard = document.getElementById('icone-dashboard')
+      if (iconeDashboard) iconeDashboard.innerHTML = layoutDashboardIconSvg
+      botaoDashboard.addEventListener('click', () => {
+        chrome.tabs.create({ url: chrome.runtime.getURL('src/dashboard/index.html') })
+      })
+    }
 
     const consulta = await consultarBlocosAoVivo(localConfig.baseUrlSei)
     renderizarStatus(consulta)
