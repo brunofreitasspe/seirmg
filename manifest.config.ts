@@ -133,6 +133,14 @@ export default defineManifest({
     },
     {
       matches: [
+        '*://*.br/*controlador.php?acao=documento_assinar*',
+        '*://*.org/*controlador.php?acao=documento_assinar*',
+      ],
+      js: ['src/content-scripts/documento_assinar/index.ts'],
+      run_at: 'document_idle',
+    },
+    {
+      matches: [
         '*://*.br/*controlador.php?acao=procedimento_visualizar*',
         '*://*.org/*controlador.php?acao=procedimento_visualizar*',
       ],
