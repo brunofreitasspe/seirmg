@@ -3,6 +3,20 @@ import { crx } from '@crxjs/vite-plugin'
 import manifest from './manifest.config'
 
 export default defineConfig({
+  build: {
+    rollupOptions: {
+      // `src/dashboard/index.html` is only referenced inside the manifest's
+      // `web_accessible_resources` (a list of URL patterns @crxjs/vite-plugin
+      // does not scan for HTML entry points) — unlike `action.default_popup`
+      // and `options_ui.page`, which the plugin does recognize and bundle
+      // automatically. Without this explicit entry, the file is copied to
+      // dist/ verbatim (raw `./main.ts`/`./style.css` references, unprocessed)
+      // instead of being built like the popup/options pages.
+      input: {
+        dashboard: 'src/dashboard/index.html',
+      },
+    },
+  },
   resolve: {
     alias: {
       // hunspell-asm's ESM build (dist/esm/loadModule.js) does

@@ -36,6 +36,12 @@ export default defineManifest({
     'https://api.anthropic.com/*',
   ],
   optional_host_permissions: ['*://*/*'],
+  web_accessible_resources: [
+    {
+      resources: ['src/dashboard/index.html'],
+      matches: ['*://*.br/*', '*://*.org/*'],
+    },
+  ],
   content_scripts: [
     {
       matches: [

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Dashboard — SEIRMG</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <div class="cabecalho">
+      <div class="cabecalho-titulo">
+        <img src="../assets/icons/icon-48.png" alt="" />
+        <div>
+          <h1>SEIRMG — Dashboard</h1>
+          <p>Estatísticas e histórico de eventos dos processos</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn ativa" data-tab="geral">Visão Geral</button>
+      <button class="tab-btn" data-tab="favoritos">Favoritos</button>
+      <button class="tab-btn" data-tab="prazos">Prazos</button>
+      <button class="tab-btn" data-tab="tarefas">Tarefas</button>
+    </div>
+
+    <div class="conteudo">
+      <div class="view ativa" id="view-geral"></div>
+      <div class="view" id="view-favoritos"></div>
+      <div class="view" id="view-prazos"></div>
+      <div class="view" id="view-tarefas"></div>
+    </div>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
