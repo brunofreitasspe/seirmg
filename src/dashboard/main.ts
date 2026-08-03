@@ -9,6 +9,7 @@ import {
   montarCelulaPrazoCongelado,
   montarCelulaAtribuicao,
 } from '../features/controle-processos/favoritosRender'
+import { calcularDiasAteVencimento, classificarPrazo } from '../features/controle-processos/prazos'
 
 const ROTULOS_TIPO: Record<EventoHistorico['tipo'], string> = {
   acesso: 'Acesso',
@@ -258,3 +259,92 @@ async function renderizarFavoritos(): Promise<void> {
 }
 
 renderizarFavoritos().catch((error) => console.error('[SEIRMG] Falha ao renderizar Favoritos:', error))
+
+function montarBadgePrazo(dias: number, config: { alerta: number; critico: number }): HTMLSpanElement {
+  const badge = document.createElement('span')
+  badge.className = 'badge-prazo'
+  if (dias < 0) {
+    badge.classList.add('badge-vencido')
+    badge.textContent = `Vencido há ${Math.abs(dias)} dia(s)`
+    return badge
+  }
+  const classificacao = classificarPrazo(dias, config)
+  badge.classList.add(classificacao === 'critico' ? 'badge-critico' : 'badge-alerta')
+  badge.textContent = `${classificacao === 'critico' ? 'Crítico' : 'Alerta'} · ${dias} dia(s)`
+  return badge
+}
+
+async function renderizarPrazos(): Promise<void> {
+  const view = document.getElementById('view-prazos')
+  if (!view) return
+
+  const config = await createSyncConfigStore().get()
+  const limites = { alerta: config.controleProcessos.prazos.alerta, critico: config.controleProcessos.prazos.critico }
+  const agora = new Date()
+
+  const itens = config.controleProcessos.favoritos.itens
+    .map((item) => {
+      const dataTexto = item.ultimoSnapshot?.prazoDataTexto ?? null
+      if (!dataTexto) return null
+      const dias = calcularDiasAteVencimento(dataTexto, agora)
+      if (dias === null) return null
+      const emAlerta = dias < 0 || classificarPrazo(dias, limites) !== null
+      return emAlerta ? { item, dataTexto, dias } : null
+    })
+    .filter((valor): valor is { item: (typeof config.controleProcessos.favoritos.itens)[number]; dataTexto: string; dias: number } => valor !== null)
+    .sort((a, b) => a.dias - b.dias)
+
+  view.innerHTML = ''
+
+  const header = document.createElement('div')
+  header.className = 'secao-header'
+  const titulo = document.createElement('h2')
+  titulo.textContent = 'Processos com prazo em alerta ou crítico'
+  header.appendChild(titulo)
+  view.appendChild(header)
+
+  const painel = document.createElement('div')
+  painel.className = 'painel-lista'
+
+  if (itens.length === 0) {
+    const vazio = document.createElement('div')
+    vazio.className = 'vazio'
+    vazio.textContent = 'Nenhum favorito com prazo em alerta, crítico ou vencido.'
+    painel.appendChild(vazio)
+  } else {
+    const tabela = document.createElement('table')
+    tabela.className = 'tabela-dash'
+    const thead = document.createElement('thead')
+    thead.innerHTML = '<tr><th>Processo</th><th>Especificação</th><th>Prazo</th><th>Situação</th></tr>'
+    tabela.appendChild(thead)
+
+    const tbody = document.createElement('tbody')
+    itens.forEach(({ item, dataTexto, dias }) => {
+      const tr = document.createElement('tr')
+
+      const tdNumero = document.createElement('td')
+      tdNumero.textContent = item.numero
+      tr.appendChild(tdNumero)
+
+      const tdEspecificacao = document.createElement('td')
+      tdEspecificacao.textContent = item.especificacao ?? '—'
+      tr.appendChild(tdEspecificacao)
+
+      const tdData = document.createElement('td')
+      tdData.textContent = dataTexto
+      tr.appendChild(tdData)
+
+      const tdSituacao = document.createElement('td')
+      tdSituacao.appendChild(montarBadgePrazo(dias, limites))
+      tr.appendChild(tdSituacao)
+
+      tbody.appendChild(tr)
+    })
+    tabela.appendChild(tbody)
+    painel.appendChild(tabela)
+  }
+
+  view.appendChild(painel)
+}
+
+renderizarPrazos().catch((error) => console.error('[SEIRMG] Falha ao renderizar Prazos:', error))
