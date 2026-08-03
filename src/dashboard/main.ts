@@ -365,7 +365,9 @@ function montarLinhaTarefa(tarefa: Tarefa, vencidaLabel?: string): HTMLTableRowE
   tr.appendChild(tdProcesso)
 
   const tdVencimento = document.createElement('td')
-  tdVencimento.textContent = tarefa.vencimento ? `${tarefa.vencimento}${vencidaLabel ? ` (${vencidaLabel})` : ''}` : '—'
+  tdVencimento.textContent = tarefa.vencimento
+    ? `${new Date(tarefa.vencimento).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}${vencidaLabel ? ` (${vencidaLabel})` : ''}`
+    : '—'
   tr.appendChild(tdVencimento)
 
   const tdPrioridade = document.createElement('td')
