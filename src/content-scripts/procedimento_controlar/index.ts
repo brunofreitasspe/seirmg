@@ -2,8 +2,13 @@ import {
   calcularDiasAteVencimento,
   classificarPrazo,
   extrairTextoMarcador,
-  formatarDiasRestantes,
 } from '../../features/controle-processos/prazos'
+import {
+  criarIcone,
+  montarCelulaMarcadoresCongelados,
+  montarCelulaPrazoCongelado,
+  montarCelulaAtribuicao,
+} from '../../features/controle-processos/favoritosRender'
 import { escolherCorProcesso, extrairEspecificacaoParaCor } from '../../features/controle-processos/corProcesso'
 import {
   extrairEspecificacaoParaExibicao,
@@ -86,7 +91,6 @@ import starIconSvg from 'lucide-static/icons/star.svg?raw'
 import starOffIconSvg from 'lucide-static/icons/star-off.svg?raw'
 import flagIconSvg from 'lucide-static/icons/flag.svg?raw'
 import userIconSvg from 'lucide-static/icons/user.svg?raw'
-import clockIconSvg from 'lucide-static/icons/clock.svg?raw'
 import bookmarkPlusIconSvg from 'lucide-static/icons/bookmark-plus.svg?raw'
 import bookmarkMinusIconSvg from 'lucide-static/icons/bookmark-minus.svg?raw'
 import downloadIconSvg from 'lucide-static/icons/download.svg?raw'
@@ -998,13 +1002,6 @@ function montarCelulaProcesso(
   return td
 }
 
-function criarIcone(svg: string): HTMLElement {
-  const icone = document.createElement('span')
-  icone.className = 'seirmg-favoritos-icone'
-  icone.innerHTML = svg
-  return icone
-}
-
 function montarCelulaMarcadores(linhaNativa: Element): HTMLTableCellElement {
   const td = document.createElement('td')
   const marcadores = obterMarcadoresDaLinha(linhaNativa)
@@ -1054,58 +1051,6 @@ function montarCelulaPrazo(linhaNativa: Element): HTMLTableCellElement {
   linhaDias.textContent = `(${prazo.diasTexto})`
   td.appendChild(linhaDias)
 
-  return td
-}
-
-function montarCelulaMarcadoresCongelados(nomes: string[]): HTMLTableCellElement {
-  const td = document.createElement('td')
-  if (nomes.length === 0) {
-    td.className = 'seirmg-favoritos-vazio'
-    td.textContent = '—'
-    return td
-  }
-  nomes.forEach((nome) => {
-    const pill = document.createElement('span')
-    pill.className = 'seirmg-favoritos-marcador'
-    pill.appendChild(criarIcone(flagIconSvg))
-    pill.appendChild(document.createTextNode(nome))
-    td.appendChild(pill)
-  })
-  return td
-}
-
-function montarCelulaPrazoCongelado(prazoDataTexto: string | null): HTMLTableCellElement {
-  const td = document.createElement('td')
-  if (!prazoDataTexto) {
-    td.className = 'seirmg-favoritos-vazio'
-    td.textContent = '—'
-    return td
-  }
-
-  const linhaData = document.createElement('div')
-  linhaData.className = 'seirmg-favoritos-prazo'
-  linhaData.appendChild(criarIcone(clockIconSvg))
-  linhaData.appendChild(document.createTextNode(prazoDataTexto))
-  td.appendChild(linhaData)
-
-  const dias = calcularDiasAteVencimento(prazoDataTexto, new Date())
-  const linhaDias = document.createElement('div')
-  linhaDias.className = 'seirmg-favoritos-prazo-data'
-  linhaDias.textContent = dias === null ? '' : formatarDiasRestantes(dias)
-  td.appendChild(linhaDias)
-
-  return td
-}
-
-function montarCelulaAtribuicao(atribuicao: string | null): HTMLTableCellElement {
-  const td = document.createElement('td')
-  if (!atribuicao) {
-    td.className = 'seirmg-favoritos-vazio'
-    td.textContent = '—'
-    return td
-  }
-  td.appendChild(criarIcone(userIconSvg))
-  td.appendChild(document.createTextNode(atribuicao))
   return td
 }
 
