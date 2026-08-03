@@ -4,8 +4,11 @@ import {
   processoFechadoEmTodasUnidades,
 } from '../../features/documento-receber/forcarReabertura'
 import { fetchText } from '../../lib/fetchViaBackground'
-import { createSyncConfigStore } from '../../lib/storage'
+import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
 import type { DocumentoExternoConfig } from '../../lib/storage'
+import { registrarEvento } from '../../features/dashboard/historicoEventos'
+import { extrairNumeroProcessoDaBarra } from '../../features/procedimento-visualizar/numeroProcesso'
+import type { EventoHistorico } from '../../lib/storage'
 
 function criarAvisoPreenchimento(): HTMLSpanElement {
   const aviso = document.createElement('span')
@@ -64,6 +67,33 @@ function autopreencherDocumentoExterno(config: DocumentoExternoConfig): void {
   } catch (error) {
     console.error('[SEIRMG] Falha ao autopreencher documento externo:', error)
   }
+}
+
+async function registrarEventoDocumento(): Promise<void> {
+  const syncConfig = await createSyncConfigStore().get()
+  if (!syncConfig.dashboard?.ativo) return
+
+  const numero = extrairNumeroProcessoDaBarra(document)
+  if (!numero) return
+
+  const localStore = createLocalConfigStore()
+  const localConfig = await localStore.get()
+  const novo: EventoHistorico = { tipo: 'documento', numero, ocorridoEm: new Date().toISOString() }
+  const historicoEventos = registrarEvento(localConfig.historicoEventos ?? [], novo)
+  await localStore.set({ ...localConfig, historicoEventos })
+}
+
+function instalarCapturaEventoDocumento(): void {
+  document.addEventListener('click', (evento) => {
+    const alvo =
+      evento.target instanceof Element
+        ? evento.target.closest('#divInfraBarraComandosSuperior #btnSalvar, #divInfraBarraComandosInferior #btnSalvar')
+        : null
+    if (!alvo) return
+    registrarEventoDocumento().catch((error) => {
+      console.error('[SEIRMG] Falha ao registrar evento de documento no Dashboard:', error)
+    })
+  })
 }
 
 async function bootstrap(): Promise<void> {
@@ -138,3 +168,4 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap()
+instalarCapturaEventoDocumento()
