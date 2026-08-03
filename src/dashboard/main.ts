@@ -9,7 +9,7 @@ import {
   montarCelulaPrazoCongelado,
   montarCelulaAtribuicao,
 } from '../features/controle-processos/favoritosRender'
-import { calcularDiasAteVencimento, classificarPrazo } from '../features/controle-processos/prazos'
+import { calcularDiasAteVencimento, classificarPrazo, formatarDiasRestantes } from '../features/controle-processos/prazos'
 
 const ROTULOS_TIPO: Record<EventoHistorico['tipo'], string> = {
   acesso: 'Acesso',
@@ -263,9 +263,9 @@ renderizarFavoritos().catch((error) => console.error('[SEIRMG] Falha ao renderiz
 function montarBadgePrazo(dias: number, config: { alerta: number; critico: number }): HTMLSpanElement {
   const badge = document.createElement('span')
   badge.className = 'badge-prazo'
-  if (dias < 0) {
+  if (dias <= 0) {
     badge.classList.add('badge-vencido')
-    badge.textContent = `Vencido há ${Math.abs(dias)} dia(s)`
+    badge.textContent = formatarDiasRestantes(dias)
     return badge
   }
   const classificacao = classificarPrazo(dias, config)
