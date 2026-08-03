@@ -3,6 +3,7 @@ import {
   extrairTooltipRelacionado,
 } from '../../features/procedimento-visualizar/ajustarElementosNativos'
 import { montarTituloJanela } from '../../features/procedimento-visualizar/alterarTitulo'
+import { obterNumeroProcesso } from '../../features/procedimento-visualizar/numeroProcesso'
 import {
   montarCorpoSalvarAnotacao,
   parseAnotacaoDados,
@@ -100,16 +101,6 @@ function esperarElemento(
   setTimeout(() => esperarElemento(seletorRaiz, seletor, callback, tentativasRestantes - 1), 100)
 }
 
-function obterNumeroProcesso(): string | null {
-  const noSelecionado = document.querySelector('.infraArvoreNoSelecionado')
-  const numeroNoSelecionado = noSelecionado?.textContent?.trim()
-  if (numeroNoSelecionado) return numeroNoSelecionado
-
-  const link = document.querySelector('.infraArvore > a[target="ifrVisualizacao"]')
-  if (!link) return null
-  return link.textContent?.trim() || null
-}
-
 function obterIdProcedimento(): string | null {
   return new URL(window.location.href).searchParams.get('id_procedimento')
 }
@@ -140,7 +131,7 @@ function alterarTitulo(): void {
         const link = document.querySelector('.infraArvore > a[target="ifrVisualizacao"]')
         if (!link) return
         const tipo = link.getAttribute('title') ?? ''
-        const numero = obterNumeroProcesso() ?? ''
+        const numero = obterNumeroProcesso(document) ?? ''
         window.parent.document.title = montarTituloJanela(numero, tipo)
       } catch (error) {
         console.error('[SEIRMG] Falha ao alterar título da janela:', error)
@@ -532,7 +523,7 @@ function renderizarAtribuicao(container: HTMLElement, dados: DadosAtribuicao): v
 }
 
 async function montarPainelTipoEInteressados(): Promise<void> {
-  const numero = obterNumeroProcesso()
+  const numero = obterNumeroProcesso(document)
   const headHtml = document.head.innerHTML
   const url = extrairUrlEdicaoProcesso(headHtml)
   if (!url) return
