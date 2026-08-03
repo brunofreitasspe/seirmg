@@ -1,8 +1,11 @@
+import { registrarEvento } from '../../features/dashboard/historicoEventos'
 import { extrairDocumentosPendentes, type DocumentoPendente } from '../../features/procedimento-enviar/detectarPendencias'
 import { unidadeDestinoSelecionada } from '../../features/procedimento-enviar/detectarSelecaoUnidade'
 import { montarDialogoAviso } from '../../features/procedimento-enviar/montarDialogo'
+import { obterNumeroProcesso } from '../../features/procedimento-visualizar/numeroProcesso'
 import { obterUnidadeAtual } from '../../features/procedimento-visualizar/painelLateral'
 import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
+import type { EventoHistorico } from '../../lib/storage'
 
 function obterIframeArvore(): HTMLIFrameElement | null {
   return window.parent.document.querySelector<HTMLIFrameElement>('#ifrArvore')
@@ -60,6 +63,30 @@ function observarSelecaoUnidade(ifrArvore: HTMLIFrameElement, unidadeAtual: stri
   observer.observe(document.body, { childList: true, subtree: true })
 }
 
+async function registrarEventoEnviado(): Promise<void> {
+  const syncConfig = await createSyncConfigStore().get()
+  if (!syncConfig.dashboard?.ativo) return
+
+  const numero = obterNumeroProcesso(document)
+  if (!numero) return
+
+  const localStore = createLocalConfigStore()
+  const localConfig = await localStore.get()
+  const novo: EventoHistorico = { tipo: 'enviado', numero, ocorridoEm: new Date().toISOString() }
+  const historicoEventos = registrarEvento(localConfig.historicoEventos ?? [], novo)
+  await localStore.set({ ...localConfig, historicoEventos })
+}
+
+function instalarCapturaEventoEnviado(): void {
+  document.addEventListener('click', (evento) => {
+    const alvo = evento.target instanceof Element ? evento.target.closest('#sbmEnviar') : null
+    if (!alvo) return
+    registrarEventoEnviado().catch((error) => {
+      console.error('[SEIRMG] Falha ao registrar evento de envio no Dashboard:', error)
+    })
+  })
+}
+
 async function bootstrap(): Promise<void> {
   try {
     const syncConfig = await createSyncConfigStore().get()
@@ -87,3 +114,4 @@ async function bootstrap(): Promise<void> {
 }
 
 bootstrap()
+instalarCapturaEventoEnviado()
