@@ -1,5 +1,5 @@
 import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
-import type { EventoHistorico, FavoritoProcesso } from '../lib/storage'
+import type { EventoHistorico, FavoritoProcesso, SnapshotPrazoProcesso } from '../lib/storage'
 import { filtrarPorPeriodo, calcularMetricas, agruparPorDia } from '../features/dashboard/historicoEventos'
 import { calcularIntervalo, type Periodo } from '../features/dashboard/periodo'
 import { montarCsvHistorico, montarHtmlRelatorio } from '../features/dashboard/relatorio'
@@ -196,17 +196,17 @@ function montarCelulaProcessoFavorito(item: FavoritoProcesso): HTMLTableCellElem
   return td
 }
 
-function montarCelulaAbrirFavorito(item: FavoritoProcesso, baseUrlSei: string | undefined): HTMLTableCellElement {
+function montarCelulaAbrirProcesso(link: string | null, baseUrlSei: string | undefined): HTMLTableCellElement {
   const td = document.createElement('td')
-  const id = extrairIdProcedimentoDoLink(item.link)
+  const id = extrairIdProcedimentoDoLink(link)
   if (id && baseUrlSei) {
-    const link = document.createElement('a')
-    link.className = 'link-abrir'
-    link.href = `${baseUrlSei}/controlador.php?acao=procedimento_trabalhar&id_procedimento=${id}`
-    link.target = '_blank'
-    link.rel = 'noopener noreferrer'
-    link.textContent = 'Abrir ↗'
-    td.appendChild(link)
+    const linkEl = document.createElement('a')
+    linkEl.className = 'link-abrir'
+    linkEl.href = `${baseUrlSei}/controlador.php?acao=procedimento_trabalhar&id_procedimento=${id}`
+    linkEl.target = '_blank'
+    linkEl.rel = 'noopener noreferrer'
+    linkEl.textContent = 'Abrir ↗'
+    td.appendChild(linkEl)
   }
   return td
 }
@@ -250,7 +250,7 @@ async function renderizarFavoritos(): Promise<void> {
       tr.appendChild(montarCelulaMarcadoresCongelados(item.ultimoSnapshot?.marcadoresNomes ?? []))
       tr.appendChild(montarCelulaPrazoCongelado(item.ultimoSnapshot?.prazoDataTexto ?? null))
       tr.appendChild(montarCelulaAtribuicao(item.ultimoSnapshot?.atribuicao ?? null))
-      tr.appendChild(montarCelulaAbrirFavorito(item, localConfig.baseUrlSei))
+      tr.appendChild(montarCelulaAbrirProcesso(item.link, localConfig.baseUrlSei))
       tbody.appendChild(tr)
     })
     tabela.appendChild(tbody)
@@ -281,19 +281,18 @@ async function renderizarPrazos(): Promise<void> {
   if (!view) return
 
   const config = await createSyncConfigStore().get()
+  const localConfig = await createLocalConfigStore().get()
   const limites = { alerta: config.controleProcessos.prazos.alerta, critico: config.controleProcessos.prazos.critico }
   const agora = new Date()
 
-  const itens = config.controleProcessos.favoritos.itens
+  const itens = (localConfig.snapshotPrazosProcessos ?? [])
     .map((item) => {
-      const dataTexto = item.ultimoSnapshot?.prazoDataTexto ?? null
-      if (!dataTexto) return null
-      const dias = calcularDiasAteVencimento(dataTexto, agora)
+      const dias = calcularDiasAteVencimento(item.prazoDataTexto, agora)
       if (dias === null) return null
       const emAlerta = dias < 0 || classificarPrazo(dias, limites) !== null
-      return emAlerta ? { item, dataTexto, dias } : null
+      return emAlerta ? { item, dias } : null
     })
-    .filter((valor): valor is { item: (typeof config.controleProcessos.favoritos.itens)[number]; dataTexto: string; dias: number } => valor !== null)
+    .filter((valor): valor is { item: SnapshotPrazoProcesso; dias: number } => valor !== null)
     .sort((a, b) => a.dias - b.dias)
 
   view.innerHTML = ''
@@ -311,17 +310,17 @@ async function renderizarPrazos(): Promise<void> {
   if (itens.length === 0) {
     const vazio = document.createElement('div')
     vazio.className = 'vazio'
-    vazio.textContent = 'Nenhum favorito com prazo em alerta, crítico ou vencido.'
+    vazio.textContent = 'Nenhum processo com prazo em alerta, crítico ou vencido.'
     painel.appendChild(vazio)
   } else {
     const tabela = document.createElement('table')
     tabela.className = 'tabela-dash'
     const thead = document.createElement('thead')
-    thead.innerHTML = '<tr><th>Processo</th><th>Especificação</th><th>Prazo</th><th>Situação</th></tr>'
+    thead.innerHTML = '<tr><th>Processo</th><th>Especificação</th><th>Prazo</th><th>Situação</th><th></th></tr>'
     tabela.appendChild(thead)
 
     const tbody = document.createElement('tbody')
-    itens.forEach(({ item, dataTexto, dias }) => {
+    itens.forEach(({ item, dias }) => {
       const tr = document.createElement('tr')
 
       const tdNumero = document.createElement('td')
@@ -333,12 +332,14 @@ async function renderizarPrazos(): Promise<void> {
       tr.appendChild(tdEspecificacao)
 
       const tdData = document.createElement('td')
-      tdData.textContent = dataTexto
+      tdData.textContent = item.prazoDataTexto
       tr.appendChild(tdData)
 
       const tdSituacao = document.createElement('td')
       tdSituacao.appendChild(montarBadgePrazo(dias, limites))
       tr.appendChild(tdSituacao)
+
+      tr.appendChild(montarCelulaAbrirProcesso(item.link, localConfig.baseUrlSei))
 
       tbody.appendChild(tr)
     })
