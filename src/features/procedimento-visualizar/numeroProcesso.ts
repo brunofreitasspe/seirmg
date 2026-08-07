@@ -17,3 +17,10 @@ export function extrairNumeroProcessoDaBarra(doc: Document): string | null {
 
   return doc.body?.textContent?.match(REGEX_NUMERO_PROCESSO)?.[0] ?? null
 }
+
+// acao=procedimento_visualizar é usado tanto pra tela-resumo do processo (id_procedimento só)
+// quanto pra visualizar um documento/despacho específico dentro dele (ganha id_documento também)
+// -- usado pra não contar acesso a documento interno como "acesso ao processo" no Dashboard.
+export function ehVisualizacaoDoProcesso(url: string): boolean {
+  return !new URL(url, 'https://seirmg.invalid/').searchParams.has('id_documento')
+}

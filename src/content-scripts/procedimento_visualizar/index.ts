@@ -3,7 +3,7 @@ import {
   extrairTooltipRelacionado,
 } from '../../features/procedimento-visualizar/ajustarElementosNativos'
 import { montarTituloJanela } from '../../features/procedimento-visualizar/alterarTitulo'
-import { obterNumeroProcesso } from '../../features/procedimento-visualizar/numeroProcesso'
+import { obterNumeroProcesso, ehVisualizacaoDoProcesso } from '../../features/procedimento-visualizar/numeroProcesso'
 import {
   montarCorpoSalvarAnotacao,
   parseAnotacaoDados,
@@ -128,6 +128,7 @@ async function registrarHistoricoVisita(numero: string | null, tipo: string): Pr
 
 async function registrarEventoAcesso(numero: string | null, tipoProcesso: string, especificacao: string): Promise<void> {
   if (!numero) return
+  if (!ehVisualizacaoDoProcesso(window.location.href)) return
 
   const syncConfig = await createSyncConfigStore().get()
   if (!syncConfig.dashboard?.ativo) return

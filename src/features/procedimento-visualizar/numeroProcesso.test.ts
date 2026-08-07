@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { obterNumeroProcesso, extrairNumeroProcessoDaBarra } from './numeroProcesso'
+import { obterNumeroProcesso, extrairNumeroProcessoDaBarra, ehVisualizacaoDoProcesso } from './numeroProcesso'
 
 function montarDocumento(html: string): Document {
   return new DOMParser().parseFromString(html, 'text/html')
@@ -36,5 +36,19 @@ describe('extrairNumeroProcessoDaBarra', () => {
 
   it('retorna null quando nenhum padrão de número é encontrado', () => {
     expect(extrairNumeroProcessoDaBarra(montarDocumento('<div>sem número aqui</div>'))).toBeNull()
+  })
+})
+
+describe('ehVisualizacaoDoProcesso', () => {
+  it('retorna true quando a URL não tem id_documento (tela-resumo do processo)', () => {
+    expect(ehVisualizacaoDoProcesso('controlador.php?acao=procedimento_visualizar&id_procedimento=123')).toBe(true)
+  })
+
+  it('retorna false quando a URL tem id_documento (visualizando um documento/despacho específico)', () => {
+    expect(
+      ehVisualizacaoDoProcesso(
+        'controlador.php?acao=procedimento_visualizar&id_procedimento=123&id_documento=456'
+      )
+    ).toBe(false)
   })
 })
