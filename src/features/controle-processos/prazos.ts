@@ -57,3 +57,23 @@ export function formatarDiasRestantes(dias: number): string {
   const diasAtraso = 1 - dias
   return `Venceu há ${diasAtraso} dia${diasAtraso === 1 ? '' : 's'}`
 }
+
+export interface ControleDePrazoFavorito {
+  dataTexto: string
+  diasTexto: string
+  iconeHtml: string
+}
+
+export function obterControleDePrazoDaLinha(linha: Element): ControleDePrazoFavorito | null {
+  const link = linha.querySelector<HTMLAnchorElement>("td > a[href*='acao=controle_prazo_definir']")
+  if (!link) return null
+
+  const onmouseover = link.getAttribute('onmouseover')
+  if (!onmouseover) return null
+
+  const texto = extrairTextoMarcador(onmouseover)
+  const match = texto.match(/(\d{2}\/\d{2}\/\d{4})\s*\((.+)\)/)
+  if (!match) return null
+
+  return { dataTexto: match[1], diasTexto: match[2], iconeHtml: link.innerHTML }
+}

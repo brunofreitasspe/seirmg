@@ -1,7 +1,7 @@
 import {
   calcularDiasAteVencimento,
   classificarPrazo,
-  extrairTextoMarcador,
+  obterControleDePrazoDaLinha,
 } from '../../features/controle-processos/prazos'
 import {
   criarIcone,
@@ -805,26 +805,6 @@ function obterMarcadoresDaLinha(linha: Element): MarcadorFavorito[] {
       }
     })
     .filter((item) => item.nome !== '')
-}
-
-interface ControleDePrazoFavorito {
-  dataTexto: string
-  diasTexto: string
-  iconeHtml: string
-}
-
-function obterControleDePrazoDaLinha(linha: Element): ControleDePrazoFavorito | null {
-  const link = linha.querySelector<HTMLAnchorElement>("td > a[href*='acao=controle_prazo_definir']")
-  if (!link) return null
-
-  const onmouseover = link.getAttribute('onmouseover')
-  if (!onmouseover) return null
-
-  const texto = extrairTextoMarcador(onmouseover)
-  const match = texto.match(/(\d{2}\/\d{2}\/\d{4})\s*\((.+)\)/)
-  if (!match) return null
-
-  return { dataTexto: match[1], diasTexto: match[2], iconeHtml: link.innerHTML }
 }
 
 function capturarSnapshotDaLinha(linhaNativa: Element): SnapshotFavorito {

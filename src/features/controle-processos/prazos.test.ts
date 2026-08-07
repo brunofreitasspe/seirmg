@@ -1,5 +1,13 @@
 import { describe, expect, it } from 'vitest'
-import { calcularDiasAteVencimento, classificarPrazo, extrairTextoMarcador, formatarDataBr, formatarDiasRestantes, isValidDate } from './prazos'
+import {
+  calcularDiasAteVencimento,
+  classificarPrazo,
+  extrairTextoMarcador,
+  formatarDataBr,
+  formatarDiasRestantes,
+  isValidDate,
+  obterControleDePrazoDaLinha,
+} from './prazos'
 
 describe('extrairTextoMarcador', () => {
   it('extrai o texto entre as duas primeiras aspas simples', () => {
@@ -105,5 +113,40 @@ describe('formatarDiasRestantes', () => {
 
   it('mostra "Venceu há N dias" no plural quando bem negativo', () => {
     expect(formatarDiasRestantes(-8)).toBe('Venceu há 9 dias')
+  })
+})
+
+function criarLinhaComPrazo(html: string): Element {
+  const doc = new DOMParser().parseFromString(`<table><tbody><tr>${html}</tr></tbody></table>`, 'text/html')
+  return doc.querySelector('tr') as Element
+}
+
+describe('obterControleDePrazoDaLinha', () => {
+  it('extrai data, dias e ícone de uma linha com controle de prazo', () => {
+    const linha = criarLinhaComPrazo(
+      `<td><a href="controlador.php?acao=controle_prazo_definir&id=1" onmouseover="return infraTooltipMostrar('15/08/2026 (10 dias)','Detalhe')"><img src="prazo.gif"></a></td>`
+    )
+    expect(obterControleDePrazoDaLinha(linha)).toEqual({
+      dataTexto: '15/08/2026',
+      diasTexto: '10 dias',
+      iconeHtml: '<img src="prazo.gif">',
+    })
+  })
+
+  it('retorna null quando a linha não tem link de controle de prazo', () => {
+    const linha = criarLinhaComPrazo('<td>sem prazo</td>')
+    expect(obterControleDePrazoDaLinha(linha)).toBeNull()
+  })
+
+  it('retorna null quando o link não tem onmouseover', () => {
+    const linha = criarLinhaComPrazo('<td><a href="controlador.php?acao=controle_prazo_definir&id=1"></a></td>')
+    expect(obterControleDePrazoDaLinha(linha)).toBeNull()
+  })
+
+  it('retorna null quando o texto do onmouseover não casa com o formato esperado', () => {
+    const linha = criarLinhaComPrazo(
+      `<td><a href="controlador.php?acao=controle_prazo_definir&id=1" onmouseover="return infraTooltipMostrar('texto sem data','Detalhe')"></a></td>`
+    )
+    expect(obterControleDePrazoDaLinha(linha)).toBeNull()
   })
 })
