@@ -56,11 +56,11 @@ describe('calcularMetricas', () => {
       evento('acesso', '0002', '2026-08-01T11:00:00.000Z'),
       evento('enviado', '0003', '2026-08-01T12:00:00.000Z'),
     ]
-    expect(calcularMetricas(eventos)).toEqual({ acesso: 2, enviado: 1, documento: 0, assinatura: 0, concluido: 0 })
+    expect(calcularMetricas(eventos)).toEqual({ acesso: 2, enviado: 1, documento: 0, concluido: 0 })
   })
 
   it('retorna todos os tipos zerados pra lista vazia', () => {
-    expect(calcularMetricas([])).toEqual({ acesso: 0, enviado: 0, documento: 0, assinatura: 0, concluido: 0 })
+    expect(calcularMetricas([])).toEqual({ acesso: 0, enviado: 0, documento: 0, concluido: 0 })
   })
 })
 

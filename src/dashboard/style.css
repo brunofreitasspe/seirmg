@@ -19,7 +19,6 @@
   --tipo-acesso: #017fff; --tipo-acesso-soft: #e8f2ff;
   --tipo-enviado: #b5530a; --tipo-enviado-soft: #fdf1e6;
   --tipo-documento: #6d28d9; --tipo-documento-soft: #f1e9fd;
-  --tipo-assinatura: #be185d; --tipo-assinatura-soft: #fce7f0;
   --tipo-concluido: #0d9488; --tipo-concluido-soft: #e6f7f5;
 }
 @media (prefers-color-scheme: dark) {
@@ -30,7 +29,7 @@
     --seirmg-bg: #14161a; --seirmg-surface: #1c1f26; --seirmg-surface-muted: #21242c;
     --seirmg-border: #30343d; --seirmg-text: #e7e9ed; --seirmg-text-muted: #9aa1ac;
     --tipo-acesso-soft: #17324f; --tipo-enviado-soft: #3a2412; --tipo-documento-soft: #2a2140;
-    --tipo-assinatura-soft: #3a1a29; --tipo-concluido-soft: #123230;
+    --tipo-concluido-soft: #123230;
   }
 }
 * { box-sizing: border-box; }

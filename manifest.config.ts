@@ -138,23 +138,6 @@ export default defineManifest({
       run_at: 'document_idle',
     },
     {
-      // A suposição original (spec do Dashboard, 2026-08-03) era que acao=documento_assinar
-      // sempre abre como janela/aba própria -- confirmado ao vivo só pra um dos fluxos de
-      // assinatura. Ao assinar pelo botão "Assinar" da barra do CKEditor (editor_montar), o SEI
-      // abre essa mesma URL dentro de um <iframe> injetado num modal "Sparkling" na PRÓPRIA
-      // página (não uma aba nova) -- confirmado ao vivo em 2026-08-07 inspecionando
-      // divInfraSparklingModalContainer*. Sem all_frames aqui, o content script nunca roda pra
-      // esse fluxo (por padrão só injeta no frame principal), e o evento "assinatura" do
-      // Dashboard nunca é capturado.
-      matches: [
-        '*://*.br/*controlador.php?acao=documento_assinar*',
-        '*://*.org/*controlador.php?acao=documento_assinar*',
-      ],
-      js: ['src/content-scripts/documento_assinar/index.ts'],
-      all_frames: true,
-      run_at: 'document_idle',
-    },
-    {
       matches: [
         '*://*.br/*controlador.php?acao=procedimento_visualizar*',
         '*://*.org/*controlador.php?acao=procedimento_visualizar*',

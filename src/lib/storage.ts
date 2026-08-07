@@ -105,7 +105,7 @@ export interface HistoricoProcessosConfig {
   ativo: boolean
 }
 
-export type TipoEventoHistorico = 'acesso' | 'enviado' | 'documento' | 'assinatura' | 'concluido'
+export type TipoEventoHistorico = 'acesso' | 'enviado' | 'documento' | 'concluido'
 
 export interface EventoHistorico {
   tipo: TipoEventoHistorico

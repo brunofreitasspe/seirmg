@@ -17,7 +17,6 @@ const ROTULOS_TIPO: Record<EventoHistorico['tipo'], string> = {
   acesso: 'Acesso',
   enviado: 'Enviado',
   documento: 'Documento',
-  assinatura: 'Assinatura',
   concluido: 'Concluído',
 }
 
