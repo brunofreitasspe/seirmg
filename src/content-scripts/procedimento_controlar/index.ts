@@ -88,6 +88,7 @@ import {
   favoritosImportadosParaAdicionar,
   montarLinhaCsv,
 } from '../../features/controle-processos/favoritosExportar'
+import { atualizarSnapshotPrazos, type LinhaVisivelComPrazo } from '../../features/dashboard/snapshotPrazos'
 import type { FavoritoProcesso, SnapshotFavorito } from '../../lib/storage'
 import starIconSvg from 'lucide-static/icons/star.svg?raw'
 import starOffIconSvg from 'lucide-static/icons/star-off.svg?raw'
@@ -826,6 +827,31 @@ function construirSnapshotsPorNumero(
     if (linhaNativa) mapa.set(item.numero, capturarSnapshotDaLinha(linhaNativa))
   })
   return mapa
+}
+
+async function capturarSnapshotGlobalDePrazos(linhas: Element[]): Promise<void> {
+  const agoraIso = new Date().toISOString()
+
+  const linhasVisiveis: LinhaVisivelComPrazo[] = linhas
+    .map((linha) => {
+      const favorito = extrairFavoritoDaLinha(linha, agoraIso)
+      if (!favorito) return null
+      const prazo = obterControleDePrazoDaLinha(linha)
+      const resultado: LinhaVisivelComPrazo = {
+        numero: favorito.numero,
+        prazoDataTexto: prazo?.dataTexto ?? null,
+        especificacao: favorito.especificacao,
+        link: favorito.link,
+      }
+      return resultado
+    })
+    .filter((linha): linha is LinhaVisivelComPrazo => linha !== null)
+
+  const localConfig = await createLocalConfigStore().get()
+  const resultado = atualizarSnapshotPrazos(localConfig.snapshotPrazosProcessos ?? [], linhasVisiveis, agoraIso)
+  if (!resultado.mudou) return
+
+  await createLocalConfigStore().set({ ...localConfig, snapshotPrazosProcessos: resultado.itens })
 }
 
 function obterEspecificacaoDaLinha(linha: Element): string | undefined {
@@ -3047,6 +3073,12 @@ async function bootstrap(): Promise<void> {
     aplicarEstrelasEmLinhas(todasAsLinhas)
     aplicarFiltroFavoritoEmTodasAsTabelas()
     renderizarPainelFavoritos()
+
+    if (config.dashboard?.ativo && config.controleProcessos.prazos.ativo) {
+      capturarSnapshotGlobalDePrazos(todasAsLinhas).catch((error) => {
+        console.error('[SEIRMG] Falha ao capturar snapshot global de prazos:', error)
+      })
+    }
 
     aplicarLinksPlankaEmLinhas(todasAsLinhas).catch((error) => {
       console.error('[SEIRMG] Falha ao aplicar links do Planka:', error)
