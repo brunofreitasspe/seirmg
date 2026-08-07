@@ -77,6 +77,14 @@ export interface FavoritoProcesso {
   ultimoSnapshot?: SnapshotFavorito
 }
 
+export interface SnapshotPrazoProcesso {
+  numero: string
+  especificacao?: string
+  link: string | null
+  prazoDataTexto: string
+  vistoEm: string // ISO — informativo, não usado para expirar nada
+}
+
 export interface FavoritosConfig {
   ativo: boolean
   itens: FavoritoProcesso[]
@@ -237,6 +245,7 @@ export interface LocalConfig {
   blocoAssinaturaPendenteAtual: string[]
   historicoProcessosVisitados: HistoricoProcessoEntry[]
   historicoEventos: EventoHistorico[]
+  snapshotPrazosProcessos: SnapshotPrazoProcesso[]
   // Último Estado conhecido de cada bloco (chave = número do bloco), usado só pela checagem
   // oportunista pra detectar transição pra "disponibilizado_para_area". Guardado como string crua
   // (não o tipo EstadoBloco) porque lib/storage.ts não importa de features/.
@@ -353,6 +362,7 @@ export const DEFAULT_LOCAL_CONFIG: LocalConfig = {
   tarefasNotificadas: {},
   historicoProcessosVisitados: [],
   historicoEventos: [],
+  snapshotPrazosProcessos: [],
 }
 
 export interface StorageArea {
