@@ -94,6 +94,23 @@ export interface AlertaNaoAssinadosConfig {
   ativo: boolean
 }
 
+export interface KanbanLista {
+  id: string
+  nome: string
+  ordem: number
+}
+
+export interface KanbanCardPosicao {
+  numero: string
+  listaId: string
+}
+
+export interface KanbanConfig {
+  ativo: boolean
+  listas: KanbanLista[]
+  posicoes: KanbanCardPosicao[]
+}
+
 export interface HistoricoProcessoEntry {
   idProcedimento: string
   numero: string
@@ -127,6 +144,7 @@ export interface ControleProcessosConfig {
   agrupamento: AgrupamentoConfig
   favoritos: FavoritosConfig
   alertaNaoAssinados: AlertaNaoAssinadosConfig
+  kanban: KanbanConfig
 }
 
 export interface ConfiguracaoPontoControle {
@@ -309,6 +327,11 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     },
     alertaNaoAssinados: {
       ativo: true,
+    },
+    kanban: {
+      ativo: false,
+      listas: [],
+      posicoes: [],
     },
   },
   pontoControle: {

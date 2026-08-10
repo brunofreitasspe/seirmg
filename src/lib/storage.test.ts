@@ -80,6 +80,7 @@ describe('createSyncConfigStore', () => {
       agrupamento: { criterio: 'nenhum' },
       favoritos: { ativo: false, itens: [] },
       alertaNaoAssinados: { ativo: true },
+      kanban: { ativo: false, listas: [], posicoes: [] },
     })
   })
 
@@ -169,6 +170,26 @@ describe('createSyncConfigStore', () => {
     }
     await store.set(atualizado)
     expect(await store.get()).toEqual(atualizado)
+  })
+
+  it('faz round-trip de controleProcessos.kanban', async () => {
+    const area = criarAreaFalsa()
+    const store = createSyncConfigStore(area)
+    const config = await store.get()
+    const atualizado = {
+      ...config,
+      controleProcessos: {
+        ...config.controleProcessos,
+        kanban: {
+          ativo: true,
+          listas: [{ id: 'lista-1', nome: 'Em análise', ordem: 0 }],
+          posicoes: [{ numero: 'HMMG.2025.00001-1', listaId: 'lista-1' }],
+        },
+      },
+    }
+    await store.set(atualizado)
+    const relido = await store.get()
+    expect(relido.controleProcessos.kanban).toEqual(atualizado.controleProcessos.kanban)
   })
 
   it('inclui pontoControle padrão quando vazio', async () => {

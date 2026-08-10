@@ -357,6 +357,7 @@ async function carregarAbaProcessos(): Promise<void> {
             alertaNaoAssinados: {
               ativo: inputAlertaNaoAssinadosAtivo?.checked ?? true,
             },
+            kanban: config.controleProcessos.kanban,
           },
           pontoControle: {
             ativo: inputPontoControleAtivo?.checked ?? true,
