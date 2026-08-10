@@ -1294,7 +1294,7 @@ git commit -m "feat(kanban): botão Visão Kanban e troca tabela↔board (scaffo
 - Produces: `renderizarColunasKanban(config: SyncConfig, container: HTMLElement): void` (chamada
   de dentro de `iniciarKanban`, ligada nesta tarefa).
 
-- [ ] **Step 1: Import da lógica pura**
+- [ ] **Step 1: Import da lógica pura + ícone de copiar**
 
 No import já existente de `../../features/controle-processos/agrupamento` em `index.ts`, não
 mexer. Adicionar um import novo, próximo dele:
@@ -1307,6 +1307,16 @@ import {
   type ColunaKanban,
   type OrigemAutomatica,
 } from '../../features/controle-processos/kanban'
+```
+
+A spec pede número do processo "com botão de copiar" no card (mesmo padrão já usado em
+`procedimento_visualizar/index.ts:414-435`, função `criarIconeCopiar` — reaproveitar a mesma
+lógica, `.seirmg-tooltip-copiado` já é uma classe global de `content-scripts/core/theme.css`,
+carregada em toda página do SEI, não precisa recriar). Adicionar aos imports de ícone lucide já
+existentes em `index.ts`:
+
+```ts
+import copyIconSvg from 'lucide-static/icons/copy.svg?raw'
 ```
 
 - [ ] **Step 2: Montar os dados de um card a partir de uma linha nativa**
@@ -1377,6 +1387,27 @@ function montarCardElementoKanban(card: CardKanbanComOrigem, favoritado: boolean
   numero.textContent = card.numero
   header.appendChild(numero)
 
+  const botaoCopiar = document.createElement('span')
+  botaoCopiar.className = 'seirmg-kanban-card-copiar'
+  botaoCopiar.innerHTML = copyIconSvg
+  botaoCopiar.title = 'Copiar número do processo'
+  botaoCopiar.addEventListener('click', (evento) => {
+    evento.stopPropagation()
+    navigator.clipboard
+      .writeText(card.numero)
+      .then(() => {
+        const tooltip = document.createElement('div')
+        tooltip.className = 'seirmg-tooltip-copiado'
+        tooltip.textContent = 'Copiado!'
+        botaoCopiar.appendChild(tooltip)
+        setTimeout(() => tooltip.remove(), 1000)
+      })
+      .catch((error) => {
+        console.error('[SEIRMG] Falha ao copiar número do processo:', error)
+      })
+  })
+  header.appendChild(botaoCopiar)
+
   const acoes = document.createElement('div')
   acoes.className = 'seirmg-kanban-card-acoes'
   acoes.appendChild(criarEstrela(card.favorito, favoritado))
@@ -1386,7 +1417,7 @@ function montarCardElementoKanban(card: CardKanbanComOrigem, favoritado: boolean
   elemento.appendChild(montarConteudoCardKanban(card.dados))
 
   elemento.addEventListener('click', (evento) => {
-    if ((evento.target as HTMLElement).closest('.seirmg-favorito-estrela')) return
+    if ((evento.target as HTMLElement).closest('.seirmg-favorito-estrela, .seirmg-kanban-card-copiar')) return
     card.linhaNativa.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')?.click()
   })
 
@@ -1471,6 +1502,23 @@ function montarColunaKanban(
 
   return coluna
 }
+```
+
+Adicionar também ao final do bloco CSS do board (mesmo template `ESTILO_FILTROS_E_ESPECIFICACAO`
+da Task 7 — `.seirmg-tooltip-copiado` já é uma classe global de `content-scripts/core/theme.css`,
+carregada em toda página do SEI, não precisa recriar):
+
+```css
+
+  .seirmg-kanban-card-copiar {
+    cursor: pointer;
+    color: #8892a0;
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+  }
+  .seirmg-kanban-card-copiar svg { width: 13px; height: 13px; }
+  .seirmg-kanban-card-copiar:hover { color: #017fff; }
 ```
 
 - [ ] **Step 4: Ligar em `iniciarKanban`**
