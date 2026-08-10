@@ -1194,77 +1194,93 @@ let kanbanAtivo = false
 let btnVisaoKanban: HTMLButtonElement | null = null
 
 function esconderTabelasKanban(): void {
-  ;['#tblProcessosRecebidos', '#tblProcessosGerados'].forEach((idTabela) => {
-    const tabela = document.querySelector(idTabela)
-    if (!tabela) return
-    ;(tabela as HTMLElement).style.display = 'none'
-    const divPai = tabela.closest('div[id*="divTabela"]')
-    if (divPai) (divPai as HTMLElement).style.display = 'none'
-  })
+  try {
+    ;['#tblProcessosRecebidos', '#tblProcessosGerados'].forEach((idTabela) => {
+      const tabela = document.querySelector(idTabela)
+      if (!tabela) return
+      ;(tabela as HTMLElement).style.display = 'none'
+      const divPai = tabela.closest('div[id*="divTabela"]')
+      if (divPai) (divPai as HTMLElement).style.display = 'none'
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao esconder tabelas nativas do Kanban:', error)
+  }
 }
 
 function mostrarTabelasKanban(): void {
-  ;['#tblProcessosRecebidos', '#tblProcessosGerados'].forEach((idTabela) => {
-    const tabela = document.querySelector(idTabela)
-    if (!tabela) return
-    ;(tabela as HTMLElement).style.display = ''
-    const divPai = tabela.closest('div[id*="divTabela"]')
-    if (divPai) (divPai as HTMLElement).style.display = ''
-  })
+  try {
+    ;['#tblProcessosRecebidos', '#tblProcessosGerados'].forEach((idTabela) => {
+      const tabela = document.querySelector(idTabela)
+      if (!tabela) return
+      ;(tabela as HTMLElement).style.display = ''
+      const divPai = tabela.closest('div[id*="divTabela"]')
+      if (divPai) (divPai as HTMLElement).style.display = ''
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao restaurar tabelas nativas do Kanban:', error)
+  }
 }
 
 function montarKanban(config: SyncConfig): void {
-  if (!config.controleProcessos.kanban.ativo) return
-  if (document.getElementById('seirmg-kanban-btn-ativar')) return
+  try {
+    if (!config.controleProcessos.kanban.ativo) return
+    if (document.getElementById('seirmg-kanban-btn-ativar')) return
 
-  montarEstiloKanbanCard()
+    montarEstiloKanbanCard()
 
-  btnVisaoKanban = document.createElement('button')
-  btnVisaoKanban.id = 'seirmg-kanban-btn-ativar'
-  btnVisaoKanban.innerHTML = `${kanbanIconSvg}<span>Visão Kanban</span>`
-  btnVisaoKanban.addEventListener('click', () => {
-    if (!btnVisaoKanban) return
-    btnVisaoKanban.style.display = 'none'
-    iniciarKanban(config)
-  })
+    btnVisaoKanban = document.createElement('button')
+    btnVisaoKanban.id = 'seirmg-kanban-btn-ativar'
+    btnVisaoKanban.innerHTML = `${kanbanIconSvg}<span>Visão Kanban</span>`
+    btnVisaoKanban.addEventListener('click', () => {
+      if (!btnVisaoKanban) return
+      btnVisaoKanban.style.display = 'none'
+      iniciarKanban(config)
+    })
 
-  const primeiroElemento = document.querySelector('#divInfraAreaTelaD') ?? document.body
-  primeiroElemento.insertBefore(btnVisaoKanban, primeiroElemento.firstChild)
+    const primeiroElemento = document.querySelector('#divInfraAreaTelaD') ?? document.body
+    primeiroElemento.insertBefore(btnVisaoKanban, primeiroElemento.firstChild)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao montar o botão do Kanban:', error)
+  }
 }
 
 function iniciarKanban(config: SyncConfig): void {
-  if (kanbanAtivo || document.getElementById('seirmg-kanban-container')) return
-  kanbanAtivo = true
-  esconderTabelasKanban()
+  try {
+    if (kanbanAtivo || document.getElementById('seirmg-kanban-container')) return
+    kanbanAtivo = true
+    esconderTabelasKanban()
 
-  const container = document.createElement('div')
-  container.id = 'seirmg-kanban-container'
+    const container = document.createElement('div')
+    container.id = 'seirmg-kanban-container'
 
-  const tituloWrapper = document.createElement('div')
-  tituloWrapper.id = 'seirmg-kanban-titulo-wrapper'
-  const titulo = document.createElement('div')
-  titulo.id = 'seirmg-kanban-titulo'
-  titulo.innerHTML = `${kanbanIconSvg}<span>Visão Kanban</span>`
-  tituloWrapper.appendChild(titulo)
+    const tituloWrapper = document.createElement('div')
+    tituloWrapper.id = 'seirmg-kanban-titulo-wrapper'
+    const titulo = document.createElement('div')
+    titulo.id = 'seirmg-kanban-titulo'
+    titulo.innerHTML = `${kanbanIconSvg}<span>Visão Kanban</span>`
+    tituloWrapper.appendChild(titulo)
 
-  const btnVoltar = document.createElement('button')
-  btnVoltar.className = 'seirmg-kanban-btn'
-  btnVoltar.textContent = 'Voltar à visualização padrão'
-  btnVoltar.addEventListener('click', () => {
-    kanbanAtivo = false
-    container.remove()
-    mostrarTabelasKanban()
-    if (btnVisaoKanban) btnVisaoKanban.style.display = ''
-  })
-  tituloWrapper.appendChild(btnVoltar)
+    const btnVoltar = document.createElement('button')
+    btnVoltar.className = 'seirmg-kanban-btn'
+    btnVoltar.textContent = 'Voltar à visualização padrão'
+    btnVoltar.addEventListener('click', () => {
+      kanbanAtivo = false
+      container.remove()
+      mostrarTabelasKanban()
+      if (btnVisaoKanban) btnVisaoKanban.style.display = ''
+    })
+    tituloWrapper.appendChild(btnVoltar)
 
-  container.appendChild(tituloWrapper)
+    container.appendChild(tituloWrapper)
 
-  const primeiroQuadro = document.querySelector('#tblProcessosRecebidos') ?? document.querySelector('table')
-  if (primeiroQuadro?.parentElement) {
-    primeiroQuadro.parentElement.insertBefore(container, primeiroQuadro)
-  } else {
-    document.body.appendChild(container)
+    const primeiroQuadro = document.querySelector('#tblProcessosRecebidos') ?? document.querySelector('table')
+    if (primeiroQuadro?.parentElement) {
+      primeiroQuadro.parentElement.insertBefore(container, primeiroQuadro)
+    } else {
+      document.body.appendChild(container)
+    }
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao iniciar o Kanban:', error)
   }
 }
 ```
