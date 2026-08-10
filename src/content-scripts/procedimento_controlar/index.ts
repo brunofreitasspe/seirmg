@@ -604,6 +604,11 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     position: relative;
   }
   .seirmg-kanban-card[draggable="true"] { cursor: grab; }
+  .seirmg-kanban-card-selecionado {
+    border-color: #017fff;
+    box-shadow: 0 0 0 1px #017fff inset;
+    background: #eaf4ff;
+  }
   .seirmg-kanban-card-header {
     display: flex;
     justify-content: space-between;
@@ -3303,6 +3308,7 @@ function montarKanban(config: SyncConfig): void {
     montarEstiloKanbanCard()
 
     btnVisaoKanban = document.createElement('button')
+    btnVisaoKanban.type = 'button'
     btnVisaoKanban.id = 'seirmg-kanban-btn-ativar'
     btnVisaoKanban.innerHTML = `${kanbanIconSvg}<span>Visão Kanban</span>`
     btnVisaoKanban.addEventListener('click', () => ativarVisaoKanban(config))
@@ -3454,8 +3460,26 @@ function montarCardElementoKanban(card: CardKanbanComOrigem, favoritado: boolean
   elemento.appendChild(header)
   elemento.appendChild(montarConteudoCardKanban(card.dados))
 
+  // Um clique seleciona (dispara o checkbox nativo da linha escondida, mesmo mecanismo que
+  // "Adicionar Marcador"/"Anotações"/etc. da barra nativa já leem via hdnRecebidosItensSelecionados/
+  // hdnGeradosItensSelecionados) -- clique duplo abre o processo. Antes um clique só já abria,
+  // o que não deixava selecionar pra aplicar marcador/anotação em lote a partir do board.
   elemento.addEventListener('click', (evento) => {
-    if ((evento.target as HTMLElement).closest('.seirmg-favorito-estrela, .seirmg-kanban-card-copiar')) return
+    const alvo = evento.target as HTMLElement
+    if (alvo.closest('.seirmg-favorito-estrela, .seirmg-kanban-card-copiar, .seirmg-kanban-card-remover-lista')) {
+      return
+    }
+    const checkbox = card.linhaNativa.querySelector<HTMLInputElement>('input.infraCheckbox')
+    if (!checkbox) return
+    checkbox.click()
+    elemento.classList.toggle('seirmg-kanban-card-selecionado', checkbox.checked)
+  })
+
+  elemento.addEventListener('dblclick', (evento) => {
+    const alvo = evento.target as HTMLElement
+    if (alvo.closest('.seirmg-favorito-estrela, .seirmg-kanban-card-copiar, .seirmg-kanban-card-remover-lista')) {
+      return
+    }
     card.linhaNativa.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')?.click()
   })
 
@@ -3678,6 +3702,7 @@ function montarColunaKanban(
 
   if (listaId) {
     const btnRenomear = document.createElement('button')
+    btnRenomear.type = 'button'
     btnRenomear.className = 'seirmg-kanban-btn'
     btnRenomear.textContent = '✎'
     btnRenomear.title = 'Editar lista'
@@ -3694,6 +3719,7 @@ function montarColunaKanban(
     header.appendChild(btnRenomear)
 
     const btnExcluir = document.createElement('button')
+    btnExcluir.type = 'button'
     btnExcluir.className = 'seirmg-kanban-btn'
     btnExcluir.textContent = '🗑'
     btnExcluir.title = 'Excluir lista'
@@ -3760,6 +3786,7 @@ function iniciarKanban(config: SyncConfig): void {
     tituloWrapper.appendChild(titulo)
 
     const btnVoltar = document.createElement('button')
+    btnVoltar.type = 'button'
     btnVoltar.className = 'seirmg-kanban-btn'
     btnVoltar.textContent = 'Voltar à visualização padrão'
     btnVoltar.addEventListener('click', () => {
@@ -3800,6 +3827,7 @@ function iniciarKanban(config: SyncConfig): void {
       .sort((a, b) => Number(b) - Number(a))
       .forEach((ano) => {
         const chip = document.createElement('button')
+        chip.type = 'button'
         chip.className = 'seirmg-kanban-btn'
         chip.textContent = ano
         chip.dataset.ativo = 'false'
@@ -3814,6 +3842,7 @@ function iniciarKanban(config: SyncConfig): void {
       })
 
     const btnNaoRecebido = document.createElement('button')
+    btnNaoRecebido.type = 'button'
     btnNaoRecebido.className = 'seirmg-kanban-btn'
     btnNaoRecebido.innerHTML = `${inboxIconSvg}<span>Não recebido</span>`
     btnNaoRecebido.dataset.ativo = 'false'
@@ -3824,6 +3853,7 @@ function iniciarKanban(config: SyncConfig): void {
     controles.appendChild(btnNaoRecebido)
 
     const btnDocAlterado = document.createElement('button')
+    btnDocAlterado.type = 'button'
     btnDocAlterado.className = 'seirmg-kanban-btn'
     btnDocAlterado.innerHTML = `${triangleAlertIconSvg}<span>Documento alterado</span>`
     btnDocAlterado.dataset.ativo = 'false'
@@ -3834,6 +3864,7 @@ function iniciarKanban(config: SyncConfig): void {
     controles.appendChild(btnDocAlterado)
 
     const btnMaximizar = document.createElement('button')
+    btnMaximizar.type = 'button'
     btnMaximizar.className = 'seirmg-kanban-btn'
     btnMaximizar.innerHTML = `${maximizeIconSvg}<span>Maximizar</span>`
     btnMaximizar.dataset.maximizado = 'false'
