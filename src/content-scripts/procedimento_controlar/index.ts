@@ -3804,3 +3804,29 @@ verificarCandidatosConcluidoEmLote().finally(() => {
   bootstrap()
 })
 instalarCapturaEventoConcluidoEmLote()
+
+// Quando o Chrome restaura a página do cache de navegação (botão voltar/avançar do navegador,
+// `pageshow` com `persisted: true`) depois do usuário ter saído com o Kanban ativo, o DOM
+// restaurado pode trazer o botão "Visão Kanban" e/ou as tabelas nativas ainda no estado
+// escondido de antes, mas o guard de `montarKanban` (`#seirmg-kanban-btn-ativar` já existe`)
+// impede a criação de um botão novo — o resultado é a tela ficar em branco, sem nada clicável.
+// Reseta tudo pro estado padrão (tabelas visíveis, sem board, sem botão antigo) e remonta do zero.
+window.addEventListener('pageshow', (evento) => {
+  if (!evento.persisted) return
+  try {
+    document.getElementById('seirmg-kanban-container')?.remove()
+    document.getElementById('seirmg-kanban-btn-ativar')?.remove()
+    btnVisaoKanban = null
+    kanbanAtivo = false
+    mostrarTabelasKanban()
+
+    createSyncConfigStore()
+      .get()
+      .then((config) => montarKanban(config))
+      .catch((error) => {
+        console.error('[SEIRMG] Falha ao remontar botão do Kanban após restauração de cache:', error)
+      })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao recuperar o Kanban após restauração de cache do navegador:', error)
+  }
+})
