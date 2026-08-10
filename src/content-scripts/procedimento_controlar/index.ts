@@ -3469,7 +3469,11 @@ function montarCardElementoKanban(card: CardKanbanComOrigem, favoritado: boolean
     if (alvo.closest('.seirmg-favorito-estrela, .seirmg-kanban-card-copiar, .seirmg-kanban-card-remover-lista')) {
       return
     }
-    const checkbox = card.linhaNativa.querySelector<HTMLInputElement>('input.infraCheckbox')
+    // O SEI embrulha o checkbox num <div class="infraCheckboxDiv"> via script próprio depois do
+    // carregamento da página, e nesse processo a classe do <input> deixa de ser exatamente
+    // "infraCheckbox" -- selecionar por type="checkbox" é resistente a esse tipo de mudança (só
+    // existe um checkbox por linha, então não precisa de seletor mais específico).
+    const checkbox = card.linhaNativa.querySelector<HTMLInputElement>('input[type="checkbox"]')
     if (!checkbox) return
     checkbox.click()
     elemento.classList.toggle('seirmg-kanban-card-selecionado', checkbox.checked)
