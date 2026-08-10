@@ -194,6 +194,43 @@
   de novo), importar JSON (ignora, não sobrescreve, favoritos cujo número já existe), exportar CSV (lê direto
   a `<table>` já renderizada na tela — mesma técnica do Sei Pro — com escape de campo de verdade, diferente
   do original). ⚠️ Pendente de validação manual numa instância SEI real.
+- **Lote S — Kanban de Processos** — spec `docs/superpowers/specs/2026-08-10-seirmg-lote-s-kanban-design.md`,
+  plano `docs/superpowers/plans/2026-08-10-seirmg-lote-s-kanban.md`. Pedido direto do usuário, usando como
+  referência a extensão de terceiro `C:\sei\seikaban` ("SEI Kanban por Etiquetas") e corrigindo 4 problemas
+  dela: sem ícone na aba de Opções, marcador calculado mas nunca desenhado no card, Recebidos/Gerados
+  misturados numa coluna só por etiqueta, e domínio único hardcoded (resolvido de graça por já rodar como
+  bloco do `procedimento_controlar/index.ts`, que já casa com qualquer SEI). Board com 3 colunas automáticas
+  (Recebidos/Gerados/Favoritos, pertencimento exclusivo via `calcularColuna`: posição manual > favoritado >
+  origem, nunca combina) + N listas criadas pelo usuário (criar/renomear/excluir direto no board), drag-and-drop
+  nativo HTML5 (sem dependência nova), card com chip colorido do marcador (reaproveita `obterMarcadoresDaLinha`,
+  relocado de `index.ts` pra `favoritosRender.ts` pra virar reusável) + botão de copiar número + estrela de
+  favoritar. Implementado via subagent-driven-development (12 tarefas, cada uma com revisão de task + fix loop
+  quando necessário). Duas correções de escopo decididas durante a implementação: (1) nível de acesso/data-hora/
+  unidade geradora cortados do card — a referência só resolve esses 3 campos por heurística de célula/imagem sem
+  seletor validado, decisão do usuário foi não portar a adivinhação; (2) botão de copiar número (que a spec já
+  pedia) tinha ficado de fora do plano original, adicionado antes da Task 8. **Revisão final (Opus) encontrou 1
+  Critical + 4 Important, todos corrigidos numa única rodada de fix (commit `b5184c5`) e re-revisados limpos:**
+  o container do board nascia inserido dentro do mesmo `div[id*="divTabela"]` que `esconderTabelasKanban` acabava
+  de esconder (board invisível — corrigido inserindo em `#divInfraAreaTelaD`, mesma âncora do botão "Visão
+  Kanban"); filtros da toolbar não eram reaplicados depois de um re-render por drag/lista/favoritar (corrigido
+  com referência module-level `aplicarFiltrosKanbanAtual`, chamada no fim de `renderizarColunasKanban`); config
+  salvo antes deste lote não tem `.kanban` (mesma classe de bug já vista no Lote A/checagem oportunista acima —
+  `store.get()` não faz merge com `DEFAULT_SYNC_CONFIG`) e travava o botão Salvar da aba Kanban pra qualquer
+  usuário existente (corrigido com fallback explícito); `listaId` órfão (lista excluída numa aba enquanto outra
+  aba, com o board aberto, ainda arrasta pra ela via `chrome.storage.sync`) fazia o card sumir de todas as
+  colunas em vez de voltar ao automático (corrigido filtrando posições órfãs antes de agrupar); e
+  `salvarListasKanban` sobrescrevia `listas`/`posicoes` inteiras a partir de um closure potencialmente obsoleto
+  em vez de read-modify-write como `moverCardKanban` já fazia (corrigido, mesmo padrão nos dois agora). 14 achados
+  Minor ficaram deferidos (não bloqueiam merge) — entre eles: extrair o agrupamento de cards por coluna
+  (`index.ts` ~3460-3474) pra `kanban.ts` como função pura testável (é a única lacuna de teste real do lote,
+  drag-and-drop/render de coluna legitimamente não têm teste); duplicação entre `esconderTabelasKanban`/
+  `mostrarTabelasKanban`; contadores de coluna não descontam o filtro ativo; botão "Visão Kanban" aparece mesmo
+  na visão "Detalhado" (que não tem Recebidos/Gerados); rolagem infinita não alimenta linhas novas pro board.
+  ⚠️ **Pendente de validação manual numa instância SEI real** — nenhuma das 12 revisões de tarefa nem a revisão
+  final tinham como enxergar o bug do container invisível (Critical acima) sem um browser de verdade; é
+  exatamente o tipo de risco que só aparece ao vivo, mesmo padrão já visto nos Lotes F/G/K/I/Q deste roteiro.
+  `index.ts` passou de ~3.000 pra ~3.750 linhas — próximo lote que mexer nessa página é candidato natural pra
+  quebrar o arquivo por feature, não como dívida deste lote.
 
 ## Roteiro (ordem sugerida)
 
