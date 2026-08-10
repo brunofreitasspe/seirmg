@@ -91,6 +91,14 @@ import {
   montarLinhaCsv,
 } from '../../features/controle-processos/favoritosExportar'
 import { atualizarSnapshotPrazos, type LinhaVisivelComPrazo } from '../../features/dashboard/snapshotPrazos'
+import {
+  calcularColuna,
+  linhaNaoRecebida,
+  linhaTemDocumentoAlterado,
+  ordenarListas,
+  type ColunaKanban,
+  type OrigemAutomatica,
+} from '../../features/controle-processos/kanban'
 import type { FavoritoProcesso, SnapshotFavorito } from '../../lib/storage'
 import starIconSvg from 'lucide-static/icons/star.svg?raw'
 import starOffIconSvg from 'lucide-static/icons/star-off.svg?raw'
@@ -104,6 +112,7 @@ import fileSpreadsheetIconSvg from 'lucide-static/icons/file-spreadsheet.svg?raw
 import kanbanIconSvg from 'lucide-static/icons/kanban.svg?raw'
 import searchIconSvg from 'lucide-static/icons/search.svg?raw'
 import maximizeIconSvg from 'lucide-static/icons/maximize-2.svg?raw'
+import copyIconSvg from 'lucide-static/icons/copy.svg?raw'
 
 const IDS_TABELAS = ['#tblProcessosDetalhado', '#tblProcessosGerados', '#tblProcessosRecebidos']
 
@@ -605,6 +614,16 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     font-weight: 600;
     cursor: pointer;
   }
+
+  .seirmg-kanban-card-copiar {
+    cursor: pointer;
+    color: #8892a0;
+    display: inline-flex;
+    align-items: center;
+    position: relative;
+  }
+  .seirmg-kanban-card-copiar svg { width: 13px; height: 13px; }
+  .seirmg-kanban-card-copiar:hover { color: #017fff; }
 `
 
 function injetarEstilos(): void {
@@ -3233,6 +3252,190 @@ function montarKanban(config: SyncConfig): void {
   }
 }
 
+interface CardKanbanComOrigem {
+  numero: string
+  origem: OrigemAutomatica
+  favorito: FavoritoProcesso
+  dados: DadosCardKanban
+  linhaNativa: Element
+}
+
+function montarDadosCardKanban(linha: Element, agoraIso: string): CardKanbanComOrigem | null {
+  try {
+    const favorito = extrairFavoritoDaLinha(linha, agoraIso)
+    if (!favorito) return null
+
+    const processo = linha.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')
+    const onmouseover = processo?.getAttribute('onmouseover') ?? ''
+    const especificacao = onmouseover ? extrairEspecificacaoParaExibicao(onmouseover) : ''
+    const tipoProcesso = onmouseover ? extrairTipoProcesso(onmouseover) : ''
+    const prazo = obterControleDePrazoDaLinha(linha)
+
+    return {
+      numero: favorito.numero,
+      origem: linha.closest('#tblProcessosGerados') ? 'gerados' : 'recebidos',
+      favorito,
+      linhaNativa: linha,
+      dados: {
+        numero: favorito.numero,
+        tipoProcesso: tipoProcesso || null,
+        especificacao: especificacao || null,
+        marcadores: obterMarcadoresDaLinha(linha),
+        atribuicao: obterTextoAtribuido(linha),
+        prazoTexto: prazo?.dataTexto ?? null,
+        documentoAlterado: linhaTemDocumentoAlterado(linha),
+        naoRecebido: linhaNaoRecebida(linha),
+      },
+    }
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao montar dados do card do Kanban:', error)
+    return null
+  }
+}
+
+const ROTULOS_COLUNA_AUTOMATICA: Record<'recebidos' | 'gerados' | 'favoritos', string> = {
+  recebidos: 'Recebidos',
+  gerados: 'Gerados',
+  favoritos: 'Favoritos',
+}
+
+function chaveDeColuna(coluna: ColunaKanban): string {
+  return coluna.tipo === 'automatica' ? `automatica:${coluna.chave}` : `lista:${coluna.id}`
+}
+
+function montarCardElementoKanban(card: CardKanbanComOrigem, favoritado: boolean): HTMLElement {
+  const elemento = document.createElement('div')
+  elemento.className = 'seirmg-kanban-card'
+  elemento.draggable = true
+  elemento.dataset.numero = card.numero
+
+  const header = document.createElement('div')
+  header.className = 'seirmg-kanban-card-header'
+  const numero = document.createElement('span')
+  numero.className = 'seirmg-kanban-card-numero'
+  numero.textContent = card.numero
+  header.appendChild(numero)
+
+  const botaoCopiar = document.createElement('span')
+  botaoCopiar.className = 'seirmg-kanban-card-copiar'
+  botaoCopiar.innerHTML = copyIconSvg
+  botaoCopiar.title = 'Copiar número do processo'
+  botaoCopiar.addEventListener('click', (evento) => {
+    evento.stopPropagation()
+    navigator.clipboard
+      .writeText(card.numero)
+      .then(() => {
+        const tooltip = document.createElement('div')
+        tooltip.className = 'seirmg-tooltip-copiado'
+        tooltip.textContent = 'Copiado!'
+        botaoCopiar.appendChild(tooltip)
+        setTimeout(() => tooltip.remove(), 1000)
+      })
+      .catch((error) => {
+        console.error('[SEIRMG] Falha ao copiar número do processo:', error)
+      })
+  })
+  header.appendChild(botaoCopiar)
+
+  const acoes = document.createElement('div')
+  acoes.className = 'seirmg-kanban-card-acoes'
+  acoes.appendChild(criarEstrela(card.favorito, favoritado))
+  header.appendChild(acoes)
+
+  elemento.appendChild(header)
+  elemento.appendChild(montarConteudoCardKanban(card.dados))
+
+  elemento.addEventListener('click', (evento) => {
+    if ((evento.target as HTMLElement).closest('.seirmg-favorito-estrela, .seirmg-kanban-card-copiar')) return
+    card.linhaNativa.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')?.click()
+  })
+
+  elemento.addEventListener('dragstart', (evento) => {
+    evento.dataTransfer?.setData('text/plain', card.numero)
+  })
+
+  return elemento
+}
+
+function renderizarColunasKanban(config: SyncConfig, container: HTMLElement): void {
+  try {
+    const antigo = document.getElementById('seirmg-kanban-colunas-wrapper')
+    antigo?.remove()
+
+    const wrapper = document.createElement('div')
+    wrapper.id = 'seirmg-kanban-colunas-wrapper'
+
+    const agoraIso = new Date().toISOString()
+    const linhasRecebidos = linhasDaTabela('#tblProcessosRecebidos')
+    const linhasGerados = linhasDaTabela('#tblProcessosGerados')
+    const cards = [...linhasRecebidos, ...linhasGerados]
+      .map((linha) => montarDadosCardKanban(linha, agoraIso))
+      .filter((card): card is CardKanbanComOrigem => card !== null)
+
+    const idsFavoritados = new Set(itensFavoritados.map((item) => item.numero))
+    const posicoesPorNumero = new Map(
+      config.controleProcessos.kanban.posicoes.map((posicao) => [posicao.numero, posicao.listaId])
+    )
+
+    const cardsPorColuna = new Map<string, { coluna: ColunaKanban; cards: CardKanbanComOrigem[] }>()
+    cards.forEach((card) => {
+      const favoritado = idsFavoritados.has(card.numero)
+      const coluna = calcularColuna(card.origem, favoritado, posicoesPorNumero.get(card.numero) ?? null)
+      const chave = chaveDeColuna(coluna)
+      const grupo = cardsPorColuna.get(chave) ?? { coluna, cards: [] }
+      grupo.cards.push(card)
+      cardsPorColuna.set(chave, grupo)
+    })
+
+    ;(['recebidos', 'gerados', 'favoritos'] as const).forEach((chaveAutomatica) => {
+      const chave = `automatica:${chaveAutomatica}`
+      const grupo = cardsPorColuna.get(chave) ?? {
+        coluna: { tipo: 'automatica', chave: chaveAutomatica } as ColunaKanban,
+        cards: [],
+      }
+      wrapper.appendChild(
+        montarColunaKanban(ROTULOS_COLUNA_AUTOMATICA[chaveAutomatica], grupo.cards, idsFavoritados, null)
+      )
+    })
+
+    ordenarListas(config.controleProcessos.kanban.listas).forEach((lista) => {
+      const grupo = cardsPorColuna.get(`lista:${lista.id}`) ?? { coluna: { tipo: 'lista', id: lista.id }, cards: [] }
+      wrapper.appendChild(montarColunaKanban(lista.nome, grupo.cards, idsFavoritados, lista.id))
+    })
+
+    container.appendChild(wrapper)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao renderizar colunas do Kanban:', error)
+  }
+}
+
+function montarColunaKanban(
+  nome: string,
+  cards: CardKanbanComOrigem[],
+  idsFavoritados: Set<string>,
+  listaId: string | null
+): HTMLElement {
+  const coluna = document.createElement('div')
+  coluna.className = 'seirmg-kanban-coluna'
+  if (listaId) coluna.dataset.listaId = listaId
+
+  const header = document.createElement('div')
+  header.className = 'seirmg-kanban-coluna-header'
+  const nomeEl = document.createElement('span')
+  nomeEl.textContent = `${nome} (${cards.length})`
+  header.appendChild(nomeEl)
+  coluna.appendChild(header)
+
+  const lista = document.createElement('div')
+  lista.className = 'seirmg-kanban-coluna-lista'
+  cards.forEach((card) => {
+    lista.appendChild(montarCardElementoKanban(card, idsFavoritados.has(card.numero)))
+  })
+  coluna.appendChild(lista)
+
+  return coluna
+}
+
 function iniciarKanban(config: SyncConfig): void {
   try {
     if (kanbanAtivo || document.getElementById('seirmg-kanban-container')) return
@@ -3261,6 +3464,8 @@ function iniciarKanban(config: SyncConfig): void {
     tituloWrapper.appendChild(btnVoltar)
 
     container.appendChild(tituloWrapper)
+
+    renderizarColunasKanban(config, container)
 
     const primeiroQuadro = document.querySelector('#tblProcessosRecebidos') ?? document.querySelector('table')
     if (primeiroQuadro?.parentElement) {
