@@ -3278,6 +3278,23 @@ function mostrarTabelasKanban(): void {
   }
 }
 
+function persistirVisaoKanbanAtiva(ativa: boolean): void {
+  createLocalConfigStore()
+    .get()
+    .then((localConfig) => createLocalConfigStore().set({ ...localConfig, kanbanVisaoAtiva: ativa }))
+    .catch((error) => {
+      console.error('[SEIRMG] Falha ao salvar preferência de Visão Kanban:', error)
+    })
+}
+
+// Ativa o board e lembra a preferência (LocalConfig) pra reabrir sozinho na próxima navegação --
+// reaproveitado tanto pelo clique manual no botão quanto pela restauração automática no bootstrap.
+function ativarVisaoKanban(config: SyncConfig): void {
+  if (btnVisaoKanban) btnVisaoKanban.style.display = 'none'
+  iniciarKanban(config)
+  persistirVisaoKanbanAtiva(true)
+}
+
 function montarKanban(config: SyncConfig): void {
   try {
     if (!config.controleProcessos.kanban?.ativo) return
@@ -3288,14 +3305,19 @@ function montarKanban(config: SyncConfig): void {
     btnVisaoKanban = document.createElement('button')
     btnVisaoKanban.id = 'seirmg-kanban-btn-ativar'
     btnVisaoKanban.innerHTML = `${kanbanIconSvg}<span>Visão Kanban</span>`
-    btnVisaoKanban.addEventListener('click', () => {
-      if (!btnVisaoKanban) return
-      btnVisaoKanban.style.display = 'none'
-      iniciarKanban(config)
-    })
+    btnVisaoKanban.addEventListener('click', () => ativarVisaoKanban(config))
 
     const primeiroElemento = document.querySelector('#divInfraAreaTelaD') ?? document.body
     primeiroElemento.insertBefore(btnVisaoKanban, primeiroElemento.firstChild)
+
+    createLocalConfigStore()
+      .get()
+      .then((localConfig) => {
+        if (localConfig.kanbanVisaoAtiva) ativarVisaoKanban(config)
+      })
+      .catch((error) => {
+        console.error('[SEIRMG] Falha ao restaurar preferência de Visão Kanban:', error)
+      })
   } catch (error) {
     console.error('[SEIRMG] Falha ao montar o botão do Kanban:', error)
   }
@@ -3745,6 +3767,7 @@ function iniciarKanban(config: SyncConfig): void {
       container.remove()
       mostrarTabelasKanban()
       if (btnVisaoKanban) btnVisaoKanban.style.display = ''
+      persistirVisaoKanbanAtiva(false)
     })
     tituloWrapper.appendChild(btnVoltar)
 
@@ -3848,8 +3871,17 @@ function iniciarKanban(config: SyncConfig): void {
 
     renderizarColunasKanban(config, container)
 
-    const primeiroElemento = document.querySelector('#divInfraAreaTelaD') ?? document.body
-    primeiroElemento.appendChild(container)
+    // Insere como IRMÃ de #divTabelaProcesso (não como filha de #divInfraAreaTelaD, que fica
+    // depois do formulário inteiro) -- #divTabelaProcesso é quem tem flex-grow-1 dentro do layout
+    // flex-column de altura 100% da página; inserir fora dele deixava um vão vazio enorme (o
+    // espaço reservado que sobra quando ela é escondida) antes do board aparecer, bem mais abaixo.
+    const divTabelaProcesso = document.querySelector('#tblProcessosRecebidos')?.closest('div[id*="divTabela"]')
+    if (divTabelaProcesso?.parentElement) {
+      divTabelaProcesso.parentElement.insertBefore(container, divTabelaProcesso)
+    } else {
+      const primeiroElemento = document.querySelector('#divInfraAreaTelaD') ?? document.body
+      primeiroElemento.appendChild(container)
+    }
   } catch (error) {
     console.error('[SEIRMG] Falha ao iniciar o Kanban:', error)
   }

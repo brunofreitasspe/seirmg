@@ -282,6 +282,9 @@ export interface LocalConfig {
   sessaoInvalidaAte?: string
   atalhoPublicacoesDisponivel?: boolean
   planka?: PlankaConfig
+  // Preferência do usuário por manter a Visão Kanban ativa entre navegações (F5, sair e voltar
+  // pro Controle de Processos) — sem isso, cada carregamento de página volta pra tabela nativa.
+  kanbanVisaoAtiva?: boolean
 }
 
 export const DEFAULT_SYNC_CONFIG: SyncConfig = {
