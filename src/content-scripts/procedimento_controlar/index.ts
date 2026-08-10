@@ -95,6 +95,7 @@ import {
   calcularColuna,
   linhaNaoRecebida,
   linhaTemDocumentoAlterado,
+  montarPosicoesAtualizadas,
   ordenarListas,
   type ColunaKanban,
   type OrigemAutomatica,
@@ -3303,7 +3304,28 @@ function chaveDeColuna(coluna: ColunaKanban): string {
   return coluna.tipo === 'automatica' ? `automatica:${coluna.chave}` : `lista:${coluna.id}`
 }
 
-function montarCardElementoKanban(card: CardKanbanComOrigem, favoritado: boolean): HTMLElement {
+async function moverCardKanban(numero: string, listaId: string | null): Promise<void> {
+  try {
+    const store = createSyncConfigStore()
+    const atual = await store.get()
+    const posicoes = montarPosicoesAtualizadas(atual.controleProcessos.kanban.posicoes, numero, listaId)
+    const atualizado = {
+      ...atual,
+      controleProcessos: {
+        ...atual.controleProcessos,
+        kanban: { ...atual.controleProcessos.kanban, posicoes },
+      },
+    }
+    await store.set(atualizado)
+
+    const container = document.getElementById('seirmg-kanban-container')
+    if (container) renderizarColunasKanban(atualizado, container)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao mover card do Kanban:', error)
+  }
+}
+
+function montarCardElementoKanban(card: CardKanbanComOrigem, favoritado: boolean, listaId: string | null): HTMLElement {
   const elemento = document.createElement('div')
   elemento.className = 'seirmg-kanban-card'
   elemento.draggable = true
@@ -3341,6 +3363,20 @@ function montarCardElementoKanban(card: CardKanbanComOrigem, favoritado: boolean
   acoes.className = 'seirmg-kanban-card-acoes'
   acoes.appendChild(criarEstrela(card.favorito, favoritado))
   header.appendChild(acoes)
+
+  if (listaId) {
+    const remover = document.createElement('span')
+    remover.className = 'seirmg-kanban-card-remover-lista'
+    remover.textContent = '×'
+    remover.title = 'Voltar ao automático'
+    remover.addEventListener('click', (evento) => {
+      evento.stopPropagation()
+      moverCardKanban(card.numero, null).catch((error) => {
+        console.error('[SEIRMG] Falha ao remover card da lista:', error)
+      })
+    })
+    acoes.appendChild(remover)
+  }
 
   elemento.appendChild(header)
   elemento.appendChild(montarConteudoCardKanban(card.dados))
@@ -3429,9 +3465,29 @@ function montarColunaKanban(
   const lista = document.createElement('div')
   lista.className = 'seirmg-kanban-coluna-lista'
   cards.forEach((card) => {
-    lista.appendChild(montarCardElementoKanban(card, idsFavoritados.has(card.numero)))
+    lista.appendChild(montarCardElementoKanban(card, idsFavoritados.has(card.numero), listaId))
   })
   coluna.appendChild(lista)
+
+  if (listaId) {
+    lista.addEventListener('dragover', (evento) => {
+      evento.preventDefault()
+      lista.classList.add('seirmg-kanban-arrastando-sobre')
+    })
+    lista.addEventListener('dragleave', () => {
+      lista.classList.remove('seirmg-kanban-arrastando-sobre')
+    })
+    lista.addEventListener('drop', (evento) => {
+      evento.preventDefault()
+      lista.classList.remove('seirmg-kanban-arrastando-sobre')
+      const numero = evento.dataTransfer?.getData('text/plain')
+      if (numero) {
+        moverCardKanban(numero, listaId).catch((error) => {
+          console.error('[SEIRMG] Falha ao mover card via drag-and-drop:', error)
+        })
+      }
+    })
+  }
 
   return coluna
 }
