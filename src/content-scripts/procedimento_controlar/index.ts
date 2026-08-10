@@ -587,6 +587,8 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     flex-direction: column;
     gap: 6px;
     overflow-y: auto;
+    flex: 1 1 auto;
+    min-height: 60px;
   }
   .seirmg-kanban-coluna-lista.seirmg-kanban-arrastando-sobre {
     outline: 2px dashed #017fff;
