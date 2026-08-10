@@ -94,6 +94,7 @@ import { atualizarSnapshotPrazos, type LinhaVisivelComPrazo } from '../../featur
 import {
   calcularColuna,
   criarLista,
+  extrairAnoProcesso,
   linhaNaoRecebida,
   linhaTemDocumentoAlterado,
   montarPosicoesAtualizadas,
@@ -117,6 +118,8 @@ import kanbanIconSvg from 'lucide-static/icons/kanban.svg?raw'
 import searchIconSvg from 'lucide-static/icons/search.svg?raw'
 import maximizeIconSvg from 'lucide-static/icons/maximize-2.svg?raw'
 import copyIconSvg from 'lucide-static/icons/copy.svg?raw'
+import inboxIconSvg from 'lucide-static/icons/inbox.svg?raw'
+import triangleAlertIconSvg from 'lucide-static/icons/triangle-alert.svg?raw'
 
 const IDS_TABELAS = ['#tblProcessosDetalhado', '#tblProcessosGerados', '#tblProcessosRecebidos']
 
@@ -524,14 +527,30 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     flex-wrap: wrap;
     margin-bottom: 12px;
   }
-  #seirmg-kanban-pesquisa {
-    padding: 6px 10px;
-    font-size: 12px;
+  #seirmg-kanban-busca {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
     border: 1px solid #ccc;
     border-radius: 4px;
+    padding: 0 8px;
     min-width: 220px;
     flex: 1;
     max-width: 360px;
+  }
+  #seirmg-kanban-busca svg {
+    width: 14px;
+    height: 14px;
+    color: #888;
+    flex-shrink: 0;
+  }
+  #seirmg-kanban-pesquisa {
+    padding: 6px 4px;
+    font-size: 12px;
+    border: none;
+    outline: none;
+    flex: 1;
+    min-width: 0;
   }
   #seirmg-kanban-colunas-wrapper {
     display: flex;
@@ -3333,6 +3352,9 @@ function montarCardElementoKanban(card: CardKanbanComOrigem, favoritado: boolean
   elemento.className = 'seirmg-kanban-card'
   elemento.draggable = true
   elemento.dataset.numero = card.numero
+  elemento.dataset.naoRecebido = card.dados.naoRecebido ? 'true' : 'false'
+  elemento.dataset.documentoAlterado = card.dados.documentoAlterado ? 'true' : 'false'
+  elemento.dataset.ano = extrairAnoProcesso(card.numero) ?? ''
 
   const header = document.createElement('div')
   header.className = 'seirmg-kanban-card-header'
@@ -3596,6 +3618,100 @@ function iniciarKanban(config: SyncConfig): void {
     tituloWrapper.appendChild(btnVoltar)
 
     container.appendChild(tituloWrapper)
+
+    const controles = document.createElement('div')
+    controles.id = 'seirmg-kanban-controles'
+
+    const buscaWrapper = document.createElement('div')
+    buscaWrapper.id = 'seirmg-kanban-busca'
+    buscaWrapper.innerHTML = searchIconSvg
+
+    const inputPesquisa = document.createElement('input')
+    inputPesquisa.id = 'seirmg-kanban-pesquisa'
+    inputPesquisa.type = 'text'
+    inputPesquisa.placeholder = 'Pesquisar processos...'
+    inputPesquisa.addEventListener('input', () => aplicarFiltrosKanban())
+    buscaWrapper.appendChild(inputPesquisa)
+    controles.appendChild(buscaWrapper)
+
+    const anosSelecionados = new Set<string>()
+    const anosPresentes = new Set(
+      [...linhasDaTabela('#tblProcessosRecebidos'), ...linhasDaTabela('#tblProcessosGerados')]
+        .map((linha) => linha.querySelector<HTMLElement>('.processoVisualizado, .processoNaoVisualizado')?.textContent?.trim())
+        .filter((numero): numero is string => !!numero)
+        .map((numero) => extrairAnoProcesso(numero))
+        .filter((ano): ano is string => ano !== null)
+    )
+    Array.from(anosPresentes)
+      .sort((a, b) => Number(b) - Number(a))
+      .forEach((ano) => {
+        const chip = document.createElement('button')
+        chip.className = 'seirmg-kanban-btn'
+        chip.textContent = ano
+        chip.dataset.ativo = 'false'
+        chip.addEventListener('click', () => {
+          const ativo = chip.dataset.ativo === 'true'
+          chip.dataset.ativo = ativo ? 'false' : 'true'
+          if (ativo) anosSelecionados.delete(ano)
+          else anosSelecionados.add(ano)
+          aplicarFiltrosKanban()
+        })
+        controles.appendChild(chip)
+      })
+
+    const btnNaoRecebido = document.createElement('button')
+    btnNaoRecebido.className = 'seirmg-kanban-btn'
+    btnNaoRecebido.innerHTML = `${inboxIconSvg}<span>Não recebido</span>`
+    btnNaoRecebido.dataset.ativo = 'false'
+    btnNaoRecebido.addEventListener('click', () => {
+      btnNaoRecebido.dataset.ativo = btnNaoRecebido.dataset.ativo === 'true' ? 'false' : 'true'
+      aplicarFiltrosKanban()
+    })
+    controles.appendChild(btnNaoRecebido)
+
+    const btnDocAlterado = document.createElement('button')
+    btnDocAlterado.className = 'seirmg-kanban-btn'
+    btnDocAlterado.innerHTML = `${triangleAlertIconSvg}<span>Documento alterado</span>`
+    btnDocAlterado.dataset.ativo = 'false'
+    btnDocAlterado.addEventListener('click', () => {
+      btnDocAlterado.dataset.ativo = btnDocAlterado.dataset.ativo === 'true' ? 'false' : 'true'
+      aplicarFiltrosKanban()
+    })
+    controles.appendChild(btnDocAlterado)
+
+    const btnMaximizar = document.createElement('button')
+    btnMaximizar.className = 'seirmg-kanban-btn'
+    btnMaximizar.innerHTML = `${maximizeIconSvg}<span>Maximizar</span>`
+    btnMaximizar.dataset.maximizado = 'false'
+    btnMaximizar.addEventListener('click', () => {
+      const maximizado = btnMaximizar.dataset.maximizado === 'true'
+      btnMaximizar.dataset.maximizado = maximizado ? 'false' : 'true'
+      container.style.position = maximizado ? '' : 'fixed'
+      container.style.inset = maximizado ? '' : '0'
+      container.style.zIndex = maximizado ? '' : '9999'
+      container.style.overflow = maximizado ? '' : 'auto'
+      container.style.margin = maximizado ? '' : '0'
+      container.style.borderRadius = maximizado ? '' : '0'
+    })
+    controles.appendChild(btnMaximizar)
+
+    container.appendChild(controles)
+
+    function aplicarFiltrosKanban(): void {
+      const termo = inputPesquisa.value.toLowerCase().trim()
+      const filtroNaoRecebido = btnNaoRecebido.dataset.ativo === 'true'
+      const filtroDocAlterado = btnDocAlterado.dataset.ativo === 'true'
+
+      document.querySelectorAll<HTMLElement>('.seirmg-kanban-card').forEach((card) => {
+        const textoCard = card.textContent?.toLowerCase() ?? ''
+        const mostrarPorPesquisa = !termo || textoCard.includes(termo)
+        const mostrarPorNaoRecebido = !filtroNaoRecebido || card.dataset.naoRecebido === 'true'
+        const mostrarPorDocAlterado = !filtroDocAlterado || card.dataset.documentoAlterado === 'true'
+        const mostrarPorAno = anosSelecionados.size === 0 || anosSelecionados.has(card.dataset.ano ?? '')
+        card.style.display =
+          mostrarPorPesquisa && mostrarPorNaoRecebido && mostrarPorDocAlterado && mostrarPorAno ? '' : 'none'
+      })
+    }
 
     renderizarColunasKanban(config, container)
 
