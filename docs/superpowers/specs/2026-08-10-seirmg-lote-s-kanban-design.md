@@ -51,10 +51,14 @@ suficiente; não há nenhum trabalho extra de generalização de domínio a faze
     colunas-alvo de drop (não é uma decisão do usuário, é fato do SEI). `Favoritos` também não é
     alvo de drop — só a ação de favoritar (já existente) move um card pra lá.
 - Card mostra: número (com botão copiar), **chip colorido do marcador** (nome + cor, corrigindo o
-  ponto 2), tipo/especificação, badges (⚠️ documento incluído/assinado, nível de acesso, não
-  recebido), data/hora, unidade geradora, atribuição — mesmo conjunto de campos que a referência
-  já extrai, só que exibindo o marcador que ela calculava e descartava. Também leva a estrela de
-  favoritar/desfavoritar (já existente) — é o único jeito de mover um card pra/de `Favoritos`.
+  ponto 2), tipo/especificação, badges (⚠️ documento incluído/assinado, não recebido), prazo,
+  atribuição. **Nível de acesso, data/hora e unidade geradora ficam de fora do card** — a
+  referência só resolve esses 3 campos por heurística de célula/imagem ("tenta achar uma célula
+  que parece com isso"), e o SEIRMG não tem hoje um seletor próprio validado pra eles; decisão
+  tomada durante a implementação (revisão da Task 3) foi não portar a adivinhação da referência,
+  em vez de arriscar mostrar dado errado no card. Pode ser revisitado depois se alguém validar
+  seletores reais numa instância SEI. Também leva a estrela de favoritar/desfavoritar (já
+  existente) — é o único jeito de mover um card pra/de `Favoritos`.
 - Toolbar do board: pesquisa em tempo real, filtro por ano, filtro "Não recebido", filtro
   "documento alterado", "Maximizar", "+ Nova lista" — portados da referência (mesma lógica de
   filtro combinado em AND), com ícones Lucide (consistente com o resto do projeto).
@@ -123,16 +127,22 @@ export function removerLista(
   id: string
 ): { listas: KanbanLista[]; posicoes: KanbanCardPosicao[] }
 
-export function extrairCorMarcador(srcImagem: string): string // porta extrairCorDoSvg do seikaban
+export function linhaNaoRecebida(linha: Element): boolean
+export function linhaTemDocumentoAlterado(linha: Element): boolean
+export function extrairAnoProcesso(numero: string): string | null
 ```
 
 - `calcularColuna`/`montarPosicoesAtualizadas`/`criarLista`/`renomearLista`/`removerLista`: sem
   DOM, só dados — mesmo padrão de `agrupamento.ts`/`favoritos.ts`, testáveis isoladamente.
-- `extrairCorMarcador`: porta o mapeamento nome-de-cor-no-arquivo → hex que já existe e funciona
-  na referência (`seikaban/content-script.js:662-695`); função pura de string → string, mesmo
-  formato de teste que `extrairTipoProcesso`/`extrairTextoPontoControle` já têm em
-  `agrupamento.test.ts`. Nome do marcador reaproveita `extrairNomeMarcador`, já existente em
-  `agrupamento.ts` — nenhuma duplicação aí.
+- `linhaNaoRecebida`/`linhaTemDocumentoAlterado`/`extrairAnoProcesso`: extratores de linha com
+  seletor real (não heurística de "qual célula pode ser isso") — ver seção 3 abaixo pra por que
+  nível de acesso/data-hora/unidade geradora não têm função equivalente.
+- Cor e nome do marcador **não** precisam de extração nova: `obterMarcadoresDaLinha`
+  (`features/controle-processos/favoritosRender.ts`, já existente — ver seção 4) já devolve nome,
+  estilo (cor real do SEI) e ícone nativo por marcador, prontos pra desenhar o chip. Não há
+  `extrairCorMarcador`/porta de `extrairCorDoSvg` do seikaban — essa era a ideia original antes
+  de eu achar que o SEIRMG já resolve isso melhor (estilo/ícone nativos, não um mapeamento de
+  nome-de-arquivo-pra-hex).
 - Ids de lista: `crypto.randomUUID()` no momento da criação (já disponível no contexto de
   extensão MV3, sem dependência nova).
 
@@ -156,15 +166,22 @@ Sincroniza entre dispositivos — mesmo tratamento de `agrupamento`/`favoritos`.
 
 ### 3. Extração de card por linha (reaproveitamento)
 
-Mesma coleta de campos que a referência já faz (`extrairEspecificacaoETipo`, `extrairDataHora`,
-`extrairNivelAcesso`, `extrairUnidadeGeradora`, `verificarNaoRecebido`, `extrairAtribuicao`,
-`extrairAnotacao`), mas adaptada aos seletores reais que o resto de
-`procedimento_controlar/index.ts` já usa e valida (não os seletores genéricos "tenta achar uma
-célula que pareça uma data" da referência) — mesmo princípio de "não reinventar o que já foi
-validado ao vivo" do resto do projeto. Número e link vêm de
+Campos com seletor real e validado, reaproveitados sem duplicar: número e link vêm de
 `.processoVisualizado`/`.processoNaoVisualizado`, igual `extrairHrefDaLinha`/
-`extrairFavoritoDaLinha` (`features/controle-processos/favoritos.ts`) já fazem — sem duplicar
-essa extração, só reaproveitar.
+`extrairFavoritoDaLinha` (`features/controle-processos/favoritos.ts`) já fazem; marcador vem de
+`obterMarcadoresDaLinha` (seção 4 abaixo); tipo/especificação vêm de `extrairTipoProcesso`/
+`extrairEspecificacaoParaExibicao`, já existentes; atribuição vem de `obterTextoAtribuido`, já
+existente; prazo vem de `obterControleDePrazoDaLinha`, já existente. "Não recebido" usa a classe
+nativa `.processoNaoVisualizado` (mais confiável que a heurística de imagem da referência).
+"Documento alterado" reaproveita o seletor direto da referência (`img[src*="exclamacao.svg"]`,
+não é uma heurística de "qual célula pode ser isso", risco baixo).
+
+**Decisão tomada durante a implementação (revisão da Task 3):** nível de acesso, data/hora e
+unidade geradora ficam de fora do card. A referência só resolve esses 3 campos por heurística de
+célula/imagem ("tenta achar uma célula que pareça uma data"), e o SEIRMG não tem hoje seletor
+próprio validado pra eles — mesmo princípio de "não reinventar o que já foi validado ao vivo" do
+resto do projeto, aplicado no sentido de "não portar o que a referência também está só
+adivinhando". Pode ser revisitado depois se alguém validar seletores reais numa instância SEI.
 
 Origem automática (`recebidos`/`gerados`): qual tabela (`#tblProcessosRecebidos` ou
 `#tblProcessosGerados`) a linha pertence — mesma checagem que `TABELAS_COM_AGRUPAMENTO`/
@@ -181,9 +198,9 @@ estiver desligado).
 
 `montarConteudoCardKanban(dados): HTMLElement` — monta número + botão copiar (mesmo padrão
 `navigator.clipboard.writeText` + tooltip "Copiado!" que `procedimento_visualizar/index.ts:421`
-já usa), chip de marcador (cor de `extrairCorMarcador`, nome de `extrairNomeMarcador`), badges,
-metadados, atribuição. Reaproveitado tanto no board principal quanto — se fizer sentido depois —
-em qualquer outro lugar que precise do mesmo card.
+já usa), chips de marcador (nome, estilo/cor e ícone nativo, um por marcador — dados de
+`obterMarcadoresDaLinha`), badges, prazo, atribuição. Reaproveitado tanto no board principal
+quanto — se fizer sentido depois — em qualquer outro lugar que precise do mesmo card.
 
 **Estrela de favorito no card**: como o Kanban esconde as tabelas nativas enquanto ativo, o card
 precisa da mesma estrela de favoritar/desfavoritar que já existe por linha (`criarEstrela`/
@@ -234,9 +251,9 @@ Gerenciamento de listas fica só no board (ver seção 5) — a tela de Opções
 sobrepõe favoritado e origem; volta ao automático quando `listaIdManual` é `null`);
 `montarPosicoesAtualizadas` (adiciona, atualiza, remove por `listaId: null`, não mexe nas outras
 entradas); `criarLista`/`renomearLista`/`removerLista` (ids únicos, ordem sequencial, remover lista
-some com ela e limpa as posições que apontavam pra ela, preserva as demais); `extrairCorMarcador`
-(mesmos casos de nome de arquivo que a referência já cobre, mais fallback pra cor neutra quando
-não reconhece).
+some com ela e limpa as posições que apontavam pra ela, preserva as demais); `linhaNaoRecebida`/
+`linhaTemDocumentoAlterado`/`extrairAnoProcesso` (seletor bate/não bate, formato de número
+válido/inválido).
 
 `storage.test.ts`: round-trip de `controleProcessos.kanban` (`ativo`/`listas`/`posicoes`), mesmo
 padrão dos demais campos de `ControleProcessosConfig`.

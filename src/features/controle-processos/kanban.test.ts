@@ -7,9 +7,6 @@ import {
   removerLista,
   renomearLista,
   extrairAnoProcesso,
-  extrairDataHoraLinha,
-  extrairNivelAcessoLinha,
-  extrairUnidadeGeradoraLinha,
   linhaNaoRecebida,
   linhaTemDocumentoAlterado,
 } from './kanban'
@@ -136,46 +133,6 @@ describe('linhaTemDocumentoAlterado', () => {
 
   it('false quando não há', () => {
     expect(linhaTemDocumentoAlterado(criarLinha('<td>sem imagem</td>'))).toBe(false)
-  })
-})
-
-describe('extrairNivelAcessoLinha', () => {
-  it('reconhece Restrito pelo título da imagem', () => {
-    expect(extrairNivelAcessoLinha(criarLinha('<td><img title="Restrito"></td>'))).toBe('Restrito')
-  })
-
-  it('reconhece Sigiloso pelo alt da imagem', () => {
-    expect(extrairNivelAcessoLinha(criarLinha('<td><img alt="Sigiloso"></td>'))).toBe('Sigiloso')
-  })
-
-  it('reconhece Público pelo src da imagem', () => {
-    expect(extrairNivelAcessoLinha(criarLinha('<td><img src="/img/publico.svg"></td>'))).toBe('Público')
-  })
-
-  it('null quando nenhuma imagem bate', () => {
-    expect(extrairNivelAcessoLinha(criarLinha('<td><img src="/img/outracoisa.svg"></td>'))).toBeNull()
-  })
-})
-
-describe('extrairDataHoraLinha', () => {
-  it('acha uma célula no formato dd/mm/yyyy', () => {
-    expect(extrairDataHoraLinha(criarLinha('<td>texto</td><td>15/08/2026 14:30</td>'))).toBe('15/08/2026 14:30')
-  })
-
-  it('null quando nenhuma célula bate o padrão', () => {
-    expect(extrairDataHoraLinha(criarLinha('<td>sem data aqui</td>'))).toBeNull()
-  })
-})
-
-describe('extrairUnidadeGeradoraLinha', () => {
-  it('pega uma célula do meio que não é número de processo nem URL', () => {
-    expect(
-      extrairUnidadeGeradoraLinha(criarLinha('<td>0021.048213/2025-07</td><td>SEPLAG/SUBSPP</td><td>final</td>'))
-    ).toBe('SEPLAG/SUBSPP')
-  })
-
-  it('null quando só há a primeira e a última célula', () => {
-    expect(extrairUnidadeGeradoraLinha(criarLinha('<td>0021.048213/2025-07</td><td>final</td>'))).toBeNull()
   })
 })
 

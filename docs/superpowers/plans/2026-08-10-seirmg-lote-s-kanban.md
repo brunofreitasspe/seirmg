@@ -415,15 +415,22 @@ git commit -m "feat(kanban): lógica pura de colunas e CRUD de listas"
 
 ### Task 3: Extratores de linha (dados que faltam no processo) — ainda em `kanban.ts`
 
-A referência (`C:\sei\seikaban\content-script.js`) já resolve esses campos; portamos a mesma
-lógica (funciona porque é a mesma base SEI), com uma exceção: **"não recebido" usa a classe
-nativa `.processoNaoVisualizado`** (já usada em `favoritos.ts`/`agrupamento.ts` neste projeto,
-mais confiável que a heurística de imagem da referência) em vez de ser portado.
+A referência (`C:\sei\seikaban\content-script.js`) resolve esses campos por heurística de
+célula/imagem ("tenta achar uma célula que parece uma data", "tenta achar uma célula do meio que
+não é o número do processo"). A spec exige seletor real e validado, não a adivinhação da
+referência (`docs/superpowers/specs/2026-08-10-seirmg-lote-s-kanban-design.md:159-167`) — e como
+o SEIRMG não tem hoje seletor próprio validado pra data/hora, nível de acesso e unidade geradora
+(decisão tomada em revisão: **esses 3 campos ficam de fora do card por enquanto**, em vez de
+portar a heurística frágil da referência), este lote implementa só o que dá pra fazer com
+seletor confiável:
 
-⚠️ `extrairDataHoraLinha`/`extrairNivelAcessoLinha`/`extrairUnidadeGeradoraLinha` são os campos
-mais frágeis (a própria referência já "adivinha" por heurística de célula/imagem) — validar
-contra uma instância SEI real antes de considerar este lote fechado (mesma ressalva que
-`docs/superpowers/specs/2026-08-10-seirmg-lote-s-kanban-design.md` já registra na seção Testes).
+- **"Não recebido"**: usa a classe nativa `.processoNaoVisualizado` (já usada em
+  `favoritos.ts`/`agrupamento.ts` neste projeto) — não é um port da referência, é mais confiável
+  que a heurística de imagem dela.
+- **"Documento alterado"**: o `img[src*="exclamacao.svg"]` da referência é mantido — é um
+  seletor direto (não uma heurística de "qual célula pode ser isso"), risco baixo.
+- **Ano do processo**: regex direto sobre o próprio número (`extrairAnoProcesso`), sem tocar em
+  célula nenhuma da tabela — também não é heurística, é parsing de uma string que a gente já tem.
 
 **Files:**
 - Modify: `src/features/controle-processos/kanban.ts`
@@ -432,9 +439,6 @@ contra uma instância SEI real antes de considerar este lote fechado (mesma ress
 **Interfaces:**
 - Produces: `linhaNaoRecebida(linha: Element): boolean`,
   `linhaTemDocumentoAlterado(linha: Element): boolean`,
-  `extrairNivelAcessoLinha(linha: Element): string | null`,
-  `extrairDataHoraLinha(linha: Element): string | null`,
-  `extrairUnidadeGeradoraLinha(linha: Element): string | null`,
   `extrairAnoProcesso(numero: string): string | null`.
 
 - [ ] **Step 1: Escrever os testes**
@@ -447,14 +451,7 @@ function criarLinha(html: string): Element {
   return doc.querySelector('tr') as Element
 }
 
-import {
-  extrairAnoProcesso,
-  extrairDataHoraLinha,
-  extrairNivelAcessoLinha,
-  extrairUnidadeGeradoraLinha,
-  linhaNaoRecebida,
-  linhaTemDocumentoAlterado,
-} from './kanban'
+import { extrairAnoProcesso, linhaNaoRecebida, linhaTemDocumentoAlterado } from './kanban'
 
 describe('linhaNaoRecebida', () => {
   it('true quando a linha tem .processoNaoVisualizado', () => {
@@ -476,46 +473,6 @@ describe('linhaTemDocumentoAlterado', () => {
   })
 })
 
-describe('extrairNivelAcessoLinha', () => {
-  it('reconhece Restrito pelo título da imagem', () => {
-    expect(extrairNivelAcessoLinha(criarLinha('<td><img title="Restrito"></td>'))).toBe('Restrito')
-  })
-
-  it('reconhece Sigiloso pelo alt da imagem', () => {
-    expect(extrairNivelAcessoLinha(criarLinha('<td><img alt="Sigiloso"></td>'))).toBe('Sigiloso')
-  })
-
-  it('reconhece Público pelo src da imagem', () => {
-    expect(extrairNivelAcessoLinha(criarLinha('<td><img src="/img/publico.svg"></td>'))).toBe('Público')
-  })
-
-  it('null quando nenhuma imagem bate', () => {
-    expect(extrairNivelAcessoLinha(criarLinha('<td><img src="/img/outracoisa.svg"></td>'))).toBeNull()
-  })
-})
-
-describe('extrairDataHoraLinha', () => {
-  it('acha uma célula no formato dd/mm/yyyy', () => {
-    expect(extrairDataHoraLinha(criarLinha('<td>texto</td><td>15/08/2026 14:30</td>'))).toBe('15/08/2026 14:30')
-  })
-
-  it('null quando nenhuma célula bate o padrão', () => {
-    expect(extrairDataHoraLinha(criarLinha('<td>sem data aqui</td>'))).toBeNull()
-  })
-})
-
-describe('extrairUnidadeGeradoraLinha', () => {
-  it('pega uma célula do meio que não é número de processo nem URL', () => {
-    expect(
-      extrairUnidadeGeradoraLinha(criarLinha('<td>0021.048213/2025-07</td><td>SEPLAG/SUBSPP</td><td>final</td>'))
-    ).toBe('SEPLAG/SUBSPP')
-  })
-
-  it('null quando só há a primeira e a última célula', () => {
-    expect(extrairUnidadeGeradoraLinha(criarLinha('<td>0021.048213/2025-07</td><td>final</td>'))).toBeNull()
-  })
-})
-
 describe('extrairAnoProcesso', () => {
   it('extrai o ano entre a barra e o hífen', () => {
     expect(extrairAnoProcesso('0021.042267/2024-10')).toBe('2024')
@@ -532,7 +489,7 @@ describe('extrairAnoProcesso', () => {
 Run: `bunx vitest run src/features/controle-processos/kanban.test.ts`
 Expected: FAIL — funções não existem ainda
 
-- [ ] **Step 3: Implementar (porta da referência, `seikaban/content-script.js:735-830`)**
+- [ ] **Step 3: Implementar**
 
 Adicionar em `kanban.ts`:
 
@@ -543,39 +500,6 @@ export function linhaNaoRecebida(linha: Element): boolean {
 
 export function linhaTemDocumentoAlterado(linha: Element): boolean {
   return !!linha.querySelector('img[src*="exclamacao.svg"]')
-}
-
-export function extrairNivelAcessoLinha(linha: Element): string | null {
-  const imagens = Array.from(linha.querySelectorAll('img'))
-  for (const img of imagens) {
-    const src = img.getAttribute('src') ?? ''
-    const title = img.getAttribute('title') ?? ''
-    const alt = img.getAttribute('alt') ?? ''
-    if (src.includes('restrito') || title.includes('Restrito') || alt.includes('Restrito')) return 'Restrito'
-    if (src.includes('sigiloso') || title.includes('Sigiloso') || alt.includes('Sigiloso')) return 'Sigiloso'
-    if (src.includes('publico') || title.includes('Público') || alt.includes('Público')) return 'Público'
-  }
-  return null
-}
-
-export function extrairDataHoraLinha(linha: Element): string | null {
-  const celulas = Array.from(linha.querySelectorAll('td'))
-  for (const celula of celulas) {
-    const texto = celula.textContent?.trim() ?? ''
-    if (/\d{2}\/\d{2}\/\d{4}/.test(texto)) return texto
-  }
-  return null
-}
-
-export function extrairUnidadeGeradoraLinha(linha: Element): string | null {
-  const celulas = Array.from(linha.querySelectorAll('td'))
-  for (let i = 1; i < celulas.length - 1; i++) {
-    const texto = celulas[i].textContent?.trim() ?? ''
-    if (texto.length > 2 && texto.length < 100 && !texto.includes('http') && !/\d{4}\.\d/.test(texto)) {
-      return texto
-    }
-  }
-  return null
 }
 
 // Padrão: 0021.042267/2024-10 — ano vem depois da barra, antes do hífen. Usado pelo filtro de
@@ -594,7 +518,7 @@ Expected: PASS
 
 ```bash
 git add src/features/controle-processos/kanban.ts src/features/controle-processos/kanban.test.ts
-git commit -m "feat(kanban): extratores de linha (não recebido, doc alterado, nível de acesso, data, unidade)"
+git commit -m "feat(kanban): extratores de linha (não recebido, doc alterado, ano do processo)"
 ```
 
 ---
@@ -807,9 +731,6 @@ export interface DadosCardKanban {
   marcadores: MarcadorFavorito[]
   atribuicao: string | null
   prazoTexto: string | null
-  dataHora: string | null
-  unidadeGeradora: string | null
-  nivelAcesso: string | null
   documentoAlterado: boolean
   naoRecebido: boolean
 }
@@ -890,9 +811,7 @@ export function montarConteudoCardKanban(dados: DadosCardKanban): HTMLElement {
     raiz.appendChild(linhaBadges)
   }
 
-  const metaPartes = [dados.dataHora, dados.unidadeGeradora, dados.nivelAcesso, dados.prazoTexto].filter(
-    (parte): parte is string => !!parte
-  )
+  const metaPartes = [dados.prazoTexto].filter((parte): parte is string => !!parte)
   if (metaPartes.length > 0) {
     const meta = document.createElement('div')
     meta.className = 'seirmg-kanban-card-meta'
@@ -1367,8 +1286,7 @@ git commit -m "feat(kanban): botão Visão Kanban e troca tabela↔board (scaffo
 - Modify: `src/content-scripts/procedimento_controlar/index.ts`
 
 **Interfaces:**
-- Consumes: `calcularColuna`, `linhaNaoRecebida`, `linhaTemDocumentoAlterado`,
-  `extrairNivelAcessoLinha`, `extrairDataHoraLinha`, `extrairUnidadeGeradoraLinha` (Task 2/3,
+- Consumes: `calcularColuna`, `linhaNaoRecebida`, `linhaTemDocumentoAlterado` (Task 2/3,
   `../../features/controle-processos/kanban`); `obterMarcadoresDaLinha` (Task 4); `criarEstrela`,
   `linhasDaTabela`, `obterTextoAtribuido`, `obterControleDePrazoDaLinha`,
   `extrairEspecificacaoParaExibicao`, `extrairTipoProcesso`, `extrairFavoritoDaLinha` (já
@@ -1384,9 +1302,6 @@ mexer. Adicionar um import novo, próximo dele:
 ```ts
 import {
   calcularColuna,
-  extrairDataHoraLinha,
-  extrairNivelAcessoLinha,
-  extrairUnidadeGeradoraLinha,
   linhaNaoRecebida,
   linhaTemDocumentoAlterado,
   type ColunaKanban,
@@ -1429,9 +1344,6 @@ function montarDadosCardKanban(linha: Element, agoraIso: string): CardKanbanComO
       marcadores: obterMarcadoresDaLinha(linha),
       atribuicao: obterTextoAtribuido(linha),
       prazoTexto: prazo?.dataTexto ?? null,
-      dataHora: extrairDataHoraLinha(linha),
-      unidadeGeradora: extrairUnidadeGeradoraLinha(linha),
-      nivelAcesso: extrairNivelAcessoLinha(linha),
       documentoAlterado: linhaTemDocumentoAlterado(linha),
       naoRecebido: linhaNaoRecebida(linha),
     },
