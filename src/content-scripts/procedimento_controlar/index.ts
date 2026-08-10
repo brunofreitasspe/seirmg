@@ -68,7 +68,7 @@ import { EVENTO_CLIQUE_ATRIBUICAO_RAPIDA } from './protocoloAtribuicaoRapida'
 import type { DetalheCliqueAtribuicaoRapida } from './protocoloAtribuicaoRapida'
 import { fetchText } from '../../lib/fetchViaBackground'
 import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
-import type { ControleProcessosConfig, SyncConfig, EventoHistorico } from '../../lib/storage'
+import type { ControleProcessosConfig, SyncConfig, EventoHistorico, KanbanConfig } from '../../lib/storage'
 import { ehLinkConcluirEmLote } from '../../features/dashboard/concluirProcesso'
 import { registrarEvento } from '../../features/dashboard/historicoEventos'
 import { montarCorpoVerificacaoLote, extrairEncontrados } from '../../features/planka/lote'
@@ -93,10 +93,13 @@ import {
 import { atualizarSnapshotPrazos, type LinhaVisivelComPrazo } from '../../features/dashboard/snapshotPrazos'
 import {
   calcularColuna,
+  criarLista,
   linhaNaoRecebida,
   linhaTemDocumentoAlterado,
   montarPosicoesAtualizadas,
   ordenarListas,
+  removerLista,
+  renomearLista,
   type ColunaKanban,
   type OrigemAutomatica,
 } from '../../features/controle-processos/kanban'
@@ -3393,6 +3396,28 @@ function montarCardElementoKanban(card: CardKanbanComOrigem, favoritado: boolean
   return elemento
 }
 
+async function salvarListasKanban(
+  listas: KanbanConfig['listas'],
+  posicoes: KanbanConfig['posicoes']
+): Promise<void> {
+  try {
+    const store = createSyncConfigStore()
+    const atual = await store.get()
+    const atualizado = {
+      ...atual,
+      controleProcessos: {
+        ...atual.controleProcessos,
+        kanban: { ...atual.controleProcessos.kanban, listas, posicoes },
+      },
+    }
+    await store.set(atualizado)
+    const container = document.getElementById('seirmg-kanban-container')
+    if (container) renderizarColunasKanban(atualizado, container)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao salvar listas do Kanban:', error)
+  }
+}
+
 function renderizarColunasKanban(config: SyncConfig, container: HTMLElement): void {
   try {
     const antigo = document.getElementById('seirmg-kanban-colunas-wrapper')
@@ -3430,14 +3455,27 @@ function renderizarColunasKanban(config: SyncConfig, container: HTMLElement): vo
         cards: [],
       }
       wrapper.appendChild(
-        montarColunaKanban(ROTULOS_COLUNA_AUTOMATICA[chaveAutomatica], grupo.cards, idsFavoritados, null)
+        montarColunaKanban(ROTULOS_COLUNA_AUTOMATICA[chaveAutomatica], grupo.cards, idsFavoritados, null, config)
       )
     })
 
     ordenarListas(config.controleProcessos.kanban.listas).forEach((lista) => {
       const grupo = cardsPorColuna.get(`lista:${lista.id}`) ?? { coluna: { tipo: 'lista', id: lista.id }, cards: [] }
-      wrapper.appendChild(montarColunaKanban(lista.nome, grupo.cards, idsFavoritados, lista.id))
+      wrapper.appendChild(montarColunaKanban(lista.nome, grupo.cards, idsFavoritados, lista.id, config))
     })
+
+    const botaoNovaLista = document.createElement('div')
+    botaoNovaLista.className = 'seirmg-kanban-nova-lista'
+    botaoNovaLista.textContent = '+ Nova lista'
+    botaoNovaLista.addEventListener('click', () => {
+      const nome = window.prompt('Nome da nova lista:')
+      if (!nome || !nome.trim()) return
+      const { listas } = criarLista(config.controleProcessos.kanban.listas, nome.trim())
+      salvarListasKanban(listas, config.controleProcessos.kanban.posicoes).catch((error) => {
+        console.error('[SEIRMG] Falha ao criar lista do Kanban:', error)
+      })
+    })
+    wrapper.appendChild(botaoNovaLista)
 
     container.appendChild(wrapper)
   } catch (error) {
@@ -3449,7 +3487,8 @@ function montarColunaKanban(
   nome: string,
   cards: CardKanbanComOrigem[],
   idsFavoritados: Set<string>,
-  listaId: string | null
+  listaId: string | null,
+  config: SyncConfig
 ): HTMLElement {
   const coluna = document.createElement('div')
   coluna.className = 'seirmg-kanban-coluna'
@@ -3460,6 +3499,43 @@ function montarColunaKanban(
   const nomeEl = document.createElement('span')
   nomeEl.textContent = `${nome} (${cards.length})`
   header.appendChild(nomeEl)
+
+  if (listaId) {
+    const btnRenomear = document.createElement('button')
+    btnRenomear.className = 'seirmg-kanban-btn'
+    btnRenomear.textContent = '✎'
+    btnRenomear.title = 'Renomear lista'
+    btnRenomear.addEventListener('click', () => {
+      const novoNome = window.prompt('Novo nome da lista:', nome)
+      if (!novoNome || !novoNome.trim()) return
+      const listas = renomearLista(config.controleProcessos.kanban.listas, listaId, novoNome.trim())
+      salvarListasKanban(listas, config.controleProcessos.kanban.posicoes).catch((error) => {
+        console.error('[SEIRMG] Falha ao renomear lista do Kanban:', error)
+      })
+    })
+    header.appendChild(btnRenomear)
+
+    const btnExcluir = document.createElement('button')
+    btnExcluir.className = 'seirmg-kanban-btn'
+    btnExcluir.textContent = '🗑'
+    btnExcluir.title = 'Excluir lista'
+    btnExcluir.addEventListener('click', () => {
+      const confirmado = window.confirm(
+        `Excluir "${nome}"? ${cards.length} card(s) voltam pras colunas automáticas.`
+      )
+      if (!confirmado) return
+      const resultado = removerLista(
+        config.controleProcessos.kanban.listas,
+        config.controleProcessos.kanban.posicoes,
+        listaId
+      )
+      salvarListasKanban(resultado.listas, resultado.posicoes).catch((error) => {
+        console.error('[SEIRMG] Falha ao excluir lista do Kanban:', error)
+      })
+    })
+    header.appendChild(btnExcluir)
+  }
+
   coluna.appendChild(header)
 
   const lista = document.createElement('div')
