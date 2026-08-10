@@ -1473,6 +1473,9 @@ async function alternarFavorito(favorito: FavoritoProcesso): Promise<void> {
     aplicarFiltroFavoritoEmTodasAsTabelas()
     atualizarTodasAsEstrelas()
     renderizarPainelFavoritos()
+
+    const containerKanban = document.getElementById('seirmg-kanban-container')
+    if (containerKanban) renderizarColunasKanban(atual, containerKanban)
   } catch (error) {
     console.error('[SEIRMG] Falha ao alternar favorito:', error)
   }
@@ -3754,6 +3757,7 @@ async function bootstrap(): Promise<void> {
     aplicarEstrelasEmLinhas(todasAsLinhas)
     aplicarFiltroFavoritoEmTodasAsTabelas()
     renderizarPainelFavoritos()
+    montarKanban(config)
 
     if (config.dashboard?.ativo && config.controleProcessos.prazos.ativo) {
       capturarSnapshotGlobalDePrazos(todasAsLinhas).catch((error) => {
