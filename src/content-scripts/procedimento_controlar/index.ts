@@ -74,6 +74,7 @@ import { registrarEvento } from '../../features/dashboard/historicoEventos'
 import { montarCorpoVerificacaoLote, extrairEncontrados } from '../../features/planka/lote'
 import { tokenValido } from '../../features/planka/token'
 import { montarEstiloPlanka, montarConteudoCardPlanka, type RespostaConsultaPlanka } from '../shared/plankaCard'
+import { montarEstiloKanbanCard, montarConteudoCardKanban, type DadosCardKanban } from '../shared/kanbanCard'
 import { limparTokenPlanka } from '../shared/plankaToken'
 import {
   extrairFavoritoDaLinha,
@@ -100,6 +101,9 @@ import bookmarkMinusIconSvg from 'lucide-static/icons/bookmark-minus.svg?raw'
 import downloadIconSvg from 'lucide-static/icons/download.svg?raw'
 import uploadIconSvg from 'lucide-static/icons/upload.svg?raw'
 import fileSpreadsheetIconSvg from 'lucide-static/icons/file-spreadsheet.svg?raw'
+import kanbanIconSvg from 'lucide-static/icons/kanban.svg?raw'
+import searchIconSvg from 'lucide-static/icons/search.svg?raw'
+import maximizeIconSvg from 'lucide-static/icons/maximize-2.svg?raw'
 
 const IDS_TABELAS = ['#tblProcessosDetalhado', '#tblProcessosGerados', '#tblProcessosRecebidos']
 
@@ -449,6 +453,157 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     border-radius: 8px;
     font: inherit;
     font-size: 13.5px;
+  }
+
+  #seirmg-kanban-btn-ativar {
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 2px solid #017fff;
+    border-radius: 6px;
+    background: #017fff;
+    color: #fff;
+    margin: 10px 0;
+  }
+  #seirmg-kanban-container {
+    margin-top: 12px;
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: #fafafa;
+  }
+  #seirmg-kanban-titulo-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  #seirmg-kanban-titulo {
+    font-weight: bold;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  #seirmg-kanban-titulo svg { width: 16px; height: 16px; color: #017fff; }
+  .seirmg-kanban-btn {
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    border: 1px solid #017fff;
+    border-radius: 4px;
+    background: #fff;
+    color: #017fff;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .seirmg-kanban-btn svg { width: 13px; height: 13px; }
+  .seirmg-kanban-btn[data-ativo="true"] { background: #017fff; color: #fff; }
+  #seirmg-kanban-controles {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+  }
+  #seirmg-kanban-pesquisa {
+    padding: 6px 10px;
+    font-size: 12px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    min-width: 220px;
+    flex: 1;
+    max-width: 360px;
+  }
+  #seirmg-kanban-colunas-wrapper {
+    display: flex;
+    gap: 12px;
+    overflow-x: auto;
+    padding-bottom: 4px;
+  }
+  .seirmg-kanban-coluna {
+    background: #f0f2f5;
+    border: 1px solid #d5dbe4;
+    border-radius: 6px;
+    padding: 8px;
+    min-width: 260px;
+    max-width: 300px;
+    flex: none;
+    display: flex;
+    flex-direction: column;
+    max-height: 70vh;
+  }
+  .seirmg-kanban-coluna-header {
+    font-weight: bold;
+    font-size: 13px;
+    margin-bottom: 8px;
+    padding: 6px 8px;
+    background: rgba(255, 255, 255, 0.6);
+    border-radius: 4px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+  }
+  .seirmg-kanban-coluna-lista {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    overflow-y: auto;
+  }
+  .seirmg-kanban-coluna-lista.seirmg-kanban-arrastando-sobre {
+    outline: 2px dashed #017fff;
+    outline-offset: -2px;
+  }
+  .seirmg-kanban-card {
+    background: #fff;
+    border-radius: 4px;
+    padding: 8px 10px;
+    cursor: pointer;
+    border: 1px solid #ddd;
+    font-size: 12px;
+    position: relative;
+  }
+  .seirmg-kanban-card[draggable="true"] { cursor: grab; }
+  .seirmg-kanban-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 6px;
+  }
+  .seirmg-kanban-card-numero {
+    font-weight: 600;
+    font-size: 11px;
+    color: #017fff;
+  }
+  .seirmg-kanban-card-acoes { display: flex; align-items: center; gap: 4px; }
+  .seirmg-kanban-card-remover-lista {
+    cursor: pointer;
+    color: #999;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0 2px;
+  }
+  .seirmg-kanban-nova-lista {
+    min-width: 200px;
+    max-width: 220px;
+    flex: none;
+    border: 1.5px dashed #b9c2d0;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60px;
+    color: #8892a0;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
   }
 `
 
@@ -3022,6 +3177,84 @@ function instalarCapturaEventoConcluidoEmLote(): void {
 
     estagiarCandidatosConcluidoEmLote(numerosSelecionadosEmLote())
   })
+}
+
+let kanbanAtivo = false
+let btnVisaoKanban: HTMLButtonElement | null = null
+
+function esconderTabelasKanban(): void {
+  ;['#tblProcessosRecebidos', '#tblProcessosGerados'].forEach((idTabela) => {
+    const tabela = document.querySelector(idTabela)
+    if (!tabela) return
+    ;(tabela as HTMLElement).style.display = 'none'
+    const divPai = tabela.closest('div[id*="divTabela"]')
+    if (divPai) (divPai as HTMLElement).style.display = 'none'
+  })
+}
+
+function mostrarTabelasKanban(): void {
+  ;['#tblProcessosRecebidos', '#tblProcessosGerados'].forEach((idTabela) => {
+    const tabela = document.querySelector(idTabela)
+    if (!tabela) return
+    ;(tabela as HTMLElement).style.display = ''
+    const divPai = tabela.closest('div[id*="divTabela"]')
+    if (divPai) (divPai as HTMLElement).style.display = ''
+  })
+}
+
+function montarKanban(config: SyncConfig): void {
+  if (!config.controleProcessos.kanban.ativo) return
+  if (document.getElementById('seirmg-kanban-btn-ativar')) return
+
+  montarEstiloKanbanCard()
+
+  btnVisaoKanban = document.createElement('button')
+  btnVisaoKanban.id = 'seirmg-kanban-btn-ativar'
+  btnVisaoKanban.innerHTML = `${kanbanIconSvg}<span>Visão Kanban</span>`
+  btnVisaoKanban.addEventListener('click', () => {
+    if (!btnVisaoKanban) return
+    btnVisaoKanban.style.display = 'none'
+    iniciarKanban(config)
+  })
+
+  const primeiroElemento = document.querySelector('#divInfraAreaTelaD') ?? document.body
+  primeiroElemento.insertBefore(btnVisaoKanban, primeiroElemento.firstChild)
+}
+
+function iniciarKanban(config: SyncConfig): void {
+  if (kanbanAtivo || document.getElementById('seirmg-kanban-container')) return
+  kanbanAtivo = true
+  esconderTabelasKanban()
+
+  const container = document.createElement('div')
+  container.id = 'seirmg-kanban-container'
+
+  const tituloWrapper = document.createElement('div')
+  tituloWrapper.id = 'seirmg-kanban-titulo-wrapper'
+  const titulo = document.createElement('div')
+  titulo.id = 'seirmg-kanban-titulo'
+  titulo.innerHTML = `${kanbanIconSvg}<span>Visão Kanban</span>`
+  tituloWrapper.appendChild(titulo)
+
+  const btnVoltar = document.createElement('button')
+  btnVoltar.className = 'seirmg-kanban-btn'
+  btnVoltar.textContent = 'Voltar à visualização padrão'
+  btnVoltar.addEventListener('click', () => {
+    kanbanAtivo = false
+    container.remove()
+    mostrarTabelasKanban()
+    if (btnVisaoKanban) btnVisaoKanban.style.display = ''
+  })
+  tituloWrapper.appendChild(btnVoltar)
+
+  container.appendChild(tituloWrapper)
+
+  const primeiroQuadro = document.querySelector('#tblProcessosRecebidos') ?? document.querySelector('table')
+  if (primeiroQuadro?.parentElement) {
+    primeiroQuadro.parentElement.insertBefore(container, primeiroQuadro)
+  } else {
+    document.body.appendChild(container)
+  }
 }
 
 async function bootstrap(): Promise<void> {
