@@ -34,6 +34,18 @@ Favoritos já usa nesse mesmo arquivo. Zero dependências novas.
 - Testes novos seguem o estilo de `favoritos.test.ts`/`agrupamento.test.ts`: `vitest`,
   `describe`/`it`, `expect().toEqual/toBe`, DOM construído via
   `new DOMParser().parseFromString(...)` quando o teste precisa de um `Element`.
+- **Sobre "Rodar o typecheck: sem erro" nas Tarefas 7-11**: `tsconfig.json` tem
+  `noUnusedLocals`/`noUnusedParameters: true`. Como essas 5 tarefas constroem o board de forma
+  incremental no mesmo arquivo (`procedimento_controlar/index.ts`), é **esperado** que
+  `bunx tsc --noEmit` acuse `TS6133 declared but never read` pra funções/imports/parâmetros que só
+  passam a ser consumidos numa tarefa posterior (ex.: `montarKanban` fica sem chamador até a
+  Tarefa 12 ligar no `bootstrap()`). Isso não é um bug da tarefa que introduz o símbolo — é
+  reconhecer esses erros específicos (cada um correspondendo a algo que uma tarefa *futura, já
+  planejada* consome) como esperados, não mascará-los com `_prefixo`/`@ts-expect-error` (sem
+  precedente no projeto) nem chamar a função cedo demais só pra silenciar o compilador. `bun run
+  build` (Vite/esbuild) não tem essa checagem e deve continuar passando normalmente em todas as
+  tarefas — é o sinal prático de "nada quebrou de verdade" enquanto isso. O gate de
+  `tsc --noEmit` **limpo de verdade** é o da Tarefa 12 (Step 3), depois de tudo ligado.
 
 ---
 
