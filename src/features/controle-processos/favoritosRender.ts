@@ -1,4 +1,5 @@
 import { calcularDiasAteVencimento, formatarDiasRestantes } from './prazos'
+import { extrairNomeMarcador } from './agrupamento'
 import flagIconSvg from 'lucide-static/icons/flag.svg?raw'
 import clockIconSvg from 'lucide-static/icons/clock.svg?raw'
 import userIconSvg from 'lucide-static/icons/user.svg?raw'
@@ -8,6 +9,28 @@ export function criarIcone(svg: string): HTMLElement {
   icone.className = 'seirmg-favoritos-icone'
   icone.innerHTML = svg
   return icone
+}
+
+export interface MarcadorFavorito {
+  nome: string
+  estilo: string | null
+  iconeHtml: string
+}
+
+export function obterMarcadoresDaLinha(linha: Element): MarcadorFavorito[] {
+  const marcadores = Array.from(
+    linha.querySelectorAll<HTMLAnchorElement>("td > a[href*='acao=andamento_marcador_gerenciar']")
+  )
+  return marcadores
+    .map((marcador) => {
+      const onmouseover = marcador.getAttribute('onmouseover')
+      return {
+        nome: onmouseover ? extrairNomeMarcador(onmouseover) : '',
+        estilo: marcador.getAttribute('style'),
+        iconeHtml: marcador.innerHTML,
+      }
+    })
+    .filter((item) => item.nome !== '')
 }
 
 export function montarCelulaMarcadoresCongelados(nomes: string[]): HTMLTableCellElement {

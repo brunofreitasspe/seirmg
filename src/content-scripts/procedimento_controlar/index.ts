@@ -8,6 +8,7 @@ import {
   montarCelulaMarcadoresCongelados,
   montarCelulaPrazoCongelado,
   montarCelulaAtribuicao,
+  obterMarcadoresDaLinha,
 } from '../../features/controle-processos/favoritosRender'
 import { escolherCorProcesso, extrairEspecificacaoParaCor } from '../../features/controle-processos/corProcesso'
 import {
@@ -785,28 +786,6 @@ const reaplicarFiltrosAposNovasLinhas: Array<() => void> = []
 
 let favoritosAtivo = false
 let itensFavoritados: FavoritoProcesso[] = []
-
-interface MarcadorFavorito {
-  nome: string
-  estilo: string | null
-  iconeHtml: string
-}
-
-function obterMarcadoresDaLinha(linha: Element): MarcadorFavorito[] {
-  const marcadores = Array.from(
-    linha.querySelectorAll<HTMLAnchorElement>("td > a[href*='acao=andamento_marcador_gerenciar']")
-  )
-  return marcadores
-    .map((marcador) => {
-      const onmouseover = marcador.getAttribute('onmouseover')
-      return {
-        nome: onmouseover ? extrairNomeMarcador(onmouseover) : '',
-        estilo: marcador.getAttribute('style'),
-        iconeHtml: marcador.innerHTML,
-      }
-    })
-    .filter((item) => item.nome !== '')
-}
 
 function capturarSnapshotDaLinha(linhaNativa: Element): SnapshotFavorito {
   const prazo = obterControleDePrazoDaLinha(linhaNativa)
