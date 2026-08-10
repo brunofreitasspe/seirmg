@@ -7,6 +7,7 @@ import bellIconSvg from 'lucide-static/icons/bell.svg?raw'
 import plugIconSvg from 'lucide-static/icons/plug.svg?raw'
 import infoIconSvg from 'lucide-static/icons/info.svg?raw'
 import spellCheckIconSvg from 'lucide-static/icons/spell-check.svg?raw'
+import kanbanIconSvg from 'lucide-static/icons/kanban.svg?raw'
 import { ativarAba } from './tabs'
 import {
   createLocalConfigStore,
@@ -44,6 +45,7 @@ const ICONES_ABA: Record<string, string> = {
   editor: fileEditIconSvg,
   corretor: spellCheckIconSvg,
   ia: sparklesIconSvg,
+  kanban: kanbanIconSvg,
   notificacoes: bellIconSvg,
   integracoes: plugIconSvg,
   sobre: infoIconSvg,
@@ -710,6 +712,44 @@ async function carregarAbaIntegracoes(): Promise<void> {
   }
 }
 
+async function carregarAbaKanban(): Promise<void> {
+  try {
+    const store = createSyncConfigStore()
+    const config = await store.get()
+
+    const inputAtivo = document.getElementById('kanban-ativo') as HTMLInputElement | null
+    const status = document.getElementById('kanban-status')
+
+    if (inputAtivo) inputAtivo.checked = config.controleProcessos.kanban.ativo
+
+    document.getElementById('kanban-salvar')?.addEventListener('click', async () => {
+      try {
+        const atualizado = {
+          ...config,
+          controleProcessos: {
+            ...config.controleProcessos,
+            kanban: {
+              ...config.controleProcessos.kanban,
+              ativo: inputAtivo?.checked ?? false,
+            },
+          },
+        }
+        await store.set(atualizado)
+        if (status) {
+          status.textContent = 'Salvo!'
+          setTimeout(() => {
+            status.textContent = ''
+          }, 2000)
+        }
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao salvar configuração do Kanban:', error)
+      }
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao carregar aba Kanban:', error)
+  }
+}
+
 carregarAbaEditor()
 carregarAbaCorretor()
 carregarAbaIA()
@@ -718,3 +758,4 @@ carregarAbaAparencia()
 carregarAbaGeral()
 carregarAbaAssinatura()
 carregarAbaIntegracoes()
+carregarAbaKanban()

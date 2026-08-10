@@ -23,6 +23,7 @@
         <button data-aba="integracoes" class="aba-btn">Integrações</button>
         <button data-aba="notificacoes" class="aba-btn">Notificações</button>
         <button data-aba="processos" class="aba-btn">Processos</button>
+        <button data-aba="kanban" class="aba-btn">Kanban</button>
         <button data-aba="sobre" class="aba-btn">Sobre</button>
       </nav>
       <main class="conteudo">
@@ -159,6 +160,20 @@
       <br />
       <button id="processos-salvar">Salvar</button>
       <span id="processos-status"></span>
+    </section>
+    <section id="painel-kanban" class="painel">
+      <h2>Kanban de Processos</h2>
+      <label>
+        <input type="checkbox" id="kanban-ativo" />
+        Ativar Kanban no Controle de Processos
+      </label>
+      <p style="font-size: 0.85em; color: #666; max-width: 480px;">
+        Mostra o botão "Visão Kanban" acima das tabelas de Recebidos e Gerados. Colunas automáticas
+        (Recebidos, Gerados, Favoritos) e suas próprias listas são gerenciadas direto no board.
+      </p>
+      <br />
+      <button id="kanban-salvar">Salvar</button>
+      <span id="kanban-status"></span>
     </section>
     <section id="painel-editor" class="painel">
       <h2>Editor de Documentos</h2>
