@@ -94,13 +94,13 @@ import { atualizarSnapshotPrazos, type LinhaVisivelComPrazo } from '../../featur
 import {
   calcularColuna,
   criarLista,
+  editarLista,
   extrairAnoProcesso,
   linhaNaoRecebida,
   linhaTemDocumentoAlterado,
   montarPosicoesAtualizadas,
   ordenarListas,
   removerLista,
-  renomearLista,
   type ColunaKanban,
   type OrigemAutomatica,
 } from '../../features/controle-processos/kanban'
@@ -649,6 +649,23 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
   }
   .seirmg-kanban-card-copiar svg { width: 13px; height: 13px; }
   .seirmg-kanban-card-copiar:hover { color: #017fff; }
+
+  .seirmg-kanban-popup-lista-cor-linha {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13.5px;
+    color: #444;
+  }
+  .seirmg-kanban-popup-lista-cor-input {
+    width: 36px;
+    height: 28px;
+    border: 1px solid #dbe9fb;
+    border-radius: 6px;
+    padding: 0;
+    cursor: pointer;
+    background: none;
+  }
 `
 
 function injetarEstilos(): void {
@@ -3229,6 +3246,9 @@ function instalarCapturaEventoConcluidoEmLote(): void {
 let kanbanAtivo = false
 let btnVisaoKanban: HTMLButtonElement | null = null
 let aplicarFiltrosKanbanAtual: (() => void) | null = null
+let popupListaKanbanAtual: HTMLElement | null = null
+
+const CorPadraoListaKanban = '#e7ecf3'
 
 function esconderTabelasKanban(): void {
   try {
@@ -3486,26 +3506,28 @@ function renderizarColunasKanban(config: SyncConfig, container: HTMLElement): vo
         cards: [],
       }
       wrapper.appendChild(
-        montarColunaKanban(ROTULOS_COLUNA_AUTOMATICA[chaveAutomatica], grupo.cards, idsFavoritados, null)
+        montarColunaKanban(ROTULOS_COLUNA_AUTOMATICA[chaveAutomatica], null, grupo.cards, idsFavoritados, null)
       )
     })
 
     ordenarListas(config.controleProcessos.kanban.listas).forEach((lista) => {
       const grupo = cardsPorColuna.get(`lista:${lista.id}`) ?? { coluna: { tipo: 'lista', id: lista.id }, cards: [] }
-      wrapper.appendChild(montarColunaKanban(lista.nome, grupo.cards, idsFavoritados, lista.id))
+      wrapper.appendChild(
+        montarColunaKanban(lista.nome, lista.cor ?? CorPadraoListaKanban, grupo.cards, idsFavoritados, lista.id)
+      )
     })
 
     const botaoNovaLista = document.createElement('div')
     botaoNovaLista.className = 'seirmg-kanban-nova-lista'
     botaoNovaLista.textContent = '+ Nova lista'
     botaoNovaLista.addEventListener('click', () => {
-      const nome = window.prompt('Nome da nova lista:')
-      if (!nome || !nome.trim()) return
-      salvarListasKanban((kanbanAtual) => {
-        const { listas } = criarLista(kanbanAtual.listas, nome.trim())
-        return { listas, posicoes: kanbanAtual.posicoes }
-      }).catch((error) => {
-        console.error('[SEIRMG] Falha ao criar lista do Kanban:', error)
+      abrirPopupListaKanban('Nova lista', '', CorPadraoListaKanban, (nome, cor) => {
+        salvarListasKanban((kanbanAtual) => {
+          const { listas } = criarLista(kanbanAtual.listas, nome, cor)
+          return { listas, posicoes: kanbanAtual.posicoes }
+        }).catch((error) => {
+          console.error('[SEIRMG] Falha ao criar lista do Kanban:', error)
+        })
       })
     })
     wrapper.appendChild(botaoNovaLista)
@@ -3517,8 +3539,106 @@ function renderizarColunasKanban(config: SyncConfig, container: HTMLElement): vo
   }
 }
 
+function fecharPopupListaKanban(): void {
+  popupListaKanbanAtual?.remove()
+  popupListaKanbanAtual = null
+}
+
+// Mesmo padrão visual do popup de marcador/atribuição rápida (fundo + card centralizado) — reaproveita
+// as classes seirmg-marcador-rapido-* já existentes em vez de criar um sistema de popup novo.
+function abrirPopupListaKanban(
+  titulo: string,
+  nomeInicial: string,
+  corInicial: string,
+  aoConfirmar: (nome: string, cor: string) => void
+): void {
+  fecharPopupListaKanban()
+
+  const fundo = document.createElement('div')
+  fundo.className = 'seirmg-marcador-rapido-fundo'
+  fundo.addEventListener('click', fecharPopupListaKanban)
+
+  const popup = document.createElement('div')
+  popup.className = 'seirmg-marcador-rapido-popup'
+  popup.addEventListener('click', (evento) => evento.stopPropagation())
+
+  const header = document.createElement('div')
+  header.className = 'seirmg-marcador-rapido-header'
+  const icone = document.createElement('div')
+  icone.className = 'seirmg-marcador-rapido-icone'
+  icone.innerHTML = kanbanIconSvg
+  header.appendChild(icone)
+  const tituloEl = document.createElement('strong')
+  tituloEl.className = 'seirmg-marcador-rapido-titulo'
+  tituloEl.textContent = titulo
+  header.appendChild(tituloEl)
+  popup.appendChild(header)
+
+  const corpo = document.createElement('div')
+  corpo.className = 'seirmg-marcador-rapido-corpo'
+
+  const inputNome = document.createElement('input')
+  inputNome.type = 'text'
+  inputNome.className = 'seirmg-marcador-rapido-input'
+  inputNome.placeholder = 'Nome da lista'
+  inputNome.value = nomeInicial
+  corpo.appendChild(inputNome)
+
+  const linhaCor = document.createElement('label')
+  linhaCor.className = 'seirmg-kanban-popup-lista-cor-linha'
+  const rotuloCor = document.createElement('span')
+  rotuloCor.textContent = 'Cor'
+  const inputCor = document.createElement('input')
+  inputCor.type = 'color'
+  inputCor.className = 'seirmg-kanban-popup-lista-cor-input'
+  inputCor.value = corInicial
+  linhaCor.append(rotuloCor, inputCor)
+  corpo.appendChild(linhaCor)
+
+  const erro = document.createElement('div')
+  erro.className = 'seirmg-marcador-rapido-erro'
+  erro.style.display = 'none'
+  erro.textContent = 'Digite um nome pra lista.'
+  corpo.appendChild(erro)
+
+  popup.appendChild(corpo)
+
+  const rodape = document.createElement('div')
+  rodape.className = 'seirmg-marcador-rapido-rodape'
+
+  const botaoCancelar = document.createElement('button')
+  botaoCancelar.type = 'button'
+  botaoCancelar.className = 'seirmg-marcador-rapido-btn seirmg-marcador-rapido-btn-secundario'
+  botaoCancelar.textContent = 'Cancelar'
+  botaoCancelar.addEventListener('click', fecharPopupListaKanban)
+  rodape.appendChild(botaoCancelar)
+
+  const botaoConfirmar = document.createElement('button')
+  botaoConfirmar.type = 'button'
+  botaoConfirmar.className = 'seirmg-marcador-rapido-btn seirmg-marcador-rapido-btn-primario'
+  botaoConfirmar.textContent = 'Salvar'
+  botaoConfirmar.addEventListener('click', () => {
+    const nome = inputNome.value.trim()
+    if (!nome) {
+      erro.style.display = ''
+      return
+    }
+    aoConfirmar(nome, inputCor.value)
+    fecharPopupListaKanban()
+  })
+  rodape.appendChild(botaoConfirmar)
+
+  popup.appendChild(rodape)
+  fundo.appendChild(popup)
+  document.body.appendChild(fundo)
+
+  popupListaKanbanAtual = fundo
+  inputNome.focus()
+}
+
 function montarColunaKanban(
   nome: string,
+  cor: string | null,
   cards: CardKanbanComOrigem[],
   idsFavoritados: Set<string>,
   listaId: string | null
@@ -3529,6 +3649,7 @@ function montarColunaKanban(
 
   const header = document.createElement('div')
   header.className = 'seirmg-kanban-coluna-header'
+  if (cor) header.style.background = cor
   const nomeEl = document.createElement('span')
   nomeEl.textContent = `${nome} (${cards.length})`
   header.appendChild(nomeEl)
@@ -3537,15 +3658,15 @@ function montarColunaKanban(
     const btnRenomear = document.createElement('button')
     btnRenomear.className = 'seirmg-kanban-btn'
     btnRenomear.textContent = '✎'
-    btnRenomear.title = 'Renomear lista'
+    btnRenomear.title = 'Editar lista'
     btnRenomear.addEventListener('click', () => {
-      const novoNome = window.prompt('Novo nome da lista:', nome)
-      if (!novoNome || !novoNome.trim()) return
-      salvarListasKanban((kanbanAtual) => {
-        const listas = renomearLista(kanbanAtual.listas, listaId, novoNome.trim())
-        return { listas, posicoes: kanbanAtual.posicoes }
-      }).catch((error) => {
-        console.error('[SEIRMG] Falha ao renomear lista do Kanban:', error)
+      abrirPopupListaKanban('Editar lista', nome, cor ?? CorPadraoListaKanban, (novoNome, novaCor) => {
+        salvarListasKanban((kanbanAtual) => {
+          const listas = editarLista(kanbanAtual.listas, listaId, novoNome, novaCor)
+          return { listas, posicoes: kanbanAtual.posicoes }
+        }).catch((error) => {
+          console.error('[SEIRMG] Falha ao editar lista do Kanban:', error)
+        })
       })
     })
     header.appendChild(btnRenomear)

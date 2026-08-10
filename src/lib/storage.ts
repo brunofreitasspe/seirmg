@@ -98,6 +98,7 @@ export interface KanbanLista {
   id: string
   nome: string
   ordem: number
+  cor: string
 }
 
 export interface KanbanCardPosicao {

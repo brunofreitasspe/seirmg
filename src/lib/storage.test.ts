@@ -182,7 +182,7 @@ describe('createSyncConfigStore', () => {
         ...config.controleProcessos,
         kanban: {
           ativo: true,
-          listas: [{ id: 'lista-1', nome: 'Em análise', ordem: 0 }],
+          listas: [{ id: 'lista-1', nome: 'Em análise', ordem: 0, cor: '#017fff' }],
           posicoes: [{ numero: 'HMMG.2025.00001-1', listaId: 'lista-1' }],
         },
       },

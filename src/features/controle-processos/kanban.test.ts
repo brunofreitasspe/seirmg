@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest'
 import {
   calcularColuna,
   criarLista,
+  editarLista,
   montarPosicoesAtualizadas,
   ordenarListas,
   removerLista,
-  renomearLista,
   extrairAnoProcesso,
   linhaNaoRecebida,
   linhaTemDocumentoAlterado,
@@ -63,53 +63,60 @@ describe('montarPosicoesAtualizadas', () => {
 })
 
 describe('criarLista', () => {
-  it('cria a primeira lista com ordem 0', () => {
-    const { lista, listas } = criarLista([], 'Em análise')
+  it('cria a primeira lista com ordem 0 e a cor pedida', () => {
+    const { lista, listas } = criarLista([], 'Em análise', '#017fff')
     expect(lista.nome).toBe('Em análise')
+    expect(lista.cor).toBe('#017fff')
     expect(lista.ordem).toBe(0)
     expect(lista.id).toBeTruthy()
     expect(listas).toEqual([lista])
   })
 
   it('a próxima lista nasce com ordem = maior ordem existente + 1', () => {
-    const listasAtuais = [{ id: 'a', nome: 'Primeira', ordem: 0 }]
-    const { lista } = criarLista(listasAtuais, 'Segunda')
+    const listasAtuais = [{ id: 'a', nome: 'Primeira', ordem: 0, cor: '#eef1f5' }]
+    const { lista } = criarLista(listasAtuais, 'Segunda', '#ff0000')
     expect(lista.ordem).toBe(1)
   })
 
   it('cada lista nasce com um id diferente', () => {
-    const { listas } = criarLista(criarLista([], 'A').listas, 'B')
+    const { listas } = criarLista(criarLista([], 'A', '#fff').listas, 'B', '#000')
     const ids = listas.map((lista) => lista.id)
     expect(new Set(ids).size).toBe(2)
   })
 })
 
-describe('renomearLista', () => {
-  it('renomeia só a lista com o id pedido', () => {
-    const listas = [{ id: 'a', nome: 'Velho nome', ordem: 0 }, { id: 'b', nome: 'Outra', ordem: 1 }]
-    const resultado = renomearLista(listas, 'a', 'Novo nome')
-    expect(resultado).toEqual([{ id: 'a', nome: 'Novo nome', ordem: 0 }, { id: 'b', nome: 'Outra', ordem: 1 }])
+describe('editarLista', () => {
+  it('atualiza nome e cor só da lista com o id pedido', () => {
+    const listas = [
+      { id: 'a', nome: 'Velho nome', ordem: 0, cor: '#111111' },
+      { id: 'b', nome: 'Outra', ordem: 1, cor: '#222222' },
+    ]
+    const resultado = editarLista(listas, 'a', 'Novo nome', '#abcdef')
+    expect(resultado).toEqual([
+      { id: 'a', nome: 'Novo nome', ordem: 0, cor: '#abcdef' },
+      { id: 'b', nome: 'Outra', ordem: 1, cor: '#222222' },
+    ])
   })
 })
 
 describe('removerLista', () => {
   it('remove a lista e limpa as posições que apontavam pra ela', () => {
-    const listas = [{ id: 'a', nome: 'A', ordem: 0 }, { id: 'b', nome: 'B', ordem: 1 }]
+    const listas = [{ id: 'a', nome: 'A', ordem: 0, cor: '#fff' }, { id: 'b', nome: 'B', ordem: 1, cor: '#000' }]
     const posicoes = [{ numero: 'HMMG.1', listaId: 'a' }, { numero: 'HMMG.2', listaId: 'b' }]
     const resultado = removerLista(listas, posicoes, 'a')
-    expect(resultado.listas).toEqual([{ id: 'b', nome: 'B', ordem: 1 }])
+    expect(resultado.listas).toEqual([{ id: 'b', nome: 'B', ordem: 1, cor: '#000' }])
     expect(resultado.posicoes).toEqual([{ numero: 'HMMG.2', listaId: 'b' }])
   })
 })
 
 describe('ordenarListas', () => {
   it('ordena por ordem crescente', () => {
-    const listas = [{ id: 'b', nome: 'B', ordem: 2 }, { id: 'a', nome: 'A', ordem: 0 }]
+    const listas = [{ id: 'b', nome: 'B', ordem: 2, cor: '#fff' }, { id: 'a', nome: 'A', ordem: 0, cor: '#000' }]
     expect(ordenarListas(listas).map((lista) => lista.id)).toEqual(['a', 'b'])
   })
 
   it('não modifica o array original', () => {
-    const listas = [{ id: 'b', nome: 'B', ordem: 1 }, { id: 'a', nome: 'A', ordem: 0 }]
+    const listas = [{ id: 'b', nome: 'B', ordem: 1, cor: '#fff' }, { id: 'a', nome: 'A', ordem: 0, cor: '#000' }]
     const copia = [...listas]
     ordenarListas(listas)
     expect(listas).toEqual(copia)

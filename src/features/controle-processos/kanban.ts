@@ -30,15 +30,16 @@ export function montarPosicoesAtualizadas(
 
 export function criarLista(
   listasAtuais: KanbanLista[],
-  nome: string
+  nome: string,
+  cor: string
 ): { lista: KanbanLista; listas: KanbanLista[] } {
   const maiorOrdem = listasAtuais.reduce((maior, lista) => Math.max(maior, lista.ordem), -1)
-  const lista: KanbanLista = { id: crypto.randomUUID(), nome, ordem: maiorOrdem + 1 }
+  const lista: KanbanLista = { id: crypto.randomUUID(), nome, ordem: maiorOrdem + 1, cor }
   return { lista, listas: [...listasAtuais, lista] }
 }
 
-export function renomearLista(listas: KanbanLista[], id: string, novoNome: string): KanbanLista[] {
-  return listas.map((lista) => (lista.id === id ? { ...lista, nome: novoNome } : lista))
+export function editarLista(listas: KanbanLista[], id: string, nome: string, cor: string): KanbanLista[] {
+  return listas.map((lista) => (lista.id === id ? { ...lista, nome, cor } : lista))
 }
 
 export function removerLista(
