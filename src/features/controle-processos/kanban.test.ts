@@ -1,5 +1,23 @@
 import { describe, expect, it } from 'vitest'
-import { calcularColuna, criarLista, montarPosicoesAtualizadas, ordenarListas, removerLista, renomearLista } from './kanban'
+import {
+  calcularColuna,
+  criarLista,
+  montarPosicoesAtualizadas,
+  ordenarListas,
+  removerLista,
+  renomearLista,
+  extrairAnoProcesso,
+  extrairDataHoraLinha,
+  extrairNivelAcessoLinha,
+  extrairUnidadeGeradoraLinha,
+  linhaNaoRecebida,
+  linhaTemDocumentoAlterado,
+} from './kanban'
+
+function criarLinha(html: string): Element {
+  const doc = new DOMParser().parseFromString(`<table><tbody><tr>${html}</tr></tbody></table>`, 'text/html')
+  return doc.querySelector('tr') as Element
+}
 
 describe('calcularColuna', () => {
   it('cai na origem quando não é favorito e não tem posição manual', () => {
@@ -98,5 +116,75 @@ describe('ordenarListas', () => {
     const copia = [...listas]
     ordenarListas(listas)
     expect(listas).toEqual(copia)
+  })
+})
+
+describe('linhaNaoRecebida', () => {
+  it('true quando a linha tem .processoNaoVisualizado', () => {
+    expect(linhaNaoRecebida(criarLinha('<td><a class="processoNaoVisualizado">HMMG.1</a></td>'))).toBe(true)
+  })
+
+  it('false quando a linha tem .processoVisualizado', () => {
+    expect(linhaNaoRecebida(criarLinha('<td><a class="processoVisualizado">HMMG.1</a></td>'))).toBe(false)
+  })
+})
+
+describe('linhaTemDocumentoAlterado', () => {
+  it('true quando há img de exclamação', () => {
+    expect(linhaTemDocumentoAlterado(criarLinha('<td><img src="/img/exclamacao.svg"></td>'))).toBe(true)
+  })
+
+  it('false quando não há', () => {
+    expect(linhaTemDocumentoAlterado(criarLinha('<td>sem imagem</td>'))).toBe(false)
+  })
+})
+
+describe('extrairNivelAcessoLinha', () => {
+  it('reconhece Restrito pelo título da imagem', () => {
+    expect(extrairNivelAcessoLinha(criarLinha('<td><img title="Restrito"></td>'))).toBe('Restrito')
+  })
+
+  it('reconhece Sigiloso pelo alt da imagem', () => {
+    expect(extrairNivelAcessoLinha(criarLinha('<td><img alt="Sigiloso"></td>'))).toBe('Sigiloso')
+  })
+
+  it('reconhece Público pelo src da imagem', () => {
+    expect(extrairNivelAcessoLinha(criarLinha('<td><img src="/img/publico.svg"></td>'))).toBe('Público')
+  })
+
+  it('null quando nenhuma imagem bate', () => {
+    expect(extrairNivelAcessoLinha(criarLinha('<td><img src="/img/outracoisa.svg"></td>'))).toBeNull()
+  })
+})
+
+describe('extrairDataHoraLinha', () => {
+  it('acha uma célula no formato dd/mm/yyyy', () => {
+    expect(extrairDataHoraLinha(criarLinha('<td>texto</td><td>15/08/2026 14:30</td>'))).toBe('15/08/2026 14:30')
+  })
+
+  it('null quando nenhuma célula bate o padrão', () => {
+    expect(extrairDataHoraLinha(criarLinha('<td>sem data aqui</td>'))).toBeNull()
+  })
+})
+
+describe('extrairUnidadeGeradoraLinha', () => {
+  it('pega uma célula do meio que não é número de processo nem URL', () => {
+    expect(
+      extrairUnidadeGeradoraLinha(criarLinha('<td>0021.048213/2025-07</td><td>SEPLAG/SUBSPP</td><td>final</td>'))
+    ).toBe('SEPLAG/SUBSPP')
+  })
+
+  it('null quando só há a primeira e a última célula', () => {
+    expect(extrairUnidadeGeradoraLinha(criarLinha('<td>0021.048213/2025-07</td><td>final</td>'))).toBeNull()
+  })
+})
+
+describe('extrairAnoProcesso', () => {
+  it('extrai o ano entre a barra e o hífen', () => {
+    expect(extrairAnoProcesso('0021.042267/2024-10')).toBe('2024')
+  })
+
+  it('null quando o número não bate o padrão', () => {
+    expect(extrairAnoProcesso('numero-invalido')).toBeNull()
   })
 })
