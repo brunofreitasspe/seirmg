@@ -212,8 +212,16 @@ Favoritos, e o board re-renderiza (o card muda de coluna automaticamente via `ca
 ### 5. UI — `content-scripts/procedimento_controlar/index.ts`
 
 - Botão "📊 Visão Kanban" inserido acima das tabelas, só quando `config.controleProcessos.kanban.ativo`.
-  Ao clicar, esconde `#tblProcessosRecebidos`/`#tblProcessosGerados` (mesma técnica de ocultação
-  de `div[id*="divTabela"]` pai já usada — ver `renderizarPainelFavoritos`) e monta o board.
+  Ao clicar, esconde `#tblProcessosRecebidos`/`#tblProcessosGerados` junto com o `div[id*="divTabela"]`
+  pai de cada uma (`#divTabelaProcesso` em layouts que colocam Detalhado/Gerados/Recebidos em
+  colunas Bootstrap, comentário em `procedimento_controlar/index.ts` por volta da linha 1140) e
+  monta o board. **Correção pós-revisão final:** essa técnica de esconder o `div` pai é nova deste
+  lote — `renderizarPainelFavoritos` **não** faz isso (ele só usa `#divTabelaProcesso` como ponto
+  de inserção e esconde linhas individuais via `calcularVisibilidade`), a afirmação original aqui
+  estava errada. Isso importa porque o container do board precisa ser inserido **fora** dessa
+  subárvore escondida (ex.: no mesmo `#divInfraAreaTelaD` onde o botão "Visão Kanban" já é
+  inserido), nunca como filho/descendente do `div[id*="divTabela"]` recém-escondido — senão o
+  board nasce com `display: none` herdado e fica invisível.
 - Board: colunas automáticas primeiro (`Recebidos`, `Gerados`, `Favoritos`), depois as listas do
   usuário na ordem de `KanbanConfig.listas` (por `ordem`), depois um botão "+ Nova lista".
 - Drag-and-drop: `draggable="true"` nos cards; `dragstart` grava `numero` via
