@@ -3226,6 +3226,7 @@ function instalarCapturaEventoConcluidoEmLote(): void {
 
 let kanbanAtivo = false
 let btnVisaoKanban: HTMLButtonElement | null = null
+let aplicarFiltrosKanbanAtual: (() => void) | null = null
 
 function esconderTabelasKanban(): void {
   try {
@@ -3257,7 +3258,7 @@ function mostrarTabelasKanban(): void {
 
 function montarKanban(config: SyncConfig): void {
   try {
-    if (!config.controleProcessos.kanban.ativo) return
+    if (!config.controleProcessos.kanban?.ativo) return
     if (document.getElementById('seirmg-kanban-btn-ativar')) return
 
     montarEstiloKanbanCard()
@@ -3422,12 +3423,12 @@ function montarCardElementoKanban(card: CardKanbanComOrigem, favoritado: boolean
 }
 
 async function salvarListasKanban(
-  listas: KanbanConfig['listas'],
-  posicoes: KanbanConfig['posicoes']
+  transformar: (kanbanAtual: KanbanConfig) => { listas: KanbanConfig['listas']; posicoes: KanbanConfig['posicoes'] }
 ): Promise<void> {
   try {
     const store = createSyncConfigStore()
     const atual = await store.get()
+    const { listas, posicoes } = transformar(atual.controleProcessos.kanban)
     const atualizado = {
       ...atual,
       controleProcessos: {
@@ -3459,8 +3460,11 @@ function renderizarColunasKanban(config: SyncConfig, container: HTMLElement): vo
       .filter((card): card is CardKanbanComOrigem => card !== null)
 
     const idsFavoritados = new Set(itensFavoritados.map((item) => item.numero))
+    const idsListasExistentes = new Set(config.controleProcessos.kanban.listas.map((lista) => lista.id))
     const posicoesPorNumero = new Map(
-      config.controleProcessos.kanban.posicoes.map((posicao) => [posicao.numero, posicao.listaId])
+      config.controleProcessos.kanban.posicoes
+        .filter((posicao) => idsListasExistentes.has(posicao.listaId))
+        .map((posicao) => [posicao.numero, posicao.listaId])
     )
 
     const cardsPorColuna = new Map<string, { coluna: ColunaKanban; cards: CardKanbanComOrigem[] }>()
@@ -3480,13 +3484,13 @@ function renderizarColunasKanban(config: SyncConfig, container: HTMLElement): vo
         cards: [],
       }
       wrapper.appendChild(
-        montarColunaKanban(ROTULOS_COLUNA_AUTOMATICA[chaveAutomatica], grupo.cards, idsFavoritados, null, config)
+        montarColunaKanban(ROTULOS_COLUNA_AUTOMATICA[chaveAutomatica], grupo.cards, idsFavoritados, null)
       )
     })
 
     ordenarListas(config.controleProcessos.kanban.listas).forEach((lista) => {
       const grupo = cardsPorColuna.get(`lista:${lista.id}`) ?? { coluna: { tipo: 'lista', id: lista.id }, cards: [] }
-      wrapper.appendChild(montarColunaKanban(lista.nome, grupo.cards, idsFavoritados, lista.id, config))
+      wrapper.appendChild(montarColunaKanban(lista.nome, grupo.cards, idsFavoritados, lista.id))
     })
 
     const botaoNovaLista = document.createElement('div')
@@ -3495,14 +3499,17 @@ function renderizarColunasKanban(config: SyncConfig, container: HTMLElement): vo
     botaoNovaLista.addEventListener('click', () => {
       const nome = window.prompt('Nome da nova lista:')
       if (!nome || !nome.trim()) return
-      const { listas } = criarLista(config.controleProcessos.kanban.listas, nome.trim())
-      salvarListasKanban(listas, config.controleProcessos.kanban.posicoes).catch((error) => {
+      salvarListasKanban((kanbanAtual) => {
+        const { listas } = criarLista(kanbanAtual.listas, nome.trim())
+        return { listas, posicoes: kanbanAtual.posicoes }
+      }).catch((error) => {
         console.error('[SEIRMG] Falha ao criar lista do Kanban:', error)
       })
     })
     wrapper.appendChild(botaoNovaLista)
 
     container.appendChild(wrapper)
+    aplicarFiltrosKanbanAtual?.()
   } catch (error) {
     console.error('[SEIRMG] Falha ao renderizar colunas do Kanban:', error)
   }
@@ -3512,8 +3519,7 @@ function montarColunaKanban(
   nome: string,
   cards: CardKanbanComOrigem[],
   idsFavoritados: Set<string>,
-  listaId: string | null,
-  config: SyncConfig
+  listaId: string | null
 ): HTMLElement {
   const coluna = document.createElement('div')
   coluna.className = 'seirmg-kanban-coluna'
@@ -3533,8 +3539,10 @@ function montarColunaKanban(
     btnRenomear.addEventListener('click', () => {
       const novoNome = window.prompt('Novo nome da lista:', nome)
       if (!novoNome || !novoNome.trim()) return
-      const listas = renomearLista(config.controleProcessos.kanban.listas, listaId, novoNome.trim())
-      salvarListasKanban(listas, config.controleProcessos.kanban.posicoes).catch((error) => {
+      salvarListasKanban((kanbanAtual) => {
+        const listas = renomearLista(kanbanAtual.listas, listaId, novoNome.trim())
+        return { listas, posicoes: kanbanAtual.posicoes }
+      }).catch((error) => {
         console.error('[SEIRMG] Falha ao renomear lista do Kanban:', error)
       })
     })
@@ -3549,14 +3557,11 @@ function montarColunaKanban(
         `Excluir "${nome}"? ${cards.length} card(s) voltam pras colunas automáticas.`
       )
       if (!confirmado) return
-      const resultado = removerLista(
-        config.controleProcessos.kanban.listas,
-        config.controleProcessos.kanban.posicoes,
-        listaId
+      salvarListasKanban((kanbanAtual) => removerLista(kanbanAtual.listas, kanbanAtual.posicoes, listaId)).catch(
+        (error) => {
+          console.error('[SEIRMG] Falha ao excluir lista do Kanban:', error)
+        }
       )
-      salvarListasKanban(resultado.listas, resultado.posicoes).catch((error) => {
-        console.error('[SEIRMG] Falha ao excluir lista do Kanban:', error)
-      })
     })
     header.appendChild(btnExcluir)
   }
@@ -3716,14 +3721,12 @@ function iniciarKanban(config: SyncConfig): void {
       })
     }
 
+    aplicarFiltrosKanbanAtual = aplicarFiltrosKanban
+
     renderizarColunasKanban(config, container)
 
-    const primeiroQuadro = document.querySelector('#tblProcessosRecebidos') ?? document.querySelector('table')
-    if (primeiroQuadro?.parentElement) {
-      primeiroQuadro.parentElement.insertBefore(container, primeiroQuadro)
-    } else {
-      document.body.appendChild(container)
-    }
+    const primeiroElemento = document.querySelector('#divInfraAreaTelaD') ?? document.body
+    primeiroElemento.appendChild(container)
   } catch (error) {
     console.error('[SEIRMG] Falha ao iniciar o Kanban:', error)
   }

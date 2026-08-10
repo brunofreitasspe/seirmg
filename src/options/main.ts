@@ -716,11 +716,12 @@ async function carregarAbaKanban(): Promise<void> {
   try {
     const store = createSyncConfigStore()
     const config = await store.get()
+    const kanban = config.controleProcessos.kanban ?? DEFAULT_SYNC_CONFIG.controleProcessos.kanban
 
     const inputAtivo = document.getElementById('kanban-ativo') as HTMLInputElement | null
     const status = document.getElementById('kanban-status')
 
-    if (inputAtivo) inputAtivo.checked = config.controleProcessos.kanban.ativo
+    if (inputAtivo) inputAtivo.checked = kanban.ativo
 
     document.getElementById('kanban-salvar')?.addEventListener('click', async () => {
       try {
@@ -729,7 +730,7 @@ async function carregarAbaKanban(): Promise<void> {
           controleProcessos: {
             ...config.controleProcessos,
             kanban: {
-              ...config.controleProcessos.kanban,
+              ...kanban,
               ativo: inputAtivo?.checked ?? false,
             },
           },
