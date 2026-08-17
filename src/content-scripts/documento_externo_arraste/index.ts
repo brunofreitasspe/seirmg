@@ -18,6 +18,7 @@ import {
   formatarDetalheFalhas,
   motivoLegivel,
   extrairFormulario,
+  extrairCamposOcultos,
   type FalhaComMotivo,
 } from '../../features/procedimento-visualizar/dropzone'
 import { fetchText } from '../../lib/fetchViaBackground'
@@ -42,9 +43,15 @@ async function criarDocumentoExternoPorArraste(arquivo: File): Promise<void> {
 
   const urlUpload = extrairUrlUpload(resposta2.data)
   if (!urlUpload) {
+    const formulario = extrairFormulario(resposta1.data, 'frmDocumentoEscolherTipo')
+    const aberturaForm = formulario ? /<form\b[^>]*>/i.exec(formulario)?.[0] : null
     console.error(
-      '[SEIRMG] Diagnóstico documento externo — form "frmDocumentoEscolherTipo" na 1ª página:',
-      extrairFormulario(resposta1.data, 'frmDocumentoEscolherTipo') ?? '(formulário não encontrado na 1ª página)'
+      '[SEIRMG] Diagnóstico documento externo — abertura do form:',
+      aberturaForm ?? '(formulário "frmDocumentoEscolherTipo" não encontrado na 1ª página)'
+    )
+    console.error(
+      '[SEIRMG] Diagnóstico documento externo — campos ocultos do form:',
+      formulario ? JSON.stringify(extrairCamposOcultos(formulario)) : '(sem formulário pra extrair campos)'
     )
     throw new Error('Não foi localizada a URL para enviar o arquivo. (veja o diagnóstico logo acima no console/Erros da extensão)')
   }

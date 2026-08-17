@@ -19,6 +19,7 @@ import {
   resumoPagina,
   extrairFuncaoJs,
   extrairFormulario,
+  extrairCamposOcultos,
 } from './dropzone'
 
 function montarDocumento(html: string): Document {
@@ -363,5 +364,25 @@ describe('extrairFormulario', () => {
 
   it('retorna null quando o formulário não existe na página', () => {
     expect(extrairFormulario('<body><form id="outro"></form></body>', 'frmDocumentoEscolherTipo')).toBeNull()
+  })
+})
+
+describe('extrairCamposOcultos', () => {
+  it('extrai nome e valor de cada input hidden, ignorando os que não são hidden', () => {
+    const html = `
+      <input type="hidden" id="hdnInfraTipoPagina" name="hdnInfraTipoPagina" value="2"/>
+      <input type="text" id="txtFiltro" name="txtFiltro" value="deveria ser ignorado"/>
+      <input class="infraCheckbox" name="chkInfraItem0" type="checkbox" value="-1"/>
+      <input name="hdnIdSerie" type="hidden" value=""/>
+    `
+    const resultado = extrairCamposOcultos(html)
+    expect(resultado).toEqual([
+      { nome: 'hdnInfraTipoPagina', valor: '2' },
+      { nome: 'hdnIdSerie', valor: '' },
+    ])
+  })
+
+  it('retorna lista vazia quando não há nenhum input hidden', () => {
+    expect(extrairCamposOcultos('<input type="text" name="a" value="b"/>')).toEqual([])
   })
 })

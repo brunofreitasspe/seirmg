@@ -234,6 +234,29 @@ export function extrairFormulario(html: string, id: string): string | null {
   return html.slice(inicio, fimTag + '</form>'.length)
 }
 
+export interface CampoFormulario {
+  nome: string
+  valor: string
+}
+
+// Extrai só os <input type="hidden"> de um trecho de HTML (nome+valor) — usado como diagnóstico
+// compacto quando o formulário inteiro (extrairFormulario) é grande demais pra caber no console
+// (ex.: uma tabela enorme de opções no meio dele).
+export function extrairCamposOcultos(html: string): CampoFormulario[] {
+  const campos: CampoFormulario[] = []
+  const regexInput = /<input\b[^>]*>/gi
+  let match: RegExpExecArray | null
+  while ((match = regexInput.exec(html)) !== null) {
+    const tag = match[0]
+    if (!/\btype=["']hidden["']/i.test(tag)) continue
+    const nome = /\bname=["']([^"']*)["']/i.exec(tag)?.[1]
+    if (!nome) continue
+    const valor = /\bvalue=["']([^"']*)["']/i.exec(tag)?.[1] ?? ''
+    campos.push({ nome, valor })
+  }
+  return campos
+}
+
 export function motivoLegivel(motivo: unknown): string {
   if (motivo instanceof Error) return motivo.message
   if (typeof motivo === 'string') return motivo
