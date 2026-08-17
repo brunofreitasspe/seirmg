@@ -22,7 +22,6 @@ import {
   formatarDetalheFalhas,
   motivoLegivel,
   extrairFormulario,
-  extrairTextoVisivel,
   type FalhaComMotivo,
 } from '../../features/procedimento-visualizar/dropzone'
 import { fetchText } from '../../lib/fetchViaBackground'
@@ -92,13 +91,7 @@ async function criarDocumentoExternoPorArraste(arquivo: File): Promise<void> {
   })
   if (!respostaFinal.ok) throw new Error(respostaFinal.error)
   if (!respostaIndicaSucesso(respostaFinal.data)) {
-    const tituloMatch = /<title[^>]*>(.*?)<\/title>/is.exec(respostaFinal.data)
-    console.error(
-      '[SEIRMG] Diagnóstico documento externo — título da resposta final:',
-      tituloMatch?.[1]?.trim() ?? '(sem título)'
-    )
-    console.error('[SEIRMG] Diagnóstico documento externo — texto visível da resposta final:', extrairTextoVisivel(respostaFinal.data))
-    throw new Error('A submissão do documento não retornou a página esperada. (veja o diagnóstico logo acima no console/Erros da extensão)')
+    throw new Error('A submissão do documento não retornou a página esperada.')
   }
 }
 

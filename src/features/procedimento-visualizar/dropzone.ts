@@ -69,7 +69,9 @@ export function montarHdnAnexos(usuarioEUnidade: UsuarioEUnidade, uploadIdentifi
 }
 
 export function respostaIndicaSucesso(respostaHtml: string): boolean {
-  return /id="divArvoreHtml"/m.test(respostaHtml)
+  if (/id="divArvoreHtml"/m.test(respostaHtml)) return true
+  const tituloMatch = /<title[^>]*>(.*?)<\/title>/is.exec(respostaHtml)
+  return /visualizar\s+[aá]rvore/i.test(tituloMatch?.[1] ?? '')
 }
 
 export function obterNomeDocumento(nomeArquivo: string): string {
@@ -214,17 +216,6 @@ export function extrairFormulario(html: string, id: string): string | null {
   if (fimTag === -1) return null
 
   return html.slice(inicio, fimTag + '</form>'.length)
-}
-
-// Dá pra "ler" o que uma página realmente diz (mensagem de erro do SEI, confirmação, etc.) sem
-// precisar de DevTools — remove script/style por completo (não só as tags) e colapsa espaços.
-export function extrairTextoVisivel(html: string, limite = 400): string {
-  const semScriptEStyle = html.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ')
-  const texto = semScriptEStyle
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-  return texto.slice(0, limite)
 }
 
 export interface CampoFormulario {

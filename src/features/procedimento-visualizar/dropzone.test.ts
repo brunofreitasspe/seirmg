@@ -20,7 +20,6 @@ import {
   formatarDetalheFalhas,
   motivoLegivel,
   extrairFormulario,
-  extrairTextoVisivel,
   extrairCamposOcultos,
 } from './dropzone'
 
@@ -163,12 +162,20 @@ describe('montarHdnAnexos', () => {
 })
 
 describe('respostaIndicaSucesso', () => {
-  it('true quando a resposta contém a div da árvore', () => {
+  it('true quando a resposta contém a div da árvore (formato antigo)', () => {
     expect(respostaIndicaSucesso('<div id="divArvoreHtml"></div>')).toBe(true)
   })
 
-  it('false quando a resposta não contém a div da árvore', () => {
-    expect(respostaIndicaSucesso('<div id="erro"></div>')).toBe(false)
+  it('true quando o <title> é "SEI - Visualizar Árvore" (formato real confirmado em produção — SEI 4.1.5)', () => {
+    expect(respostaIndicaSucesso('<html><head><title>SEI - Visualizar Árvore</title></head><body></body></html>')).toBe(true)
+  })
+
+  it('reconhece o título sem acento também (por segurança de encoding)', () => {
+    expect(respostaIndicaSucesso('<html><head><title>SEI - Visualizar Arvore</title></head></html>')).toBe(true)
+  })
+
+  it('false quando não é nem o formato antigo nem o título de sucesso', () => {
+    expect(respostaIndicaSucesso('<html><head><title>SEI - Erro</title></head><div id="erro"></div></html>')).toBe(false)
   })
 })
 
@@ -392,19 +399,3 @@ describe('extrairCamposOcultos', () => {
   })
 })
 
-describe('extrairTextoVisivel', () => {
-  it('remove tags e colapsa espaços, mantendo o texto legível', () => {
-    const html = '<html><body><h1>Erro</h1>\n\n  <p>Campo   obrigatório\nnão preenchido</p></body></html>'
-    expect(extrairTextoVisivel(html)).toBe('Erro Campo obrigatório não preenchido')
-  })
-
-  it('remove o conteúdo de <script> e <style>, não só as tags', () => {
-    const html = '<script>var x = "não deveria aparecer";</script><style>.a{color:red}</style><p>Texto real</p>'
-    expect(extrairTextoVisivel(html)).toBe('Texto real')
-  })
-
-  it('trunca no limite informado', () => {
-    const html = `<p>${'a'.repeat(500)}</p>`
-    expect(extrairTextoVisivel(html, 10)).toBe('a'.repeat(10))
-  })
-})
