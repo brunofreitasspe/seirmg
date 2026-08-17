@@ -18,7 +18,7 @@ objeto: `SyncConfig` (chave `config` em `chrome.storage.sync`), que contém `fea
 backup completo bem mais simples que o export de favoritos: não precisa extrair campo a campo, é
 o objeto inteiro.
 
-O outro lado do storage, `LocalConfig` (chave `config` em `chrome.storage.local`), guarda coisas
+O outro lado do storage, `LocalConfig` (chave `localConfig` em `chrome.storage.local`), guarda coisas
 que são mais cache/estado de sessão do que "configuração" (token/e-mail do Planka, estado de
 notificações já disparadas, `baseUrlSei`, `sessaoInvalidaAte` etc.) — decisão do usuário, tomada
 durante o brainstorming, foi deixar esse conjunto de fora do backup, **exceto** três campos com
