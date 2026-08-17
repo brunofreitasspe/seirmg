@@ -16,6 +16,7 @@ import {
   formatarMensagemSucesso,
   formatarDetalheFalhas,
   motivoLegivel,
+  trechoDiagnostico,
 } from './dropzone'
 
 function montarDocumento(html: string): Document {
@@ -283,5 +284,28 @@ describe('formatarDetalheFalhas', () => {
 
   it('retorna string vazia para lista vazia', () => {
     expect(formatarDetalheFalhas([])).toBe('')
+  })
+})
+
+describe('trechoDiagnostico', () => {
+  it('avisa quando o trecho procurado não existe na página', () => {
+    expect(trechoDiagnostico('<html><body>nada aqui</body></html>', 'infraUpload')).toBe(
+      '(trecho "infraUpload" não encontrado na página)'
+    )
+  })
+
+  it('devolve o contexto ao redor do trecho quando ele existe', () => {
+    const html = `algo antes disso tudo   objUpload = new infraUploadDiferente('frmAnexos','xyz'); algo depois`
+    const resultado = trechoDiagnostico(html, 'infraUpload')
+    expect(resultado).toContain('infraUploadDiferente')
+    expect(resultado).toContain('algo antes')
+    expect(resultado).toContain('algo depois')
+  })
+
+  it('colapsa espaços em branco (quebras de linha/indentação) num único espaço', () => {
+    const html = 'antes\n\n   infraUpload\n\t  depois'
+    const resultado = trechoDiagnostico(html, 'infraUpload')
+    expect(resultado).not.toMatch(/\n|\t/)
+    expect(resultado).toContain('antes infraUpload depois')
   })
 })

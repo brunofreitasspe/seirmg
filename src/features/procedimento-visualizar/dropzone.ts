@@ -182,6 +182,19 @@ export function formatarMensagemSucesso(quantidade: number): string {
   return `${quantidade} documentos incluídos com sucesso`
 }
 
+// Ajuda a diagnosticar falhas de extração (regex que não bate mais com o HTML real do SEI) sem
+// precisar que o usuário abra o DevTools — a página em questão nem é navegada por ele, é buscada
+// em segundo plano (fetch), então não tem "Inspecionar" pra consultar. O trecho volta embutido na
+// própria mensagem de erro exibida no overlay.
+export function trechoDiagnostico(html: string, agulha: string, raio = 120): string {
+  const indice = html.indexOf(agulha)
+  if (indice === -1) return `(trecho "${agulha}" não encontrado na página)`
+  const inicio = Math.max(0, indice - raio)
+  const fim = Math.min(html.length, indice + agulha.length + raio)
+  const contexto = html.slice(inicio, fim).replace(/\s+/g, ' ').trim()
+  return `(trecho: ...${contexto}...)`
+}
+
 export function motivoLegivel(motivo: unknown): string {
   if (motivo instanceof Error) return motivo.message
   if (typeof motivo === 'string') return motivo
