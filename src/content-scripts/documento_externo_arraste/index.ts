@@ -17,7 +17,7 @@ import {
   formatarMensagemSucesso,
   formatarDetalheFalhas,
   motivoLegivel,
-  trechoDiagnostico,
+  resumoPagina,
   type FalhaComMotivo,
 } from '../../features/procedimento-visualizar/dropzone'
 import { fetchText } from '../../lib/fetchViaBackground'
@@ -41,7 +41,7 @@ async function criarDocumentoExternoPorArraste(arquivo: File): Promise<void> {
 
   const urlUpload = extrairUrlUpload(resposta2.data)
   if (!urlUpload) {
-    throw new Error(`Não foi localizada a URL para enviar o arquivo. ${trechoDiagnostico(resposta2.data, 'infraUpload')}`)
+    throw new Error(`Não foi localizada a URL para enviar o arquivo. (${resumoPagina(resposta2.data)})`)
   }
 
   const formData = new FormData()

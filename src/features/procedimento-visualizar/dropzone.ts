@@ -184,15 +184,17 @@ export function formatarMensagemSucesso(quantidade: number): string {
 
 // Ajuda a diagnosticar falhas de extração (regex que não bate mais com o HTML real do SEI) sem
 // precisar que o usuário abra o DevTools — a página em questão nem é navegada por ele, é buscada
-// em segundo plano (fetch), então não tem "Inspecionar" pra consultar. O trecho volta embutido na
-// própria mensagem de erro exibida no overlay.
-export function trechoDiagnostico(html: string, agulha: string, raio = 120): string {
-  const indice = html.indexOf(agulha)
-  if (indice === -1) return `(trecho "${agulha}" não encontrado na página)`
-  const inicio = Math.max(0, indice - raio)
-  const fim = Math.min(html.length, indice + agulha.length + raio)
-  const contexto = html.slice(inicio, fim).replace(/\s+/g, ' ').trim()
-  return `(trecho: ...${contexto}...)`
+// em segundo plano (fetch), então não tem "Inspecionar" pra consultar. Identifica qual página foi
+// de fato retornada (título) e quais dos marcadores conhecidos desse fluxo estão presentes/
+// ausentes, embutido na própria mensagem de erro exibida no overlay.
+const MARCADORES_DOCUMENTO_EXTERNO = ['frmDocumentoCadastro', 'selSerie', 'infraUpload', 'frmAnexos']
+
+export function resumoPagina(html: string): string {
+  const tituloMatch = /<title[^>]*>(.*?)<\/title>/is.exec(html)
+  const titulo = tituloMatch ? tituloMatch[1].trim() : '(sem <title>)'
+  const encontrados = MARCADORES_DOCUMENTO_EXTERNO.filter((marcador) => html.includes(marcador))
+  const ausentes = MARCADORES_DOCUMENTO_EXTERNO.filter((marcador) => !html.includes(marcador))
+  return `título: "${titulo}"; encontrados: [${encontrados.join(', ') || 'nenhum'}]; ausentes: [${ausentes.join(', ') || 'nenhum'}]`
 }
 
 export function motivoLegivel(motivo: unknown): string {

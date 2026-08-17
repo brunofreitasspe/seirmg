@@ -16,7 +16,7 @@ import {
   formatarMensagemSucesso,
   formatarDetalheFalhas,
   motivoLegivel,
-  trechoDiagnostico,
+  resumoPagina,
 } from './dropzone'
 
 function montarDocumento(html: string): Document {
@@ -287,25 +287,27 @@ describe('formatarDetalheFalhas', () => {
   })
 })
 
-describe('trechoDiagnostico', () => {
-  it('avisa quando o trecho procurado não existe na página', () => {
-    expect(trechoDiagnostico('<html><body>nada aqui</body></html>', 'infraUpload')).toBe(
-      '(trecho "infraUpload" não encontrado na página)'
-    )
+describe('resumoPagina', () => {
+  it('extrai o título e separa marcadores conhecidos entre encontrados e ausentes', () => {
+    const html = `<html><head><title>SEI - Documento Externo</title></head>
+      <body><form id="frmDocumentoCadastro"><select id="selSerie"></select></form></body></html>`
+    const resumo = resumoPagina(html)
+    expect(resumo).toContain('título: "SEI - Documento Externo"')
+    expect(resumo).toContain('frmDocumentoCadastro')
+    expect(resumo).toContain('selSerie')
+    expect(resumo).toContain('infraUpload')
+    expect(resumo).toContain('frmAnexos')
   })
 
-  it('devolve o contexto ao redor do trecho quando ele existe', () => {
-    const html = `algo antes disso tudo   objUpload = new infraUploadDiferente('frmAnexos','xyz'); algo depois`
-    const resultado = trechoDiagnostico(html, 'infraUpload')
-    expect(resultado).toContain('infraUploadDiferente')
-    expect(resultado).toContain('algo antes')
-    expect(resultado).toContain('algo depois')
+  it('avisa quando não há <title>', () => {
+    const resumo = resumoPagina('<html><body>sem título</body></html>')
+    expect(resumo).toContain('(sem <title>)')
   })
 
-  it('colapsa espaços em branco (quebras de linha/indentação) num único espaço', () => {
-    const html = 'antes\n\n   infraUpload\n\t  depois'
-    const resultado = trechoDiagnostico(html, 'infraUpload')
-    expect(resultado).not.toMatch(/\n|\t/)
-    expect(resultado).toContain('antes infraUpload depois')
+  it('reconhece uma página de login (sem nenhum marcador de documento externo)', () => {
+    const html = '<html><head><title>SEI - Login</title></head><body><input name="txtUsuario"></body></html>'
+    const resumo = resumoPagina(html)
+    expect(resumo).toContain('título: "SEI - Login"')
+    expect(resumo).toContain('nenhum')
   })
 })
