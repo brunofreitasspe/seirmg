@@ -47,7 +47,10 @@ async function consultarBlocosAoVivo(baseUrlSei: string | undefined): Promise<Co
     if (!resposta?.ok || typeof resposta.total !== 'number') return { ok: false }
     return { ok: true, total: resposta.total }
   } catch (error) {
-    console.error('[SEIRMG] Falha ao consultar blocos de assinatura ao vivo:', error)
+    // Esperado quando a aba do SEI encontrada não tem o content script ativo (ex.: aba aberta
+    // antes de a extensão ser recarregada) — a UI já cai graciosamente no estado "indisponível"
+    // logo abaixo, então isso não é um erro de verdade, só um diagnóstico.
+    console.warn('[SEIRMG] Não foi possível consultar blocos de assinatura ao vivo:', error)
     return { ok: false }
   }
 }
