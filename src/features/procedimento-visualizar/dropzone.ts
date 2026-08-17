@@ -219,6 +219,21 @@ export function extrairFuncaoJs(html: string, nomeFuncao: string): string | null
   return null
 }
 
+// Extrai a tag <form id="ID">...</form> inteira de um HTML — <form> não aninha em HTML válido,
+// então basta achar o próximo </form> depois da tag de abertura com esse id (sem precisar de
+// balanceamento de chaves como extrairFuncaoJs).
+export function extrairFormulario(html: string, id: string): string | null {
+  const regexAbertura = new RegExp(`<form\\b[^>]*\\bid=["']${id}["'][^>]*>`, 'i')
+  const abertura = regexAbertura.exec(html)
+  if (!abertura) return null
+
+  const inicio = abertura.index
+  const fimTag = html.indexOf('</form>', inicio)
+  if (fimTag === -1) return null
+
+  return html.slice(inicio, fimTag + '</form>'.length)
+}
+
 export function motivoLegivel(motivo: unknown): string {
   if (motivo instanceof Error) return motivo.message
   if (typeof motivo === 'string') return motivo

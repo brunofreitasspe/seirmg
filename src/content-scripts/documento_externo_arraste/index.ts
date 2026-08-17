@@ -17,7 +17,7 @@ import {
   formatarMensagemSucesso,
   formatarDetalheFalhas,
   motivoLegivel,
-  extrairFuncaoJs,
+  extrairFormulario,
   type FalhaComMotivo,
 } from '../../features/procedimento-visualizar/dropzone'
 import { fetchText } from '../../lib/fetchViaBackground'
@@ -43,8 +43,8 @@ async function criarDocumentoExternoPorArraste(arquivo: File): Promise<void> {
   const urlUpload = extrairUrlUpload(resposta2.data)
   if (!urlUpload) {
     console.error(
-      '[SEIRMG] Diagnóstico documento externo — função "escolher" na 1ª página:',
-      extrairFuncaoJs(resposta1.data, 'escolher') ?? '(função "escolher" não encontrada na 1ª página)'
+      '[SEIRMG] Diagnóstico documento externo — form "frmDocumentoEscolherTipo" na 1ª página:',
+      extrairFormulario(resposta1.data, 'frmDocumentoEscolherTipo') ?? '(formulário não encontrado na 1ª página)'
     )
     throw new Error('Não foi localizada a URL para enviar o arquivo. (veja o diagnóstico logo acima no console/Erros da extensão)')
   }

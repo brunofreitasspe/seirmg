@@ -18,6 +18,7 @@ import {
   motivoLegivel,
   resumoPagina,
   extrairFuncaoJs,
+  extrairFormulario,
 } from './dropzone'
 
 function montarDocumento(html: string): Document {
@@ -337,5 +338,30 @@ describe('extrairFuncaoJs', () => {
 
   it('retorna null quando a função não existe na página', () => {
     expect(extrairFuncaoJs('<script>function outraCoisa(){}</script>', 'escolher')).toBeNull()
+  })
+})
+
+describe('extrairFormulario', () => {
+  it('extrai a tag <form> inteira, do início até o </form> correspondente', () => {
+    const html = `<body>
+      <form id="frmOutro" action="x"><input name="a"></form>
+      <form id="frmDocumentoEscolherTipo" action="controlador.php?acao=y" method="post">
+        <input type="hidden" id="hdnIdSerie" name="hdnIdSerie" value="">
+        <input type="hidden" name="hdnIdProcedimento" value="21467757">
+      </form>
+      <form id="frmMaisOutro"></form>
+    </body>`
+    const resultado = extrairFormulario(html, 'frmDocumentoEscolherTipo')
+    expect(resultado).toContain('action="controlador.php?acao=y"')
+    expect(resultado).toContain('method="post"')
+    expect(resultado).toContain('hdnIdSerie')
+    expect(resultado).toContain('hdnIdProcedimento')
+    expect(resultado).not.toContain('frmOutro')
+    expect(resultado).not.toContain('frmMaisOutro')
+    expect(resultado?.trim().endsWith('</form>')).toBe(true)
+  })
+
+  it('retorna null quando o formulário não existe na página', () => {
+    expect(extrairFormulario('<body><form id="outro"></form></body>', 'frmDocumentoEscolherTipo')).toBeNull()
   })
 })
