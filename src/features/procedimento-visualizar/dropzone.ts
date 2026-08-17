@@ -197,6 +197,28 @@ export function resumoPagina(html: string): string {
   return `título: "${titulo}"; encontrados: [${encontrados.join(', ') || 'nenhum'}]; ausentes: [${ausentes.join(', ') || 'nenhum'}]`
 }
 
+// Extrai o corpo completo (com chaves balanceadas) de uma função JS nomeada, de dentro de um
+// bloco de <script> ou HTML bruto — usado pra ver o que um onclick="funcao(...)" realmente faz,
+// sem precisar que o usuário navegue até o frame/popup certo no DevTools pra copiar manualmente.
+export function extrairFuncaoJs(html: string, nomeFuncao: string): string | null {
+  const marcador = `function ${nomeFuncao}(`
+  const inicio = html.indexOf(marcador)
+  if (inicio === -1) return null
+
+  const inicioChave = html.indexOf('{', inicio)
+  if (inicioChave === -1) return null
+
+  let profundidade = 0
+  for (let i = inicioChave; i < html.length; i++) {
+    if (html[i] === '{') profundidade++
+    else if (html[i] === '}') {
+      profundidade--
+      if (profundidade === 0) return html.slice(inicio, i + 1)
+    }
+  }
+  return null
+}
+
 export function motivoLegivel(motivo: unknown): string {
   if (motivo instanceof Error) return motivo.message
   if (typeof motivo === 'string') return motivo

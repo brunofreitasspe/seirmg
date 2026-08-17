@@ -17,6 +17,7 @@ import {
   formatarDetalheFalhas,
   motivoLegivel,
   resumoPagina,
+  extrairFuncaoJs,
 } from './dropzone'
 
 function montarDocumento(html: string): Document {
@@ -309,5 +310,32 @@ describe('resumoPagina', () => {
     const resumo = resumoPagina(html)
     expect(resumo).toContain('título: "SEI - Login"')
     expect(resumo).toContain('nenhum')
+  })
+})
+
+describe('extrairFuncaoJs', () => {
+  it('extrai o corpo completo de uma função, incluindo chaves aninhadas', () => {
+    const html = `<script>
+      function outraCoisa() { return 1; }
+      function escolher(idx) {
+        if (idx == -1) {
+          document.getElementById('divExterno').style.display = 'block';
+        } else {
+          document.getElementById('divInterno').style.display = 'block';
+        }
+      }
+      function maisOutraCoisa() { return 2; }
+    </script>`
+    const resultado = extrairFuncaoJs(html, 'escolher')
+    expect(resultado).toContain('function escolher(idx) {')
+    expect(resultado).toContain("divExterno")
+    expect(resultado).toContain('divInterno')
+    expect(resultado).not.toContain('maisOutraCoisa')
+    // fecha exatamente na chave que fecha a função, não vaza pra função seguinte
+    expect(resultado?.trim().endsWith('}')).toBe(true)
+  })
+
+  it('retorna null quando a função não existe na página', () => {
+    expect(extrairFuncaoJs('<script>function outraCoisa(){}</script>', 'escolher')).toBeNull()
   })
 })
