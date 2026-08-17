@@ -44,7 +44,7 @@ async function criarDocumentoExternoPorArraste(arquivo: File): Promise<void> {
   if (!urlUpload) {
     throw new Error(
       `Não foi localizada a URL para enviar o arquivo. ` +
-        `(link "Externo" bruto: "${urlExterno}"; buscado em: ${urlExternoResolvida}; ${resumoPagina(resposta2.data)})`
+        `(1ª página já tinha o formulário? ${resumoPagina(resposta1.data)})`
     )
   }
 
