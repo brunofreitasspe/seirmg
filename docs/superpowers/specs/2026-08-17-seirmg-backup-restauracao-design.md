@@ -136,9 +136,13 @@ nome do arquivo).
    + `createLocalConfigStore().get()` seguido de um `set` que sobrescreve *só* as 3 chaves
    restauradas, preservando os demais campos do `LocalConfig` atual (token do Planka, estado de
    sessão etc. não são tocados).
-4. Status "Backup restaurado com sucesso." e re-chama todas as `carregarAbaX()` já existentes na
-   página de Options, pra refletir os novos valores nos campos de cada aba sem precisar recarregar
-   a página inteira.
+4. Status "Backup restaurado com sucesso." seguido de `location.reload()` da própria página de
+   Options (com um pequeno `setTimeout`, ~800ms, só pra a mensagem ser visível antes do reload).
+   **Correção sobre a primeira versão desta spec:** re-chamar as `carregarAbaX()` já existentes
+   pra "atualizar sem recarregar a página" registraria um segundo conjunto de listeners de clique
+   nos botões de cada aba (cada `carregarAbaX()` faz `addEventListener` nos seus próprios
+   elementos, e eles não são recriados) — um clique em "Salvar" de qualquer aba passaria a salvar
+   duas vezes. `location.reload()` evita esse problema reconstruindo a página do zero.
 5. Igual a qualquer mudança de configuração hoje no projeto: abas do SEI já abertas em outras janelas
    só pegam os novos valores depois de um F5 nelas — não é uma regra nova deste recurso.
 
