@@ -36,12 +36,16 @@ async function criarDocumentoExternoPorArraste(arquivo: File): Promise<void> {
   const urlExterno = extrairUrlDocumentoExterno(resposta1.data)
   if (!urlExterno) throw new Error('Não foi localizado link para o documento tipo externo.')
 
-  const resposta2 = await fetchText(new URL(urlExterno, window.location.href).href)
+  const urlExternoResolvida = new URL(urlExterno, window.location.href).href
+  const resposta2 = await fetchText(urlExternoResolvida)
   if (!resposta2.ok) throw new Error(resposta2.error)
 
   const urlUpload = extrairUrlUpload(resposta2.data)
   if (!urlUpload) {
-    throw new Error(`Não foi localizada a URL para enviar o arquivo. (${resumoPagina(resposta2.data)})`)
+    throw new Error(
+      `Não foi localizada a URL para enviar o arquivo. ` +
+        `(link "Externo" bruto: "${urlExterno}"; buscado em: ${urlExternoResolvida}; ${resumoPagina(resposta2.data)})`
+    )
   }
 
   const formData = new FormData()
