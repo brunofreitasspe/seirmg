@@ -14,7 +14,8 @@ import {
   montarCorpoDocumentoExterno,
   formatarMensagemEnviando,
   formatarMensagemSucesso,
-  formatarListaFalhas,
+  formatarDetalheFalhas,
+  motivoLegivel,
 } from './dropzone'
 
 function montarDocumento(html: string): Document {
@@ -254,12 +255,33 @@ describe('formatarMensagemSucesso', () => {
   })
 })
 
-describe('formatarListaFalhas', () => {
-  it('junta os nomes com vírgula', () => {
-    expect(formatarListaFalhas(['a.pdf', 'b.pdf'])).toBe('a.pdf, b.pdf')
+describe('motivoLegivel', () => {
+  it('usa a mensagem de um Error', () => {
+    expect(motivoLegivel(new Error('Falha no upload: HTTP 500'))).toBe('Falha no upload: HTTP 500')
+  })
+
+  it('usa o valor direto quando é uma string', () => {
+    expect(motivoLegivel('algo deu errado')).toBe('algo deu errado')
+  })
+
+  it('cai num texto genérico pra motivo desconhecido (ex.: undefined, objeto sem mensagem)', () => {
+    expect(motivoLegivel(undefined)).toBe('Motivo desconhecido')
+    expect(motivoLegivel({})).toBe('Motivo desconhecido')
+  })
+})
+
+describe('formatarDetalheFalhas', () => {
+  it('junta nome e motivo de cada falha, uma por linha', () => {
+    const falhas = [
+      { nome: 'a.pdf', motivo: 'Falha no upload: HTTP 500' },
+      { nome: 'b.pdf', motivo: 'Não foi possível ler os campos do formulário de documento.' },
+    ]
+    expect(formatarDetalheFalhas(falhas)).toBe(
+      'a.pdf: Falha no upload: HTTP 500\nb.pdf: Não foi possível ler os campos do formulário de documento.'
+    )
   })
 
   it('retorna string vazia para lista vazia', () => {
-    expect(formatarListaFalhas([])).toBe('')
+    expect(formatarDetalheFalhas([])).toBe('')
   })
 })

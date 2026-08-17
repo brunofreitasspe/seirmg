@@ -15,7 +15,9 @@ import {
   montarCorpoDocumentoExterno,
   formatarMensagemEnviando,
   formatarMensagemSucesso,
-  formatarListaFalhas,
+  formatarDetalheFalhas,
+  motivoLegivel,
+  type FalhaComMotivo,
 } from '../../features/procedimento-visualizar/dropzone'
 import { fetchText } from '../../lib/fetchViaBackground'
 import { createSyncConfigStore } from '../../lib/storage'
@@ -174,22 +176,31 @@ function montarDropzone(): void {
 
       Promise.allSettled(arquivos.map((arquivo) => criarDocumentoExternoPorArraste(arquivo)))
         .then((resultados) => {
-          const falhas = arquivos.filter((_, indice) => resultados[indice]?.status === 'rejected')
-          const sucessos = arquivos.length - falhas.length
+          const falhasComMotivo: FalhaComMotivo[] = []
+          const arquivosFalhos: File[] = []
+          arquivos.forEach((arquivo, indice) => {
+            const resultado = resultados[indice]
+            if (resultado?.status !== 'rejected') return
+            const motivo = motivoLegivel(resultado.reason)
+            console.error(`[SEIRMG] Falha ao incluir documento "${arquivo.name}" por arraste:`, resultado.reason)
+            falhasComMotivo.push({ nome: arquivo.name, motivo })
+            arquivosFalhos.push(arquivo)
+          })
+          const sucessos = arquivos.length - falhasComMotivo.length
 
-          if (falhas.length === 0) {
+          if (falhasComMotivo.length === 0) {
             arquivosPendentes = []
             definirEstado(overlay, 'sucesso', { titulo: formatarMensagemSucesso(sucessos) })
             setTimeout(() => location.reload(), 900)
             return
           }
 
-          arquivosPendentes = falhas
+          arquivosPendentes = arquivosFalhos
           enviando = false
           definirEstado(overlay, 'erro', {
             titulo: 'Não foi possível incluir o documento',
-            sub: 'Verifique se o processo está aberto na sua unidade',
-            falhas: formatarListaFalhas(falhas.map((arquivo) => arquivo.name)),
+            sub: 'Confira o motivo de cada arquivo abaixo',
+            falhas: formatarDetalheFalhas(falhasComMotivo),
           })
         })
         .catch((error) => {

@@ -774,6 +774,7 @@ p.seirmg-atribuido-para.seirmg-atribuido-para-mais {
   color: #b3261e;
   max-width: 260px;
   word-break: break-word;
+  white-space: pre-line;
 }
 
 #seirmg-dropzone-overlay .seirmg-dropzone-acoes {

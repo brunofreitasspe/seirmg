@@ -182,6 +182,17 @@ export function formatarMensagemSucesso(quantidade: number): string {
   return `${quantidade} documentos incluídos com sucesso`
 }
 
-export function formatarListaFalhas(nomesArquivos: string[]): string {
-  return nomesArquivos.join(', ')
+export function motivoLegivel(motivo: unknown): string {
+  if (motivo instanceof Error) return motivo.message
+  if (typeof motivo === 'string') return motivo
+  return 'Motivo desconhecido'
+}
+
+export interface FalhaComMotivo {
+  nome: string
+  motivo: string
+}
+
+export function formatarDetalheFalhas(falhas: FalhaComMotivo[]): string {
+  return falhas.map(({ nome, motivo }) => `${nome}: ${motivo}`).join('\n')
 }
