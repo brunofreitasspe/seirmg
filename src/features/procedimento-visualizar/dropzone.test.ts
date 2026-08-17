@@ -20,6 +20,7 @@ import {
   formatarDetalheFalhas,
   motivoLegivel,
   extrairFormulario,
+  extrairTextoVisivel,
   extrairCamposOcultos,
 } from './dropzone'
 
@@ -388,5 +389,22 @@ describe('extrairCamposOcultos', () => {
 
   it('retorna lista vazia quando não há nenhum input hidden', () => {
     expect(extrairCamposOcultos('<input type="text" name="a" value="b"/>')).toEqual([])
+  })
+})
+
+describe('extrairTextoVisivel', () => {
+  it('remove tags e colapsa espaços, mantendo o texto legível', () => {
+    const html = '<html><body><h1>Erro</h1>\n\n  <p>Campo   obrigatório\nnão preenchido</p></body></html>'
+    expect(extrairTextoVisivel(html)).toBe('Erro Campo obrigatório não preenchido')
+  })
+
+  it('remove o conteúdo de <script> e <style>, não só as tags', () => {
+    const html = '<script>var x = "não deveria aparecer";</script><style>.a{color:red}</style><p>Texto real</p>'
+    expect(extrairTextoVisivel(html)).toBe('Texto real')
+  })
+
+  it('trunca no limite informado', () => {
+    const html = `<p>${'a'.repeat(500)}</p>`
+    expect(extrairTextoVisivel(html, 10)).toBe('a'.repeat(10))
   })
 })
