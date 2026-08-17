@@ -7,10 +7,29 @@ export function extrairUrlIncluirDocumento(scriptsHtml: string): string | null {
   return resultado ? resultado[1] : null
 }
 
-export function extrairUrlDocumentoExterno(respostaHtml: string): string | null {
-  const regex = /<a\s+(?:[^>]*?\s+)?href="(.*?)" tabindex="1003" class="ancoraOpcao"> Externo<\/a>/m
+// A opção "Externo" na lista de tipos de documento não é mais um link navegável (href="#") —
+// escolher um tipo dispara escolher(idSerie), que preenche hdnIdSerie e submete
+// frmDocumentoEscolherTipo via POST. Aqui extraímos o idSerie (ex.: "-1") do próprio onclick,
+// não um href, pra depois montar essa submissão manualmente (ver extrairAcaoFormulario +
+// montarCorpoCamposOcultos).
+export function extrairIdSerieDocumentoExterno(respostaHtml: string): string | null {
+  const regex = /<a[^>]*onclick="escolher\((-?\d+)\)"[^>]*>\s*Externo\s*<\/a>/i
   const resultado = regex.exec(respostaHtml)
   return resultado ? resultado[1] : null
+}
+
+export function extrairAcaoFormulario(formularioHtml: string): string | null {
+  const regex = /<form\b[^>]*\baction="([^"]*)"/i
+  const resultado = regex.exec(formularioHtml)
+  return resultado ? resultado[1] : null
+}
+
+export function definirValorCampo(campos: CampoFormulario[], nome: string, valor: string): CampoFormulario[] {
+  return campos.map((campo) => (campo.nome === nome ? { ...campo, valor } : campo))
+}
+
+export function montarCorpoCamposOcultos(campos: CampoFormulario[]): string {
+  return campos.map(({ nome, valor }) => `${nome}=${escapeComponentAnotacao(valor)}`).join('&')
 }
 
 export function extrairUrlUpload(respostaHtml: string): string | null {
@@ -180,43 +199,6 @@ export function formatarMensagemEnviando(nomesArquivos: string[]): string {
 export function formatarMensagemSucesso(quantidade: number): string {
   if (quantidade === 1) return 'Documento incluído com sucesso'
   return `${quantidade} documentos incluídos com sucesso`
-}
-
-// Ajuda a diagnosticar falhas de extração (regex que não bate mais com o HTML real do SEI) sem
-// precisar que o usuário abra o DevTools — a página em questão nem é navegada por ele, é buscada
-// em segundo plano (fetch), então não tem "Inspecionar" pra consultar. Identifica qual página foi
-// de fato retornada (título) e quais dos marcadores conhecidos desse fluxo estão presentes/
-// ausentes, embutido na própria mensagem de erro exibida no overlay.
-const MARCADORES_DOCUMENTO_EXTERNO = ['frmDocumentoCadastro', 'selSerie', 'infraUpload', 'frmAnexos']
-
-export function resumoPagina(html: string): string {
-  const tituloMatch = /<title[^>]*>(.*?)<\/title>/is.exec(html)
-  const titulo = tituloMatch ? tituloMatch[1].trim() : '(sem <title>)'
-  const encontrados = MARCADORES_DOCUMENTO_EXTERNO.filter((marcador) => html.includes(marcador))
-  const ausentes = MARCADORES_DOCUMENTO_EXTERNO.filter((marcador) => !html.includes(marcador))
-  return `título: "${titulo}"; encontrados: [${encontrados.join(', ') || 'nenhum'}]; ausentes: [${ausentes.join(', ') || 'nenhum'}]`
-}
-
-// Extrai o corpo completo (com chaves balanceadas) de uma função JS nomeada, de dentro de um
-// bloco de <script> ou HTML bruto — usado pra ver o que um onclick="funcao(...)" realmente faz,
-// sem precisar que o usuário navegue até o frame/popup certo no DevTools pra copiar manualmente.
-export function extrairFuncaoJs(html: string, nomeFuncao: string): string | null {
-  const marcador = `function ${nomeFuncao}(`
-  const inicio = html.indexOf(marcador)
-  if (inicio === -1) return null
-
-  const inicioChave = html.indexOf('{', inicio)
-  if (inicioChave === -1) return null
-
-  let profundidade = 0
-  for (let i = inicioChave; i < html.length; i++) {
-    if (html[i] === '{') profundidade++
-    else if (html[i] === '}') {
-      profundidade--
-      if (profundidade === 0) return html.slice(inicio, i + 1)
-    }
-  }
-  return null
 }
 
 // Extrai a tag <form id="ID">...</form> inteira de um HTML — <form> não aninha em HTML válido,

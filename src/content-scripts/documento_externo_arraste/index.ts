@@ -4,7 +4,11 @@ import checkIconSvg from 'lucide-static/icons/check.svg?raw'
 import xIconSvg from 'lucide-static/icons/x.svg?raw'
 import {
   extrairUrlIncluirDocumento,
-  extrairUrlDocumentoExterno,
+  extrairIdSerieDocumentoExterno,
+  extrairAcaoFormulario,
+  extrairCamposOcultos,
+  definirValorCampo,
+  montarCorpoCamposOcultos,
   extrairUrlUpload,
   extrairUsuarioEUnidade,
   montarHdnAnexos,
@@ -18,7 +22,6 @@ import {
   formatarDetalheFalhas,
   motivoLegivel,
   extrairFormulario,
-  extrairCamposOcultos,
   type FalhaComMotivo,
 } from '../../features/procedimento-visualizar/dropzone'
 import { fetchText } from '../../lib/fetchViaBackground'
@@ -34,27 +37,29 @@ async function criarDocumentoExternoPorArraste(arquivo: File): Promise<void> {
   const resposta1 = await fetchText(new URL(urlIncluir, window.location.href).href)
   if (!resposta1.ok) throw new Error(resposta1.error)
 
-  const urlExterno = extrairUrlDocumentoExterno(resposta1.data)
-  if (!urlExterno) throw new Error('Não foi localizado link para o documento tipo externo.')
+  // A opção "Externo" não é mais um link navegável nas versões atuais do SEI — escolher um tipo
+  // preenche hdnIdSerie e submete frmDocumentoEscolherTipo via POST (função escolher(idSerie) do
+  // próprio SEI). Replicamos essa submissão manualmente.
+  const idSerieExterno = extrairIdSerieDocumentoExterno(resposta1.data)
+  if (!idSerieExterno) throw new Error('Não foi localizada a opção "Externo" na lista de tipos de documento.')
 
-  const urlExternoResolvida = new URL(urlExterno, window.location.href).href
-  const resposta2 = await fetchText(urlExternoResolvida)
+  const formularioEscolherTipo = extrairFormulario(resposta1.data, 'frmDocumentoEscolherTipo')
+  if (!formularioEscolherTipo) throw new Error('Não foi possível localizar o formulário de escolha do tipo de documento.')
+
+  const acaoEscolherTipo = extrairAcaoFormulario(formularioEscolherTipo)
+  if (!acaoEscolherTipo) throw new Error('Não foi possível localizar a ação do formulário de escolha do tipo de documento.')
+
+  const camposEscolherTipo = definirValorCampo(extrairCamposOcultos(formularioEscolherTipo), 'hdnIdSerie', idSerieExterno)
+  const corpoEscolherTipo = montarCorpoCamposOcultos(camposEscolherTipo)
+
+  const resposta2 = await fetchText(new URL(acaoEscolherTipo, window.location.href).href, {
+    method: 'POST',
+    bodyRaw: corpoEscolherTipo,
+  })
   if (!resposta2.ok) throw new Error(resposta2.error)
 
   const urlUpload = extrairUrlUpload(resposta2.data)
-  if (!urlUpload) {
-    const formulario = extrairFormulario(resposta1.data, 'frmDocumentoEscolherTipo')
-    const aberturaForm = formulario ? /<form\b[^>]*>/i.exec(formulario)?.[0] : null
-    console.error(
-      '[SEIRMG] Diagnóstico documento externo — abertura do form:',
-      aberturaForm ?? '(formulário "frmDocumentoEscolherTipo" não encontrado na 1ª página)'
-    )
-    console.error(
-      '[SEIRMG] Diagnóstico documento externo — campos ocultos do form:',
-      formulario ? JSON.stringify(extrairCamposOcultos(formulario)) : '(sem formulário pra extrair campos)'
-    )
-    throw new Error('Não foi localizada a URL para enviar o arquivo. (veja o diagnóstico logo acima no console/Erros da extensão)')
-  }
+  if (!urlUpload) throw new Error('Não foi localizada a URL para enviar o arquivo.')
 
   const formData = new FormData()
   formData.append('filArquivo', arquivo, arquivo.name)

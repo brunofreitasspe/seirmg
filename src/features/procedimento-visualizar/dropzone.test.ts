@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest'
 import type { DocumentoExternoConfig } from '../../lib/storage'
 import {
   extrairUrlIncluirDocumento,
-  extrairUrlDocumentoExterno,
+  extrairIdSerieDocumentoExterno,
+  extrairAcaoFormulario,
+  montarCorpoCamposOcultos,
+  definirValorCampo,
   extrairUrlUpload,
   extrairUsuarioEUnidade,
   formatarTamanhoBytes,
@@ -16,8 +19,6 @@ import {
   formatarMensagemSucesso,
   formatarDetalheFalhas,
   motivoLegivel,
-  resumoPagina,
-  extrairFuncaoJs,
   extrairFormulario,
   extrairCamposOcultos,
 } from './dropzone'
@@ -48,14 +49,69 @@ describe('extrairUrlIncluirDocumento', () => {
   })
 })
 
-describe('extrairUrlDocumentoExterno', () => {
-  it('extrai a url do link "Externo"', () => {
-    const html = `<a href="controlador.php?acao=documento_gerar&id_tipo=2" tabindex="1003" class="ancoraOpcao"> Externo</a>`
-    expect(extrairUrlDocumentoExterno(html)).toBe('controlador.php?acao=documento_gerar&id_tipo=2')
+describe('extrairIdSerieDocumentoExterno', () => {
+  it('extrai o argumento numérico de escolher(...) na opção "Externo" (formato real do SEI)', () => {
+    const html = `<a style="width:100%;" href="#" onclick="escolher(-1)" tabindex="1003" class="ancoraOpcao"> Externo</a>`
+    expect(extrairIdSerieDocumentoExterno(html)).toBe('-1')
   })
 
-  it('retorna null quando não há link Externo', () => {
-    expect(extrairUrlDocumentoExterno('<a href="x" tabindex="1003" class="ancoraOpcao"> Interno</a>')).toBeNull()
+  it('funciona mesmo com outras opções (não-Externo) antes na página', () => {
+    const html = `
+      <a href="#" onclick="escolher(40)" tabindex="1005" class="ancoraOpcao">Acesso / Revogação ao SEI</a>
+      <a href="#" onclick="escolher(-1)" tabindex="1003" class="ancoraOpcao"> Externo</a>
+    `
+    expect(extrairIdSerieDocumentoExterno(html)).toBe('-1')
+  })
+
+  it('retorna null quando não há opção "Externo" na página', () => {
+    expect(extrairIdSerieDocumentoExterno('<a href="#" onclick="escolher(40)" class="ancoraOpcao">Interno</a>')).toBeNull()
+  })
+})
+
+describe('extrairAcaoFormulario', () => {
+  it('extrai o action de uma tag <form>', () => {
+    const html = `<form id="frmDocumentoEscolherTipo" method="post" onsubmit="return false;" action="controlador.php?acao=documento_escolher_tipo&id_procedimento=123">`
+    expect(extrairAcaoFormulario(html)).toBe('controlador.php?acao=documento_escolher_tipo&id_procedimento=123')
+  })
+
+  it('retorna null quando não há atributo action', () => {
+    expect(extrairAcaoFormulario('<form id="x" method="post">')).toBeNull()
+  })
+})
+
+describe('definirValorCampo', () => {
+  it('substitui o valor do campo com o nome pedido, mantendo os demais intactos', () => {
+    const campos = [
+      { nome: 'hdnInfraTipoPagina', valor: '2' },
+      { nome: 'hdnIdSerie', valor: '' },
+    ]
+    expect(definirValorCampo(campos, 'hdnIdSerie', '-1')).toEqual([
+      { nome: 'hdnInfraTipoPagina', valor: '2' },
+      { nome: 'hdnIdSerie', valor: '-1' },
+    ])
+  })
+
+  it('não altera nada quando o campo não existe na lista', () => {
+    const campos = [{ nome: 'a', valor: '1' }]
+    expect(definirValorCampo(campos, 'inexistente', 'x')).toEqual(campos)
+  })
+})
+
+describe('montarCorpoCamposOcultos', () => {
+  it('monta o corpo url-encoded a partir dos campos', () => {
+    const campos = [
+      { nome: 'hdnInfraTipoPagina', valor: '2' },
+      { nome: 'hdnIdSerie', valor: '-1' },
+    ]
+    expect(montarCorpoCamposOcultos(campos)).toBe('hdnInfraTipoPagina=2&hdnIdSerie=-1')
+  })
+
+  it('escapa valores com caracteres especiais', () => {
+    expect(montarCorpoCamposOcultos([{ nome: 'hdnInfraItensHash', valor: 'a&b=c' }])).toBe('hdnInfraItensHash=a%26b%3Dc')
+  })
+
+  it('retorna string vazia pra lista vazia', () => {
+    expect(montarCorpoCamposOcultos([])).toBe('')
   })
 })
 
@@ -287,58 +343,6 @@ describe('formatarDetalheFalhas', () => {
 
   it('retorna string vazia para lista vazia', () => {
     expect(formatarDetalheFalhas([])).toBe('')
-  })
-})
-
-describe('resumoPagina', () => {
-  it('extrai o título e separa marcadores conhecidos entre encontrados e ausentes', () => {
-    const html = `<html><head><title>SEI - Documento Externo</title></head>
-      <body><form id="frmDocumentoCadastro"><select id="selSerie"></select></form></body></html>`
-    const resumo = resumoPagina(html)
-    expect(resumo).toContain('título: "SEI - Documento Externo"')
-    expect(resumo).toContain('frmDocumentoCadastro')
-    expect(resumo).toContain('selSerie')
-    expect(resumo).toContain('infraUpload')
-    expect(resumo).toContain('frmAnexos')
-  })
-
-  it('avisa quando não há <title>', () => {
-    const resumo = resumoPagina('<html><body>sem título</body></html>')
-    expect(resumo).toContain('(sem <title>)')
-  })
-
-  it('reconhece uma página de login (sem nenhum marcador de documento externo)', () => {
-    const html = '<html><head><title>SEI - Login</title></head><body><input name="txtUsuario"></body></html>'
-    const resumo = resumoPagina(html)
-    expect(resumo).toContain('título: "SEI - Login"')
-    expect(resumo).toContain('nenhum')
-  })
-})
-
-describe('extrairFuncaoJs', () => {
-  it('extrai o corpo completo de uma função, incluindo chaves aninhadas', () => {
-    const html = `<script>
-      function outraCoisa() { return 1; }
-      function escolher(idx) {
-        if (idx == -1) {
-          document.getElementById('divExterno').style.display = 'block';
-        } else {
-          document.getElementById('divInterno').style.display = 'block';
-        }
-      }
-      function maisOutraCoisa() { return 2; }
-    </script>`
-    const resultado = extrairFuncaoJs(html, 'escolher')
-    expect(resultado).toContain('function escolher(idx) {')
-    expect(resultado).toContain("divExterno")
-    expect(resultado).toContain('divInterno')
-    expect(resultado).not.toContain('maisOutraCoisa')
-    // fecha exatamente na chave que fecha a função, não vaza pra função seguinte
-    expect(resultado?.trim().endsWith('}')).toBe(true)
-  })
-
-  it('retorna null quando a função não existe na página', () => {
-    expect(extrairFuncaoJs('<script>function outraCoisa(){}</script>', 'escolher')).toBeNull()
   })
 })
 
