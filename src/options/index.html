@@ -16,6 +16,7 @@
     <div class="layout">
       <nav id="abas">
         <button data-aba="aparencia" class="aba-btn">Aparência</button>
+        <button data-aba="backup" class="aba-btn">Backup</button>
         <button data-aba="editor" class="aba-btn">Editor de Documentos</button>
         <button data-aba="corretor" class="aba-btn">Corretor Ortográfico</button>
         <button data-aba="ia" class="aba-btn">Ferramentas de IA</button>
@@ -57,6 +58,25 @@
       <br />
       <button id="geral-salvar">Salvar</button>
       <span id="geral-status"></span>
+    </section>
+    <section id="painel-backup" class="painel">
+      <h2>Backup e Restauração</h2>
+      <h3>Fazer backup</h3>
+      <p style="font-size: 0.85em; color: #666; max-width: 480px;">
+        Baixa um arquivo .json com todas as configurações atuais (dicionário do corretor, Kanban,
+        prazos, avisos de bloco, tema, IA, favoritos, tarefas, atalhos, ponto de controle, histórico) —
+        inclui as chaves de API salvas.
+      </p>
+      <button id="backup-baixar">Baixar backup</button>
+      <br /><br />
+      <h3>Restaurar backup</h3>
+      <p style="font-size: 0.85em; color: #666; max-width: 480px;">
+        Substitui TODAS as configurações atuais pelas do arquivo escolhido. Essa ação não pode ser
+        desfeita.
+      </p>
+      <input type="file" id="backup-arquivo" accept="application/json" />
+      <button id="backup-restaurar">Restaurar</button>
+      <span id="backup-status"></span>
     </section>
     <section id="painel-aparencia" class="painel">
       <h2>Aparência</h2>

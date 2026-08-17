@@ -8,6 +8,7 @@ import plugIconSvg from 'lucide-static/icons/plug.svg?raw'
 import infoIconSvg from 'lucide-static/icons/info.svg?raw'
 import spellCheckIconSvg from 'lucide-static/icons/spell-check.svg?raw'
 import kanbanIconSvg from 'lucide-static/icons/kanban.svg?raw'
+import archiveIconSvg from 'lucide-static/icons/archive.svg?raw'
 import { ativarAba } from './tabs'
 import {
   createLocalConfigStore,
@@ -24,6 +25,12 @@ import { montarListaEditavel } from './listaEditavel'
 import { colorToFilter } from '../features/ponto-controle/colorToFilter'
 import { decodificarPayloadJwtSemVerificar, tokenValido } from '../features/planka/token'
 import { formatarAtalhos, parsearAtalhos } from '../features/formatacao-basica/atalhos'
+import {
+  montarBackupCompleto,
+  parseBackupCompleto,
+  aplicarBackupRestaurado,
+  type BackupLocalConfig,
+} from '../features/backup/backup'
 
 interface RegraPontoControleEditavel {
   nome: string
@@ -46,6 +53,7 @@ const ICONES_ABA: Record<string, string> = {
   corretor: spellCheckIconSvg,
   ia: sparklesIconSvg,
   kanban: kanbanIconSvg,
+  backup: archiveIconSvg,
   notificacoes: bellIconSvg,
   integracoes: plugIconSvg,
   sobre: infoIconSvg,
@@ -751,6 +759,89 @@ async function carregarAbaKanban(): Promise<void> {
   }
 }
 
+async function carregarAbaBackup(): Promise<void> {
+  try {
+    const btnBaixar = document.getElementById('backup-baixar')
+    const btnRestaurar = document.getElementById('backup-restaurar')
+    const inputArquivo = document.getElementById('backup-arquivo') as HTMLInputElement | null
+    const status = document.getElementById('backup-status')
+
+    btnBaixar?.addEventListener('click', async () => {
+      try {
+        const syncStore = createSyncConfigStore()
+        const localStore = createLocalConfigStore()
+        const sync = await syncStore.get()
+        const local = await localStore.get()
+        const localParaBackup: BackupLocalConfig = {
+          historicoProcessosVisitados: local.historicoProcessosVisitados,
+          historicoEventos: local.historicoEventos,
+          snapshotPrazosProcessos: local.snapshotPrazosProcessos,
+        }
+        const backup = montarBackupCompleto(sync, localParaBackup, chrome.runtime.getManifest().version, new Date())
+        const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = `backup-seirmg-${new Date().toISOString().slice(0, 10)}.json`
+        link.click()
+        URL.revokeObjectURL(url)
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao gerar backup:', error)
+        if (status) status.textContent = 'Falha ao gerar backup.'
+      }
+    })
+
+    btnRestaurar?.addEventListener('click', () => {
+      const arquivo = inputArquivo?.files?.[0]
+      if (!arquivo) {
+        if (status) status.textContent = 'Escolha um arquivo primeiro.'
+        return
+      }
+
+      const leitor = new FileReader()
+      leitor.onerror = () => {
+        console.error('[SEIRMG] Falha ao ler arquivo de backup:', leitor.error)
+        if (status) status.textContent = 'Falha ao ler o arquivo.'
+      }
+      leitor.onload = async (evento) => {
+        try {
+          const conteudo = evento.target?.result
+          if (typeof conteudo !== 'string') return
+
+          const backup = parseBackupCompleto(conteudo)
+          if (!backup) {
+            if (status) status.textContent = 'Arquivo inválido ou corrompido.'
+            return
+          }
+
+          const dataFormatada = new Date(backup.exportadoEm).toLocaleString('pt-BR')
+          const confirmado = window.confirm(
+            `Isso vai substituir TODAS as configurações atuais pelas do backup de ${dataFormatada}. Essa ação não pode ser desfeita. Continuar?`
+          )
+          if (!confirmado) return
+
+          const restaurado = aplicarBackupRestaurado(backup)
+          const syncStore = createSyncConfigStore()
+          const localStore = createLocalConfigStore()
+          await syncStore.set(restaurado.sync)
+          const localAtual = await localStore.get()
+          await localStore.set({ ...localAtual, ...restaurado.local })
+
+          if (status) status.textContent = 'Backup restaurado com sucesso. Recarregando...'
+          if (inputArquivo) inputArquivo.value = ''
+          setTimeout(() => location.reload(), 800)
+        } catch (error) {
+          console.error('[SEIRMG] Falha ao restaurar backup:', error)
+          if (status) status.textContent = 'Falha ao restaurar backup.'
+        }
+      }
+      leitor.readAsText(arquivo)
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao carregar aba Backup:', error)
+  }
+}
+
 carregarAbaEditor()
 carregarAbaCorretor()
 carregarAbaIA()
@@ -760,3 +851,4 @@ carregarAbaGeral()
 carregarAbaAssinatura()
 carregarAbaIntegracoes()
 carregarAbaKanban()
+carregarAbaBackup()
