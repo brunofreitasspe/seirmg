@@ -78,6 +78,20 @@ describe('parseBackupCompleto', () => {
   it('retorna null quando sync não é objeto', () => {
     expect(parseBackupCompleto(JSON.stringify({ ...backupValido, sync: 'não é objeto' }))).toBeNull()
   })
+
+  it('retorna null quando versaoSeirmg está ausente ou não é string', () => {
+    const { versaoSeirmg: _versaoSeirmg, ...semVersao } = backupValido
+    expect(parseBackupCompleto(JSON.stringify(semVersao))).toBeNull()
+  })
+
+  it('retorna null quando exportadoEm está ausente ou não é string', () => {
+    const { exportadoEm: _exportadoEm, ...semExportadoEm } = backupValido
+    expect(parseBackupCompleto(JSON.stringify(semExportadoEm))).toBeNull()
+  })
+
+  it('retorna null quando sync é um objeto vazio (não parece um SyncConfig real)', () => {
+    expect(parseBackupCompleto(JSON.stringify({ ...backupValido, sync: {} }))).toBeNull()
+  })
 })
 
 describe('aplicarBackupRestaurado', () => {

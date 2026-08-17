@@ -41,6 +41,13 @@ export function parseBackupCompleto(json: string): BackupCompleto | null {
     if (typeof local !== 'object' || local === null || Array.isArray(local)) {
       return null
     }
+    const { versaoSeirmg, exportadoEm } = dados as { versaoSeirmg?: unknown; exportadoEm?: unknown }
+    if (typeof versaoSeirmg !== 'string' || typeof exportadoEm !== 'string') {
+      return null
+    }
+    if (!('featureFlags' in sync)) {
+      return null
+    }
     return dados as BackupCompleto
   } catch {
     return null
