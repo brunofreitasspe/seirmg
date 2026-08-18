@@ -1926,7 +1926,7 @@ function montarSelecaoMultipla(): void {
 function montarConfirmarAntesDeConcluir(): void {
   try {
     const botao = document.querySelector<HTMLAnchorElement>(
-      '#divComandos > a[onclick*="acao=procedimento_concluir"]'
+      '#divBotoesControleProcessos > a[onclick*="acao=procedimento_concluir"]'
     )
     if (!botao) return
 
@@ -2021,7 +2021,7 @@ const PREFIXOS_BLOCO: Record<string, string> = {
 
 function montarFiltroBloco(): void {
   try {
-    const divComandos = document.querySelector('#divComandos')
+    const divComandos = document.querySelector('#divBotoesControleProcessos')
     if (!divComandos) return
 
     const tipos = [
@@ -3065,8 +3065,8 @@ function montarMarcadorRapido(): void {
 
       const seletor =
         chave === 'adicionar'
-          ? '#divComandos a[onclick*="andamento_marcador_cadastrar"]'
-          : '#divComandos a[onclick*="andamento_marcador_remover"]'
+          ? '#divBotoesControleProcessos a[onclick*="andamento_marcador_cadastrar"]'
+          : '#divBotoesControleProcessos a[onclick*="andamento_marcador_remover"]'
       const link = document.querySelector<HTMLAnchorElement>(seletor)
       if (!link) return
 
@@ -3118,7 +3118,7 @@ function montarAtribuicaoRapida(): void {
       const { quantidade } = (evento as CustomEvent<DetalheCliqueAtribuicaoRapida>).detail
 
       const link = document.querySelector<HTMLAnchorElement>(
-        '#divComandos a[onclick*="procedimento_atribuicao_cadastrar"]'
+        '#divBotoesControleProcessos a[onclick*="procedimento_atribuicao_cadastrar"]'
       )
       if (!link) return
 

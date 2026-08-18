@@ -5,6 +5,14 @@ import type { DetalheCliqueAtribuicaoRapida } from './protocoloAtribuicaoRapida'
 
 const IDS_TABELAS = ['#tblProcessosDetalhado', '#tblProcessosGerados', '#tblProcessosRecebidos']
 
+// Confirmado ao vivo (2026-08-18, código-fonte bruto via Ctrl+U de uma instância SEI real,
+// versão 4.1.5-2.29.0): a barra de ações da grade de Controle de Processos é
+// #divBotoesControleProcessos (classe "barraBotoesSEI") -- NÃO #divComandos. Esse id nunca
+// existiu nessa tela; por isso todo seletor que dependia dele (marcador rápido, atribuição
+// rápida, confirmação antes de concluir, filtro de bloco) ficava silenciosamente inerte, sem
+// nenhum erro, e o clique caía sempre no comportamento nativo do SEI (navegação normal).
+const SELETOR_BARRA_COMANDOS = '#divBotoesControleProcessos'
+
 function contarCheckboxesMarcados(documentoGlobal: Document): number {
   return IDS_TABELAS.reduce((total, idTabela) => {
     const tabela = documentoGlobal.querySelector(idTabela)
@@ -35,7 +43,8 @@ export function criarPonteMarcadorRapidoMainWorld(
     if (!(alvo instanceof Element)) return
 
     const link = alvo.closest<HTMLAnchorElement>(
-      '#divComandos a[onclick*="andamento_marcador_cadastrar"], #divComandos a[onclick*="andamento_marcador_remover"]'
+      `${SELETOR_BARRA_COMANDOS} a[onclick*="andamento_marcador_cadastrar"], ` +
+        `${SELETOR_BARRA_COMANDOS} a[onclick*="andamento_marcador_remover"]`
     )
     if (!link) return
 
@@ -77,7 +86,7 @@ export function criarPonteAtribuicaoRapidaMainWorld(
     if (!(alvo instanceof Element)) return
 
     const link = alvo.closest<HTMLAnchorElement>(
-      '#divComandos a[onclick*="procedimento_atribuicao_cadastrar"]'
+      `${SELETOR_BARRA_COMANDOS} a[onclick*="procedimento_atribuicao_cadastrar"]`
     )
     if (!link) return
 

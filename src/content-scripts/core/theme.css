@@ -77,7 +77,7 @@ body.seirmg-theme-black {
   background-image: none;
   border-bottom-color: var(--dark-gray);
 }
-.seirmg-theme-black #divInfraBarraSistemaE img:first-child, .seirmg-theme-black #divComandos img {
+.seirmg-theme-black #divInfraBarraSistemaE img:first-child, .seirmg-theme-black #divBotoesControleProcessos img {
   filter: brightness(50%);
 }
 

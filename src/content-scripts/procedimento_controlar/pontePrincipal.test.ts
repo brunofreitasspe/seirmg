@@ -14,7 +14,7 @@ function montarPagina(qtdMarcadosRecebidos: number): void {
   // "return") que contenha a mesma substring usada pelo seletor/decisão de chave -- o teste
   // verifica a PONTE (nosso código), não o comportamento nativo do SEI em si.
   document.body.innerHTML = `
-    <div id="divComandos">
+    <div id="divBotoesControleProcessos">
       <a onclick="/* andamento_marcador_cadastrar */">Adicionar Marcador</a>
       <a onclick="/* andamento_marcador_remover */">Remover Marcador</a>
     </div>
@@ -25,7 +25,7 @@ function montarPagina(qtdMarcadosRecebidos: number): void {
 }
 
 function clicarLink(rotulo: string): { defaultPrevented: boolean } {
-  const link = Array.from(document.querySelectorAll('#divComandos a')).find(
+  const link = Array.from(document.querySelectorAll('#divBotoesControleProcessos a')).find(
     (a) => a.textContent === rotulo
   ) as HTMLAnchorElement
   const evento = new MouseEvent('click', { bubbles: true, cancelable: true })
@@ -131,7 +131,7 @@ function montarPaginaAtribuicao(qtdMarcadosRecebidos: number): void {
   }).join('')
 
   document.body.innerHTML = `
-    <div id="divComandos">
+    <div id="divBotoesControleProcessos">
       <a onclick="/* procedimento_atribuicao_cadastrar */">Atribuição de Processos</a>
     </div>
     <table id="tblProcessosDetalhado"><tbody></tbody></table>
@@ -141,7 +141,7 @@ function montarPaginaAtribuicao(qtdMarcadosRecebidos: number): void {
 }
 
 function clicarLinkAtribuicao(): { defaultPrevented: boolean } {
-  const link = document.querySelector<HTMLAnchorElement>('#divComandos a')
+  const link = document.querySelector<HTMLAnchorElement>('#divBotoesControleProcessos a')
   if (!link) throw new Error('link não encontrado')
   const evento = new MouseEvent('click', { bubbles: true, cancelable: true })
   link.dispatchEvent(evento)
