@@ -149,4 +149,22 @@ describe('obterControleDePrazoDaLinha', () => {
     )
     expect(obterControleDePrazoDaLinha(linha)).toBeNull()
   })
+
+  it('retorna null quando o controle de prazo já foi concluído (HTML real de uma instância SEI, 2026-08-24)', () => {
+    const linha = criarLinhaComPrazo(
+      `<td><a href="controlador.php?acao=controle_prazo_definir&amp;acao_origem=procedimento_controlar&amp;acao_retorno=procedimento_controlar&amp;id_controle_prazo=43128&amp;id_procedimento=16075355&amp;infra_sistema=100000100&amp;infra_unidade_atual=110002133&amp;infra_hash=411be1a1ae6a1fb5151922b07431ba58f7ecf41171a9dfba53e324f45b9602c1" aria-label="Controle de Prazo / 22289893803 20/08/2026 (concluído em 24/08/2026)" onmouseover="return infraTooltipMostrar('22289893803 20/08/2026 (concluído em 24/08/2026)','Controle de Prazo');" onmouseout="return infraTooltipOcultar();" tabindex="1001"><img src="svg/controle_prazo2.svg?18" class="imagemStatus"></a>`
+    )
+    expect(obterControleDePrazoDaLinha(linha)).toBeNull()
+  })
+
+  it('continua extraindo normalmente um controle de prazo em andamento que tem "dias" no texto, não "concluído"', () => {
+    const linha = criarLinhaComPrazo(
+      `<td><a href="controlador.php?acao=controle_prazo_definir&id=1" onmouseover="return infraTooltipMostrar('22289893803 20/08/2026 (4 dias)','Controle de Prazo')"><img src="svg/controle_prazo1.svg?18"></a></td>`
+    )
+    expect(obterControleDePrazoDaLinha(linha)).toEqual({
+      dataTexto: '20/08/2026',
+      diasTexto: '4 dias',
+      iconeHtml: '<img src="svg/controle_prazo1.svg?18">',
+    })
+  })
 })

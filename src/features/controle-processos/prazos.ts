@@ -75,5 +75,11 @@ export function obterControleDePrazoDaLinha(linha: Element): ControleDePrazoFavo
   const match = texto.match(/(\d{2}\/\d{2}\/\d{4})\s*\((.+)\)/)
   if (!match) return null
 
+  // Controle de prazo já concluído (ícone svg/controle_prazo2.svg, tooltip "... (concluído em DD/MM/YYYY)")
+  // não é mais um prazo em aberto -- tratar como "sem prazo" (retornar null) faz o ícone de relógio e a
+  // marcação vermelha da linha sumirem, em vez de continuar calculando dias em atraso sobre uma data que
+  // já foi cumprida. Confirmado ao vivo 2026-08-24 com HTML real de uma instância SEI.
+  if (/^concluído/i.test(match[2].trim())) return null
+
   return { dataTexto: match[1], diasTexto: match[2], iconeHtml: link.innerHTML }
 }
