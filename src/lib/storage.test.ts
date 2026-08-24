@@ -386,4 +386,8 @@ describe('createLocalConfigStore', () => {
     await store.set(atualizado)
     expect(await store.get()).toEqual(atualizado)
   })
+
+  it('DEFAULT_LOCAL_CONFIG inclui snapshotAlteradosProcessos vazio', () => {
+    expect(DEFAULT_LOCAL_CONFIG.snapshotAlteradosProcessos).toEqual([])
+  })
 })
