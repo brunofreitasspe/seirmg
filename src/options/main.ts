@@ -776,6 +776,7 @@ async function carregarAbaBackup(): Promise<void> {
           historicoProcessosVisitados: local.historicoProcessosVisitados,
           historicoEventos: local.historicoEventos,
           snapshotPrazosProcessos: local.snapshotPrazosProcessos,
+          snapshotAlteradosProcessos: local.snapshotAlteradosProcessos,
         }
         const backup = montarBackupCompleto(sync, localParaBackup, chrome.runtime.getManifest().version, new Date())
         const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })

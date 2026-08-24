@@ -140,8 +140,16 @@ async function renderizarVisaoGeral(): Promise<void> {
   })
   view.appendChild(cards)
 
-  const consultaBlocos = await consultarBlocosAoVivo(localConfig.baseUrlSei)
-  view.appendChild(montarCardBlocos(consultaBlocos))
+  const placeholderBlocos = montarCardBlocos({ ok: false })
+  view.appendChild(placeholderBlocos)
+  consultarBlocosAoVivo(localConfig.baseUrlSei)
+    .then((consultaBlocos) => {
+      if (!placeholderBlocos.isConnected) return
+      placeholderBlocos.replaceWith(montarCardBlocos(consultaBlocos))
+    })
+    .catch((error) => {
+      console.error('[SEIRMG] Falha ao consultar blocos ao vivo:', error)
+    })
 
   const painel = document.createElement('div')
   painel.className = 'painel-lista'

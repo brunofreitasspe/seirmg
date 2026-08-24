@@ -68,7 +68,7 @@ import { EVENTO_CLIQUE_ATRIBUICAO_RAPIDA } from './protocoloAtribuicaoRapida'
 import type { DetalheCliqueAtribuicaoRapida } from './protocoloAtribuicaoRapida'
 import { fetchText } from '../../lib/fetchViaBackground'
 import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
-import type { ControleProcessosConfig, SyncConfig, EventoHistorico, KanbanConfig } from '../../lib/storage'
+import type { ControleProcessosConfig, SyncConfig, EventoHistorico, KanbanConfig, LocalConfig } from '../../lib/storage'
 import { ehLinkConcluirEmLote } from '../../features/dashboard/concluirProcesso'
 import { registrarEvento } from '../../features/dashboard/historicoEventos'
 import { montarCorpoVerificacaoLote, extrairEncontrados } from '../../features/planka/lote'
@@ -1030,53 +1030,52 @@ function construirSnapshotsPorNumero(
   return mapa
 }
 
-async function capturarSnapshotGlobalDePrazos(linhas: Element[]): Promise<void> {
+async function capturarSnapshotsGlobais(linhas: Element[], config: SyncConfig): Promise<void> {
   const agoraIso = new Date().toISOString()
 
-  const linhasVisiveis: LinhaVisivelComPrazo[] = linhas
-    .map((linha) => {
-      const favorito = extrairFavoritoDaLinha(linha, agoraIso)
-      if (!favorito) return null
-      const prazo = obterControleDePrazoDaLinha(linha)
-      const resultado: LinhaVisivelComPrazo = {
-        numero: favorito.numero,
-        prazoDataTexto: prazo?.dataTexto ?? null,
-        especificacao: favorito.especificacao,
-        link: favorito.link,
-      }
-      return resultado
-    })
-    .filter((linha): linha is LinhaVisivelComPrazo => linha !== null)
+  const favoritos = linhas
+    .map((linha) => ({ linha, favorito: extrairFavoritoDaLinha(linha, agoraIso) }))
+    .filter(
+      (item): item is { linha: Element; favorito: NonNullable<ReturnType<typeof extrairFavoritoDaLinha>> } =>
+        item.favorito !== null
+    )
 
   const localConfig = await createLocalConfigStore().get()
-  const resultado = atualizarSnapshotPrazos(localConfig.snapshotPrazosProcessos ?? [], linhasVisiveis, agoraIso)
-  if (!resultado.mudou) return
+  const atualizacao: Partial<LocalConfig> = {}
+  let mudou = false
 
-  await createLocalConfigStore().set({ ...localConfig, snapshotPrazosProcessos: resultado.itens })
-}
+  if (config.controleProcessos.prazos.ativo) {
+    const linhasVisiveis: LinhaVisivelComPrazo[] = favoritos.map(({ linha, favorito }) => ({
+      numero: favorito.numero,
+      prazoDataTexto: obterControleDePrazoDaLinha(linha)?.dataTexto ?? null,
+      especificacao: favorito.especificacao,
+      link: favorito.link,
+    }))
+    const resultado = atualizarSnapshotPrazos(localConfig.snapshotPrazosProcessos ?? [], linhasVisiveis, agoraIso)
+    if (resultado.mudou) {
+      atualizacao.snapshotPrazosProcessos = resultado.itens
+      mudou = true
+    }
+  }
 
-async function capturarSnapshotGlobalDeAlterados(linhas: Element[]): Promise<void> {
-  const agoraIso = new Date().toISOString()
+  const linhasVisiveisAlterados: LinhaVisivelComAlterado[] = favoritos.map(({ linha, favorito }) => ({
+    numero: favorito.numero,
+    alterado: linhaTemDocumentoAlterado(linha),
+    especificacao: favorito.especificacao,
+    link: favorito.link,
+  }))
+  const resultadoAlterados = atualizarSnapshotAlterados(
+    localConfig.snapshotAlteradosProcessos ?? [],
+    linhasVisiveisAlterados,
+    agoraIso
+  )
+  if (resultadoAlterados.mudou) {
+    atualizacao.snapshotAlteradosProcessos = resultadoAlterados.itens
+    mudou = true
+  }
 
-  const linhasVisiveis: LinhaVisivelComAlterado[] = linhas
-    .map((linha) => {
-      const favorito = extrairFavoritoDaLinha(linha, agoraIso)
-      if (!favorito) return null
-      const resultado: LinhaVisivelComAlterado = {
-        numero: favorito.numero,
-        alterado: linhaTemDocumentoAlterado(linha),
-        especificacao: favorito.especificacao,
-        link: favorito.link,
-      }
-      return resultado
-    })
-    .filter((linha): linha is LinhaVisivelComAlterado => linha !== null)
-
-  const localConfig = await createLocalConfigStore().get()
-  const resultado = atualizarSnapshotAlterados(localConfig.snapshotAlteradosProcessos ?? [], linhasVisiveis, agoraIso)
-  if (!resultado.mudou) return
-
-  await createLocalConfigStore().set({ ...localConfig, snapshotAlteradosProcessos: resultado.itens })
+  if (!mudou) return
+  await createLocalConfigStore().set({ ...localConfig, ...atualizacao })
 }
 
 function obterEspecificacaoDaLinha(linha: Element): string | undefined {
@@ -3977,15 +3976,9 @@ async function bootstrap(): Promise<void> {
     renderizarPainelFavoritos()
     montarKanban(config)
 
-    if (config.dashboard?.ativo && config.controleProcessos.prazos.ativo) {
-      capturarSnapshotGlobalDePrazos(todasAsLinhas).catch((error) => {
-        console.error('[SEIRMG] Falha ao capturar snapshot global de prazos:', error)
-      })
-    }
-
     if (config.dashboard?.ativo) {
-      capturarSnapshotGlobalDeAlterados(todasAsLinhas).catch((error) => {
-        console.error('[SEIRMG] Falha ao capturar snapshot global de alterados:', error)
+      capturarSnapshotsGlobais(todasAsLinhas, config).catch((error) => {
+        console.error('[SEIRMG] Falha ao capturar snapshots globais:', error)
       })
     }
 

@@ -1,10 +1,17 @@
-import type { EventoHistorico, HistoricoProcessoEntry, SnapshotPrazoProcesso, SyncConfig } from '../../lib/storage'
+import type {
+  EventoHistorico,
+  HistoricoProcessoEntry,
+  SnapshotAlteradoProcesso,
+  SnapshotPrazoProcesso,
+  SyncConfig,
+} from '../../lib/storage'
 import { DEFAULT_LOCAL_CONFIG, DEFAULT_SYNC_CONFIG } from '../../lib/storage'
 
 export interface BackupLocalConfig {
   historicoProcessosVisitados: HistoricoProcessoEntry[]
   historicoEventos: EventoHistorico[]
   snapshotPrazosProcessos: SnapshotPrazoProcesso[]
+  snapshotAlteradosProcessos: SnapshotAlteradoProcesso[]
 }
 
 export interface BackupCompleto {
@@ -61,6 +68,7 @@ export function aplicarBackupRestaurado(backup: BackupCompleto): { sync: SyncCon
       historicoProcessosVisitados: backup.local.historicoProcessosVisitados ?? DEFAULT_LOCAL_CONFIG.historicoProcessosVisitados,
       historicoEventos: backup.local.historicoEventos ?? DEFAULT_LOCAL_CONFIG.historicoEventos,
       snapshotPrazosProcessos: backup.local.snapshotPrazosProcessos ?? DEFAULT_LOCAL_CONFIG.snapshotPrazosProcessos,
+      snapshotAlteradosProcessos: backup.local.snapshotAlteradosProcessos ?? DEFAULT_LOCAL_CONFIG.snapshotAlteradosProcessos,
     },
   }
 }
