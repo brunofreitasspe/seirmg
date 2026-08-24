@@ -5,7 +5,8 @@ import { deveOcultarMenu } from '../../features/core/menu'
 import { estaNaTelaDeConfiguracao } from '../../features/core/indicarConfiguracao'
 import { renderBadge } from './badge'
 import { fetchText } from '../../lib/fetchViaBackground'
-import { parseListaBlocosAssinatura } from '../../features/bloco-assinatura/parser'
+import { parseListaBlocosAssinatura, resumirBlocos } from '../../features/bloco-assinatura/parser'
+import type { BlocoAssinaturaResumo } from '../../features/bloco-assinatura/types'
 
 function detectarUrlBaseSei(): string {
   return `${window.location.origin}${window.location.pathname.split('/controlador')[0]}`
@@ -166,6 +167,7 @@ async function indicarConfiguracao(): Promise<void> {
 interface RespostaBlocosDisponibilizados {
   ok: boolean
   total?: number
+  resumo?: BlocoAssinaturaResumo
   error?: string
 }
 
@@ -181,7 +183,8 @@ async function consultarBlocosDisponibilizados(): Promise<RespostaBlocosDisponib
   const doc = new DOMParser().parseFromString(resultado.data, 'text/html')
   const blocos = parseListaBlocosAssinatura(doc)
   const total = blocos.filter((bloco) => bloco.estado === 'disponibilizado_para_area').length
-  return { ok: true, total }
+  const resumo = resumirBlocos(blocos)
+  return { ok: true, total, resumo }
 }
 
 function ehMensagemConsultarBlocos(
