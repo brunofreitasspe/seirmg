@@ -12,7 +12,6 @@ import {
 import { calcularDiasAteVencimento, classificarPrazo, formatarDiasRestantes } from '../features/controle-processos/prazos'
 import { agruparPorUrgencia, ordenarDentroDoGrupo } from '../features/tarefas/urgencia'
 import { consultarBlocosAoVivo, type ConsultaBlocosAoVivo } from '../features/bloco-assinatura/consultarAoVivo'
-import { atualizarSnapshotsAoVivo } from '../features/controle-processos/atualizarSnapshotsAoVivo'
 import type { Tarefa } from '../lib/storage'
 
 const ROTULOS_TIPO: Record<EventoHistorico['tipo'], string> = {
@@ -534,19 +533,3 @@ async function renderizarAlterados(): Promise<void> {
 }
 
 renderizarAlterados().catch((error) => console.error('[SEIRMG] Falha ao renderizar Alterados:', error))
-
-// Ao abrir o Dashboard, busca o Controle de Processos em segundo plano (numa aba do SEI já aberta) e
-// alimenta os snapshots de Alterados/Prazos na hora, sem depender só de visitas orgânicas — mesmo padrão
-// de consulta ao vivo já usado pro card de Blocos de Assinatura. Se algo mudou, re-renderiza as duas abas
-// pra refletir os dados novos.
-async function atualizarSnapshotsControleAoAbrir(): Promise<void> {
-  const localConfig = await createLocalConfigStore().get()
-  const resultado = await atualizarSnapshotsAoVivo(localConfig.baseUrlSei)
-  if (resultado.ok && resultado.mudou) {
-    await Promise.all([renderizarAlterados(), renderizarPrazos()])
-  }
-}
-
-atualizarSnapshotsControleAoAbrir().catch((error) =>
-  console.error('[SEIRMG] Falha ao atualizar snapshots do Controle de Processos ao vivo:', error)
-)
