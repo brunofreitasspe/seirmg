@@ -69,7 +69,7 @@ export function parseBlocoAssinaturaTable(
   return itens
 }
 
-export function resumirBlocos(itens: BlocoAssinaturaItem[]): BlocoAssinaturaResumo {
+export function resumirBlocos(itens: Array<{ estado: EstadoBloco | undefined }>): BlocoAssinaturaResumo {
   return itens.reduce<BlocoAssinaturaResumo>(
     (resumo, item) => {
       switch (item.estado) {

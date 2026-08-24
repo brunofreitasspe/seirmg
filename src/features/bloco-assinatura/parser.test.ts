@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest'
+import type { BlocoAssinaturaItem } from './types'
 import {
   detectarTransicoesParaDisponibilizado,
   parseBlocoAssinaturaTable,
@@ -74,16 +75,32 @@ describe('parseBlocoAssinaturaTable (SEI >= 4.0)', () => {
 
 describe('resumirBlocos', () => {
   it('conta os itens por estado', () => {
-    const resumo = resumirBlocos([
+    const blocos: BlocoAssinaturaItem[] = [
       { id: '1', numero: '1', link: '', estado: 'disponibilizado_para_area' },
       { id: '2', numero: '2', link: '', estado: 'disponibilizado_para_area' },
       { id: '3', numero: '3', link: '', estado: 'disponibilizado_pela_area' },
       { id: '4', numero: '4', link: '', estado: 'aberto' },
       { id: '5', numero: '5', link: '', estado: 'retornado' },
-    ])
+    ]
+    const resumo = resumirBlocos(blocos)
     expect(resumo).toEqual({
       totalDisponibilizadoParaArea: 2,
       totalDisponibilizadoPelaArea: 1,
+      totalAberto: 1,
+      totalRetornado: 1,
+    })
+  })
+
+  it('aceita itens no formato BlocoListaItem (sem id/numero/link), ignorando estado indefinido', () => {
+    const blocos: BlocoListaItem[] = [
+      { numero: '1', descricao: '', href: '', estado: 'aberto' },
+      { numero: '2', descricao: '', href: '', estado: 'retornado' },
+      { numero: '3', descricao: '', href: '', estado: undefined },
+    ]
+    const resumo = resumirBlocos(blocos)
+    expect(resumo).toEqual({
+      totalDisponibilizadoParaArea: 0,
+      totalDisponibilizadoPelaArea: 0,
       totalAberto: 1,
       totalRetornado: 1,
     })
