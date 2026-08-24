@@ -11,6 +11,7 @@ import {
 } from '../features/controle-processos/favoritosRender'
 import { calcularDiasAteVencimento, classificarPrazo, formatarDiasRestantes } from '../features/controle-processos/prazos'
 import { agruparPorUrgencia, ordenarDentroDoGrupo } from '../features/tarefas/urgencia'
+import { consultarBlocosAoVivo, type ConsultaBlocosAoVivo } from '../features/bloco-assinatura/consultarAoVivo'
 import type { Tarefa } from '../lib/storage'
 
 const ROTULOS_TIPO: Record<EventoHistorico['tipo'], string> = {
@@ -30,6 +31,45 @@ function formatarDataGrupo(data: string): string {
     month: 'long',
     year: 'numeric',
   })
+}
+
+function montarCardBlocos(consulta: ConsultaBlocosAoVivo): HTMLElement {
+  const card = document.createElement('div')
+  card.className = 'card-blocos'
+
+  const titulo = document.createElement('h3')
+  titulo.textContent = 'Blocos de Assinatura'
+  card.appendChild(titulo)
+
+  if (!consulta.ok) {
+    const aviso = document.createElement('p')
+    aviso.className = 'card-blocos-vazio'
+    aviso.textContent = 'Abra uma aba do SEI pra ver blocos pendentes.'
+    card.appendChild(aviso)
+    return card
+  }
+
+  const linhas = document.createElement('div')
+  linhas.className = 'card-blocos-linhas'
+  const itens: Array<{ rotulo: string; valor: number }> = [
+    { rotulo: 'Abertos', valor: consulta.resumo.totalAberto },
+    { rotulo: 'Disponibilizados p/ sua área', valor: consulta.resumo.totalDisponibilizadoParaArea },
+    { rotulo: 'Retornados', valor: consulta.resumo.totalRetornado },
+  ]
+  itens.forEach(({ rotulo, valor }) => {
+    const linha = document.createElement('div')
+    linha.className = 'card-blocos-linha'
+    const valorSpan = document.createElement('span')
+    valorSpan.className = 'card-blocos-valor'
+    valorSpan.textContent = String(valor)
+    const rotuloSpan = document.createElement('span')
+    rotuloSpan.className = 'card-blocos-rotulo'
+    rotuloSpan.textContent = rotulo
+    linha.append(valorSpan, rotuloSpan)
+    linhas.appendChild(linha)
+  })
+  card.appendChild(linhas)
+  return card
 }
 
 async function renderizarVisaoGeral(): Promise<void> {
@@ -99,6 +139,9 @@ async function renderizarVisaoGeral(): Promise<void> {
     cards.appendChild(card)
   })
   view.appendChild(cards)
+
+  const consultaBlocos = await consultarBlocosAoVivo(localConfig.baseUrlSei)
+  view.appendChild(montarCardBlocos(consultaBlocos))
 
   const painel = document.createElement('div')
   painel.className = 'painel-lista'

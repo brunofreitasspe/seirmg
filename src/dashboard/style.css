@@ -85,3 +85,10 @@ table.tabela-dash tr:last-child td { border-bottom: none; }
 .prioridade-media { background: var(--seirmg-warn-soft); color: var(--seirmg-warn); }
 .prioridade-baixa { background: var(--seirmg-surface-muted); color: var(--seirmg-text-muted); }
 .vazio { padding: var(--sp-8); text-align: center; color: var(--seirmg-text-muted); font-size: 13px; }
+.card-blocos { background: var(--seirmg-surface); border: 1px solid var(--seirmg-border); border-radius: var(--seirmg-radius); padding: var(--sp-4); box-shadow: var(--seirmg-shadow); margin-bottom: var(--sp-6); }
+.card-blocos h3 { margin: 0 0 var(--sp-3); font-size: 13px; font-weight: 700; }
+.card-blocos-linhas { display: flex; gap: var(--sp-6); flex-wrap: wrap; }
+.card-blocos-linha { display: flex; flex-direction: column; }
+.card-blocos-valor { font-size: 22px; font-weight: 800; line-height: 1; }
+.card-blocos-rotulo { font-size: 11.5px; color: var(--seirmg-text-muted); margin-top: 4px; }
+.card-blocos-vazio { margin: 0; color: var(--seirmg-text-muted); font-size: 13px; }
