@@ -68,7 +68,7 @@ import { EVENTO_CLIQUE_ATRIBUICAO_RAPIDA } from './protocoloAtribuicaoRapida'
 import type { DetalheCliqueAtribuicaoRapida } from './protocoloAtribuicaoRapida'
 import { fetchText } from '../../lib/fetchViaBackground'
 import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
-import type { ControleProcessosConfig, SyncConfig, EventoHistorico, KanbanConfig, LocalConfig } from '../../lib/storage'
+import type { ControleProcessosConfig, SyncConfig, EventoHistorico, KanbanConfig } from '../../lib/storage'
 import { ehLinkConcluirEmLote } from '../../features/dashboard/concluirProcesso'
 import { registrarEvento } from '../../features/dashboard/historicoEventos'
 import { montarCorpoVerificacaoLote, extrairEncontrados } from '../../features/planka/lote'
@@ -90,8 +90,7 @@ import {
   favoritosImportadosParaAdicionar,
   montarLinhaCsv,
 } from '../../features/controle-processos/favoritosExportar'
-import { atualizarSnapshotPrazos, type LinhaVisivelComPrazo } from '../../features/dashboard/snapshotPrazos'
-import { atualizarSnapshotAlterados, type LinhaVisivelComAlterado } from '../../features/dashboard/snapshotAlterados'
+import { calcularSnapshotsControleProcessos } from '../../features/dashboard/snapshotsControleProcessos'
 import {
   calcularColuna,
   criarLista,
@@ -1032,49 +1031,10 @@ function construirSnapshotsPorNumero(
 
 async function capturarSnapshotsGlobais(linhas: Element[], config: SyncConfig): Promise<void> {
   const agoraIso = new Date().toISOString()
-
-  const favoritos = linhas
-    .map((linha) => ({ linha, favorito: extrairFavoritoDaLinha(linha, agoraIso) }))
-    .filter(
-      (item): item is { linha: Element; favorito: NonNullable<ReturnType<typeof extrairFavoritoDaLinha>> } =>
-        item.favorito !== null
-    )
-
   const localConfig = await createLocalConfigStore().get()
-  const atualizacao: Partial<LocalConfig> = {}
-  let mudou = false
-
-  if (config.controleProcessos.prazos.ativo) {
-    const linhasVisiveis: LinhaVisivelComPrazo[] = favoritos.map(({ linha, favorito }) => ({
-      numero: favorito.numero,
-      prazoDataTexto: obterControleDePrazoDaLinha(linha)?.dataTexto ?? null,
-      especificacao: favorito.especificacao,
-      link: favorito.link,
-    }))
-    const resultado = atualizarSnapshotPrazos(localConfig.snapshotPrazosProcessos ?? [], linhasVisiveis, agoraIso)
-    if (resultado.mudou) {
-      atualizacao.snapshotPrazosProcessos = resultado.itens
-      mudou = true
-    }
-  }
-
-  const linhasVisiveisAlterados: LinhaVisivelComAlterado[] = favoritos.map(({ linha, favorito }) => ({
-    numero: favorito.numero,
-    alterado: linhaTemDocumentoAlterado(linha),
-    especificacao: favorito.especificacao,
-    link: favorito.link,
-  }))
-  const resultadoAlterados = atualizarSnapshotAlterados(
-    localConfig.snapshotAlteradosProcessos ?? [],
-    linhasVisiveisAlterados,
-    agoraIso
-  )
-  if (resultadoAlterados.mudou) {
-    atualizacao.snapshotAlteradosProcessos = resultadoAlterados.itens
-    mudou = true
-  }
-
+  const { atualizacao, mudou } = calcularSnapshotsControleProcessos(linhas, config, localConfig, agoraIso)
   if (!mudou) return
+
   await createLocalConfigStore().set({ ...localConfig, ...atualizacao })
 }
 
