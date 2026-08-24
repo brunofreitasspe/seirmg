@@ -424,3 +424,61 @@ async function renderizarTarefas(): Promise<void> {
 }
 
 renderizarTarefas().catch((error) => console.error('[SEIRMG] Falha ao renderizar Tarefas:', error))
+
+async function renderizarAlterados(): Promise<void> {
+  const view = document.getElementById('view-alterados')
+  if (!view) return
+
+  const localConfig = await createLocalConfigStore().get()
+  const itens = [...(localConfig.snapshotAlteradosProcessos ?? [])].sort(
+    (a, b) => new Date(b.vistoEm).getTime() - new Date(a.vistoEm).getTime()
+  )
+
+  view.innerHTML = ''
+
+  const header = document.createElement('div')
+  header.className = 'secao-header'
+  const titulo = document.createElement('h2')
+  titulo.textContent = `⚠ Alterados (${itens.length})`
+  header.appendChild(titulo)
+  view.appendChild(header)
+
+  const painel = document.createElement('div')
+  painel.className = 'painel-lista'
+
+  if (itens.length === 0) {
+    const vazio = document.createElement('div')
+    vazio.className = 'vazio'
+    vazio.textContent = 'Nenhum processo com alteração pendente de visualização.'
+    painel.appendChild(vazio)
+  } else {
+    const tabela = document.createElement('table')
+    tabela.className = 'tabela-dash'
+    const thead = document.createElement('thead')
+    thead.innerHTML = '<tr><th>Processo</th><th>Especificação</th><th></th></tr>'
+    tabela.appendChild(thead)
+
+    const tbody = document.createElement('tbody')
+    itens.forEach((item) => {
+      const tr = document.createElement('tr')
+
+      const tdNumero = document.createElement('td')
+      tdNumero.textContent = item.numero
+      tr.appendChild(tdNumero)
+
+      const tdEspecificacao = document.createElement('td')
+      tdEspecificacao.textContent = item.especificacao ?? '—'
+      tr.appendChild(tdEspecificacao)
+
+      tr.appendChild(montarCelulaAbrirProcesso(item.link, localConfig.baseUrlSei))
+
+      tbody.appendChild(tr)
+    })
+    tabela.appendChild(tbody)
+    painel.appendChild(tabela)
+  }
+
+  view.appendChild(painel)
+}
+
+renderizarAlterados().catch((error) => console.error('[SEIRMG] Falha ao renderizar Alterados:', error))
