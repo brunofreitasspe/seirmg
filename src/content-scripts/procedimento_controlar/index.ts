@@ -91,6 +91,7 @@ import {
   montarLinhaCsv,
 } from '../../features/controle-processos/favoritosExportar'
 import { atualizarSnapshotPrazos, type LinhaVisivelComPrazo } from '../../features/dashboard/snapshotPrazos'
+import { atualizarSnapshotAlterados, type LinhaVisivelComAlterado } from '../../features/dashboard/snapshotAlterados'
 import {
   calcularColuna,
   criarLista,
@@ -1052,6 +1053,30 @@ async function capturarSnapshotGlobalDePrazos(linhas: Element[]): Promise<void> 
   if (!resultado.mudou) return
 
   await createLocalConfigStore().set({ ...localConfig, snapshotPrazosProcessos: resultado.itens })
+}
+
+async function capturarSnapshotGlobalDeAlterados(linhas: Element[]): Promise<void> {
+  const agoraIso = new Date().toISOString()
+
+  const linhasVisiveis: LinhaVisivelComAlterado[] = linhas
+    .map((linha) => {
+      const favorito = extrairFavoritoDaLinha(linha, agoraIso)
+      if (!favorito) return null
+      const resultado: LinhaVisivelComAlterado = {
+        numero: favorito.numero,
+        alterado: linhaTemDocumentoAlterado(linha),
+        especificacao: favorito.especificacao,
+        link: favorito.link,
+      }
+      return resultado
+    })
+    .filter((linha): linha is LinhaVisivelComAlterado => linha !== null)
+
+  const localConfig = await createLocalConfigStore().get()
+  const resultado = atualizarSnapshotAlterados(localConfig.snapshotAlteradosProcessos ?? [], linhasVisiveis, agoraIso)
+  if (!resultado.mudou) return
+
+  await createLocalConfigStore().set({ ...localConfig, snapshotAlteradosProcessos: resultado.itens })
 }
 
 function obterEspecificacaoDaLinha(linha: Element): string | undefined {
@@ -3955,6 +3980,12 @@ async function bootstrap(): Promise<void> {
     if (config.dashboard?.ativo && config.controleProcessos.prazos.ativo) {
       capturarSnapshotGlobalDePrazos(todasAsLinhas).catch((error) => {
         console.error('[SEIRMG] Falha ao capturar snapshot global de prazos:', error)
+      })
+    }
+
+    if (config.dashboard?.ativo) {
+      capturarSnapshotGlobalDeAlterados(todasAsLinhas).catch((error) => {
+        console.error('[SEIRMG] Falha ao capturar snapshot global de alterados:', error)
       })
     }
 
