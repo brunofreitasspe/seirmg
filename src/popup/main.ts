@@ -1,4 +1,5 @@
 import { createLocalConfigStore, createSyncConfigStore, type HistoricoProcessoEntry } from '../lib/storage'
+import { consultarBlocosAoVivo, type ConsultaBlocosAoVivo } from '../features/bloco-assinatura/consultarAoVivo'
 import checkIconSvg from 'lucide-static/icons/check.svg?raw'
 import alertIconSvg from 'lucide-static/icons/triangle-alert.svg?raw'
 import infoIconSvg from 'lucide-static/icons/info.svg?raw'
@@ -34,28 +35,7 @@ function montarItemHistorico(entrada: HistoricoProcessoEntry, baseUrlSei: string
   return item
 }
 
-type ConsultaBlocos = { ok: true; total: number } | { ok: false }
-
-async function consultarBlocosAoVivo(baseUrlSei: string | undefined): Promise<ConsultaBlocos> {
-  if (!baseUrlSei) return { ok: false }
-  try {
-    const [aba] = await chrome.tabs.query({ url: `${baseUrlSei}/*` })
-    if (!aba?.id) return { ok: false }
-    const resposta = await chrome.tabs.sendMessage(aba.id, {
-      type: 'seirmg:consultar-blocos-disponibilizados',
-    })
-    if (!resposta?.ok || typeof resposta.total !== 'number') return { ok: false }
-    return { ok: true, total: resposta.total }
-  } catch (error) {
-    // Esperado quando a aba do SEI encontrada não tem o content script ativo (ex.: aba aberta
-    // antes de a extensão ser recarregada) — a UI já cai graciosamente no estado "indisponível"
-    // logo abaixo, então isso não é um erro de verdade, só um diagnóstico.
-    console.warn('[SEIRMG] Não foi possível consultar blocos de assinatura ao vivo:', error)
-    return { ok: false }
-  }
-}
-
-function renderizarStatus(consulta: ConsultaBlocos): void {
+function renderizarStatus(consulta: ConsultaBlocosAoVivo): void {
   const status = document.getElementById('status')
   const statusIcone = document.getElementById('status-icone')
   const statusTitulo = document.getElementById('status-titulo')
