@@ -1,5 +1,5 @@
 import menuIconSvg from 'lucide-static/icons/menu.svg?raw'
-import { createLocalConfigStore } from '../../lib/storage'
+import { createLocalConfigStore, createSyncConfigStore } from '../../lib/storage'
 import { detectarSeiVersaoMajor, detectarSeiVersionAtLeast4 } from '../../lib/seiVersion'
 import { deveOcultarMenu } from '../../features/core/menu'
 import { estaNaTelaDeConfiguracao } from '../../features/core/indicarConfiguracao'
@@ -7,6 +7,10 @@ import { renderBadge } from './badge'
 import { fetchText } from '../../lib/fetchViaBackground'
 import { parseListaBlocosAssinatura, resumirBlocos } from '../../features/bloco-assinatura/parser'
 import type { BlocoAssinaturaResumo } from '../../features/bloco-assinatura/types'
+import {
+  calcularSnapshotsControleProcessos,
+  extrairLinhasDeControle,
+} from '../../features/dashboard/snapshotsControleProcessos'
 
 function detectarUrlBaseSei(): string {
   return `${window.location.origin}${window.location.pathname.split('/controlador')[0]}`
@@ -203,6 +207,62 @@ chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
     .then(responder)
     .catch((error) => {
       console.error('[SEIRMG] Falha ao consultar blocos de assinatura disponibilizados:', error)
+      responder({ ok: false, error: String(error) })
+    })
+  return true
+})
+
+interface RespostaAtualizarSnapshots {
+  ok: boolean
+  mudou?: boolean
+  error?: string
+}
+
+// Busca o Controle de Processos em segundo plano (a partir do link já presente no menu de navegação de
+// qualquer página do SEI, com infra_hash válido) e alimenta os snapshots de Prazos/Alterados na hora --
+// pra não depender só de visitas orgânicas ao Controle de Processos (ver
+// features/dashboard/snapshotsControleProcessos.ts, mesma lógica que o content script de lá usa contra o
+// DOM ao vivo).
+async function atualizarSnapshotsControleProcessos(): Promise<RespostaAtualizarSnapshots> {
+  const config = await createSyncConfigStore().get()
+  if (!config.dashboard?.ativo) return { ok: false, error: 'Dashboard não está ativo' }
+
+  const link = document.querySelector<HTMLAnchorElement>(
+    'a[href^="controlador.php?acao=procedimento_controlar"]'
+  )
+  if (!link) return { ok: false, error: 'Link de Controle de Processos não encontrado nessa página' }
+
+  const resultado = await fetchText(link.href)
+  if (!resultado.ok) return { ok: false, error: resultado.error }
+
+  const doc = new DOMParser().parseFromString(resultado.data, 'text/html')
+  const linhas = extrairLinhasDeControle(doc)
+
+  const localConfig = await createLocalConfigStore().get()
+  const agoraIso = new Date().toISOString()
+  const { atualizacao, mudou } = calcularSnapshotsControleProcessos(linhas, config, localConfig, agoraIso)
+  if (mudou) {
+    await createLocalConfigStore().set({ ...localConfig, ...atualizacao })
+  }
+  return { ok: true, mudou }
+}
+
+function ehMensagemAtualizarSnapshots(
+  mensagem: unknown
+): mensagem is { type: 'seirmg:atualizar-snapshots-controle' } {
+  return (
+    typeof mensagem === 'object' &&
+    mensagem !== null &&
+    (mensagem as { type?: unknown }).type === 'seirmg:atualizar-snapshots-controle'
+  )
+}
+
+chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
+  if (!ehMensagemAtualizarSnapshots(mensagem)) return false
+  atualizarSnapshotsControleProcessos()
+    .then(responder)
+    .catch((error) => {
+      console.error('[SEIRMG] Falha ao atualizar snapshots do Controle de Processos:', error)
       responder({ ok: false, error: String(error) })
     })
   return true
