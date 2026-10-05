@@ -38,3 +38,20 @@ describe('registrarProcessoVisitado', () => {
     expect(resultado.find((item) => item.idProcedimento === '10')).toBeUndefined()
   })
 })
+
+import { ehNivelAcessoCapturavel } from './historico'
+
+describe('ehNivelAcessoCapturavel', () => {
+  it('permite capturar processo Público ou Restrito', () => {
+    expect(ehNivelAcessoCapturavel('Público')).toBe(true)
+    expect(ehNivelAcessoCapturavel('Restrito')).toBe(true)
+  })
+
+  it('bloqueia processo Sigiloso', () => {
+    expect(ehNivelAcessoCapturavel('Sigiloso')).toBe(false)
+  })
+
+  it('bloqueia nível desconhecido (não há garantia de que é público)', () => {
+    expect(ehNivelAcessoCapturavel('')).toBe(false)
+  })
+})

@@ -25,7 +25,7 @@ import {
 } from '../../features/procedimento-visualizar/painelLateral'
 import { fetchText } from '../../lib/fetchViaBackground'
 import { createLocalConfigStore, createSyncConfigStore, type HistoricoProcessoEntry, type EventoHistorico } from '../../lib/storage'
-import { registrarProcessoVisitado } from '../../features/procedimento-visualizar/historico'
+import { ehNivelAcessoCapturavel, registrarProcessoVisitado } from '../../features/procedimento-visualizar/historico'
 import { registrarEvento } from '../../features/dashboard/historicoEventos'
 import { ehLinkConcluirIndividual } from '../../features/dashboard/concluirProcesso'
 import { tokenValido } from '../../features/planka/token'
@@ -107,9 +107,14 @@ function obterIdProcedimento(): string | null {
   return new URL(window.location.href).searchParams.get('id_procedimento')
 }
 
-async function registrarHistoricoVisita(numero: string | null, tipo: string): Promise<void> {
+async function registrarHistoricoVisita(
+  numero: string | null,
+  tipo: string,
+  nivelAcesso: NivelAcessoExtraido['nivel']
+): Promise<void> {
   const idProcedimento = obterIdProcedimento()
   if (!idProcedimento || !numero) return
+  if (!ehNivelAcessoCapturavel(nivelAcesso)) return
 
   const syncConfig = await createSyncConfigStore().get()
   if (!syncConfig.historicoProcessos?.ativo) return
@@ -585,6 +590,7 @@ async function montarPainelTipoEInteressados(): Promise<void> {
   const container = document.getElementById('container') ?? document.body
 
   const tipo = extrairTipoProcesso(doc)
+  const nivelAcesso = extrairNivelAcesso(doc)
 
   const { secao: secaoTipo, corpo: divTipo } = criarSecao('Tipo do processo', briefcaseIconSvg)
   divTipo.id = 'seirmg-tipo-processo'
@@ -594,11 +600,11 @@ async function montarPainelTipoEInteressados(): Promise<void> {
   divTipo.appendChild(pTipo)
   container.appendChild(secaoTipo)
 
-  const historicoVisitaFeito = registrarHistoricoVisita(numero, tipo).catch((error) => {
+  const historicoVisitaFeito = registrarHistoricoVisita(numero, tipo, nivelAcesso.nivel).catch((error) => {
     console.error('[SEIRMG] Falha ao registrar processo no histórico:', error)
   })
 
-  renderizarNivelAcesso(container, extrairNivelAcesso(doc))
+  renderizarNivelAcesso(container, nivelAcesso)
   const especificacao = extrairEspecificacao(doc)
   renderizarTextoSimples(container, 'Especificação', 'seirmg-especificacao', especificacao, 'Sem especificação.', fileTextIconSvg)
 
