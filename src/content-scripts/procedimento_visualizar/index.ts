@@ -677,11 +677,17 @@ async function montarPainelTipoEInteressados(): Promise<void> {
   })
 
   const idProcedimentoAtual = obterIdProcedimento()
-  createLocalConfigStore()
-    .get()
-    .then((localConfig) => {
+  Promise.all([createLocalConfigStore().get(), createSyncConfigStore().get()])
+    .then(([localConfig, syncConfigVisitados]) => {
+      if (!syncConfigVisitados.historicoProcessos?.ativo) return
       if (!localConfig.baseUrlSei) return
-      const recentes = prepararListaRecentes(localConfig.historicoProcessosVisitados ?? [], idProcedimentoAtual)
+      const janelaDias = syncConfigVisitados.historicoProcessos?.janelaDias ?? 7
+      const historicoPodado = podarPorJanela(
+        localConfig.historicoProcessosVisitados ?? [],
+        new Date().toISOString(),
+        janelaDias
+      )
+      const recentes = prepararListaRecentes(historicoPodado, idProcedimentoAtual)
       renderizarVisitadosRecentemente(container, recentes, localConfig.baseUrlSei)
     })
     .catch((error) => {

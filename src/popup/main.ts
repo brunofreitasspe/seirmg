@@ -1,6 +1,6 @@
 import { createLocalConfigStore, createSyncConfigStore, type HistoricoProcessoEntry } from '../lib/storage'
 import { consultarBlocosAoVivo, type ConsultaBlocosAoVivo } from '../features/bloco-assinatura/consultarAoVivo'
-import { filtrarHistoricoPorTexto, historicoEntryParaFavorito } from '../features/procedimento-visualizar/historico'
+import { filtrarHistoricoPorTexto, historicoEntryParaFavorito, podarPorJanela } from '../features/procedimento-visualizar/historico'
 import { adicionarFavoritoSeNovo } from '../features/controle-processos/favoritos'
 import checkIconSvg from 'lucide-static/icons/check.svg?raw'
 import alertIconSvg from 'lucide-static/icons/triangle-alert.svg?raw'
@@ -42,7 +42,10 @@ function montarBotaoFavoritar(entrada: HistoricoProcessoEntry): HTMLButtonElemen
   return botao
 }
 
-function montarItemHistorico(entrada: HistoricoProcessoEntry, baseUrlSei: string): HTMLAnchorElement {
+function montarItemHistorico(entrada: HistoricoProcessoEntry, baseUrlSei: string): HTMLDivElement {
+  const linha = document.createElement('div')
+  linha.className = 'item-recente-linha'
+
   const item = document.createElement('a')
   item.className = 'item-recente'
   item.target = '_blank'
@@ -67,8 +70,8 @@ function montarItemHistorico(entrada: HistoricoProcessoEntry, baseUrlSei: string
   seta.innerHTML = externalLinkIconSvg
 
   item.append(marcador, texto, seta)
-  item.appendChild(montarBotaoFavoritar(entrada))
-  return item
+  linha.append(item, montarBotaoFavoritar(entrada))
+  return linha
 }
 
 function renderizarStatus(consulta: ConsultaBlocosAoVivo): void {
@@ -129,7 +132,8 @@ async function render(): Promise<void> {
     const consulta = await consultarBlocosAoVivo(localConfig.baseUrlSei)
     renderizarStatus(consulta)
 
-    historicoCompleto = localConfig.historicoProcessosVisitados ?? []
+    const janelaDias = syncConfig.historicoProcessos?.janelaDias ?? 7
+    historicoCompleto = podarPorJanela(localConfig.historicoProcessosVisitados ?? [], new Date().toISOString(), janelaDias)
     baseUrlSeiAtual = localConfig.baseUrlSei
     const secaoHistorico = document.getElementById('historico')
     if (secaoHistorico && historicoCompleto.length > 0 && baseUrlSeiAtual) {
