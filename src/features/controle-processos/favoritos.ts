@@ -53,6 +53,13 @@ export function calcularOcultacaoPorFavorito(
   return resultado
 }
 
+// Reusada pelo botão de favoritar direto do histórico de visitados (popup e painel no SEI) e,
+// futuramente, pelo Plano de Favoritos Avançados.
+export function adicionarFavoritoSeNovo(itens: FavoritoProcesso[], novo: FavoritoProcesso): FavoritoProcesso[] {
+  if (itens.some((item) => item.numero === novo.numero)) return itens
+  return [...itens, novo]
+}
+
 export function ordenarFavoritosPorData(itens: FavoritoProcesso[]): FavoritoProcesso[] {
   return [...itens].sort((a, b) => b.adicionadoEm.localeCompare(a.adicionadoEm))
 }

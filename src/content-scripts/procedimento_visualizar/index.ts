@@ -30,7 +30,9 @@ import {
   registrarProcessoVisitado,
   podarPorJanela,
   prepararListaRecentes,
+  historicoEntryParaFavorito,
 } from '../../features/procedimento-visualizar/historico'
+import { adicionarFavoritoSeNovo } from '../../features/controle-processos/favoritos'
 import { registrarEvento } from '../../features/dashboard/historicoEventos'
 import { ehLinkConcluirIndividual } from '../../features/dashboard/concluirProcesso'
 import { tokenValido } from '../../features/planka/token'
@@ -52,6 +54,7 @@ import trash2IconSvg from 'lucide-static/icons/trash-2.svg?raw'
 import xIconSvg from 'lucide-static/icons/x.svg?raw'
 import checkIconSvg from 'lucide-static/icons/check.svg?raw'
 import historyIconSvg from 'lucide-static/icons/history.svg?raw'
+import starIconSvg from 'lucide-static/icons/star.svg?raw'
 
 function ajustarElementosNativos(): void {
   try {
@@ -583,6 +586,35 @@ function renderizarAtribuicao(container: HTMLElement, dados: DadosAtribuicao): v
   container.appendChild(secao)
 }
 
+function montarBotaoFavoritarVisitadoRecente(entrada: HistoricoProcessoEntry): HTMLButtonElement {
+  const botao = document.createElement('button')
+  botao.type = 'button'
+  botao.className = 'seirmg-visitado-recente-favoritar'
+  botao.title = 'Adicionar aos favoritos'
+  botao.innerHTML = starIconSvg
+  botao.addEventListener('click', async (evento) => {
+    evento.preventDefault()
+    evento.stopPropagation()
+    try {
+      const store = createSyncConfigStore()
+      const config = await store.get()
+      const novosItens = adicionarFavoritoSeNovo(
+        config.controleProcessos.favoritos.itens,
+        historicoEntryParaFavorito(entrada, new Date().toISOString())
+      )
+      await store.set({
+        ...config,
+        controleProcessos: { ...config.controleProcessos, favoritos: { ...config.controleProcessos.favoritos, itens: novosItens } },
+      })
+      botao.disabled = true
+      botao.title = 'Já está nos favoritos'
+    } catch (error) {
+      console.error('[SEIRMG] Falha ao favoritar direto do histórico:', error)
+    }
+  })
+  return botao
+}
+
 function renderizarVisitadosRecentemente(
   container: HTMLElement,
   recentes: HistoricoProcessoEntry[],
@@ -592,6 +624,9 @@ function renderizarVisitadosRecentemente(
   const { secao, corpo } = criarSecao('Visitados recentemente', historyIconSvg)
   corpo.id = 'seirmg-visitados-recentemente'
   recentes.forEach((item) => {
+    const linha = document.createElement('div')
+    linha.className = 'seirmg-visitado-recente-linha'
+
     const link = document.createElement('a')
     link.className = 'seirmg-visitado-recente-item'
     link.target = '_blank'
@@ -604,7 +639,9 @@ function renderizarVisitadosRecentemente(
     tipo.className = 'seirmg-visitado-recente-tipo'
     tipo.textContent = item.tipo
     link.append(numero, tipo)
-    corpo.appendChild(link)
+
+    linha.append(link, montarBotaoFavoritarVisitadoRecente(item))
+    corpo.appendChild(linha)
   })
   container.appendChild(secao)
 }

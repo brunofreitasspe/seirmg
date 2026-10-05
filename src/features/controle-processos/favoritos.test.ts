@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  adicionarFavoritoSeNovo,
   atualizarSnapshotsFavoritos,
   calcularOcultacaoPorFavorito,
   construirLinkSeguro,
@@ -173,6 +174,20 @@ describe('snapshotsIguais', () => {
 
   it('retorna false quando marcadoresNomes difere em quantidade', () => {
     expect(snapshotsIguais(base, { ...base, marcadoresNomes: ['Urgente', 'Concluído'] })).toBe(false)
+  })
+})
+
+describe('adicionarFavoritoSeNovo', () => {
+  const existente: FavoritoProcesso = { numero: '1234.001/2026', link: null, adicionadoEm: '2026-07-01T00:00:00.000Z' }
+
+  it('adiciona quando o número ainda não está na lista', () => {
+    const novo: FavoritoProcesso = { numero: '5678.002/2026', link: null, adicionadoEm: '2026-07-20T00:00:00.000Z' }
+    expect(adicionarFavoritoSeNovo([existente], novo)).toEqual([existente, novo])
+  })
+
+  it('não duplica quando o número já está favoritado', () => {
+    const duplicado: FavoritoProcesso = { ...existente, adicionadoEm: '2026-07-20T00:00:00.000Z' }
+    expect(adicionarFavoritoSeNovo([existente], duplicado)).toEqual([existente])
   })
 })
 

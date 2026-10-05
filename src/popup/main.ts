@@ -1,15 +1,46 @@
 import { createLocalConfigStore, createSyncConfigStore, type HistoricoProcessoEntry } from '../lib/storage'
 import { consultarBlocosAoVivo, type ConsultaBlocosAoVivo } from '../features/bloco-assinatura/consultarAoVivo'
-import { filtrarHistoricoPorTexto } from '../features/procedimento-visualizar/historico'
+import { filtrarHistoricoPorTexto, historicoEntryParaFavorito } from '../features/procedimento-visualizar/historico'
+import { adicionarFavoritoSeNovo } from '../features/controle-processos/favoritos'
 import checkIconSvg from 'lucide-static/icons/check.svg?raw'
 import alertIconSvg from 'lucide-static/icons/triangle-alert.svg?raw'
 import infoIconSvg from 'lucide-static/icons/info.svg?raw'
 import externalLinkIconSvg from 'lucide-static/icons/external-link.svg?raw'
 import settingsIconSvg from 'lucide-static/icons/settings.svg?raw'
 import layoutDashboardIconSvg from 'lucide-static/icons/layout-dashboard.svg?raw'
+import starIconSvg from 'lucide-static/icons/star.svg?raw'
 
 let historicoCompleto: HistoricoProcessoEntry[] = []
 let baseUrlSeiAtual: string | undefined
+
+function montarBotaoFavoritar(entrada: HistoricoProcessoEntry): HTMLButtonElement {
+  const botao = document.createElement('button')
+  botao.type = 'button'
+  botao.className = 'item-favoritar'
+  botao.title = 'Adicionar aos favoritos'
+  botao.innerHTML = starIconSvg
+  botao.addEventListener('click', async (evento) => {
+    evento.preventDefault()
+    evento.stopPropagation()
+    try {
+      const store = createSyncConfigStore()
+      const config = await store.get()
+      const novosItens = adicionarFavoritoSeNovo(
+        config.controleProcessos.favoritos.itens,
+        historicoEntryParaFavorito(entrada, new Date().toISOString())
+      )
+      await store.set({
+        ...config,
+        controleProcessos: { ...config.controleProcessos, favoritos: { ...config.controleProcessos.favoritos, itens: novosItens } },
+      })
+      botao.disabled = true
+      botao.title = 'Já está nos favoritos'
+    } catch (error) {
+      console.error('[SEIRMG] Falha ao favoritar direto do histórico:', error)
+    }
+  })
+  return botao
+}
 
 function montarItemHistorico(entrada: HistoricoProcessoEntry, baseUrlSei: string): HTMLAnchorElement {
   const item = document.createElement('a')
@@ -36,6 +67,7 @@ function montarItemHistorico(entrada: HistoricoProcessoEntry, baseUrlSei: string
   seta.innerHTML = externalLinkIconSvg
 
   item.append(marcador, texto, seta)
+  item.appendChild(montarBotaoFavoritar(entrada))
   return item
 }
 

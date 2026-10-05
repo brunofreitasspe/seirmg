@@ -1,4 +1,4 @@
-import type { HistoricoProcessoEntry } from '../../lib/storage'
+import type { FavoritoProcesso, HistoricoProcessoEntry } from '../../lib/storage'
 import type { NivelAcessoExtraido } from './painelLateral'
 
 // Processos sigilosos não entram no histórico: evita que o popup ou o painel lateral
@@ -53,4 +53,16 @@ export function prepararListaRecentes(
   max = 5
 ): HistoricoProcessoEntry[] {
   return historico.filter((item) => item.idProcedimento !== idProcedimentoAtual).slice(0, max)
+}
+
+// Usado pelo botão de favoritar direto do histórico de visitados (popup e painel no SEI).
+// O link é reconstruído só com id_procedimento (sem infra_hash/infra_unidade_atual), igual
+// ao `construirLinkSeguro` de favoritos.ts -- ver o comentário lá sobre por que um hash
+// capturado nesse momento não é seguro de reusar depois.
+export function historicoEntryParaFavorito(entry: HistoricoProcessoEntry, adicionadoEm: string): FavoritoProcesso {
+  return {
+    numero: entry.numero,
+    link: `controlador.php?acao=procedimento_trabalhar&id_procedimento=${entry.idProcedimento}`,
+    adicionadoEm,
+  }
 }

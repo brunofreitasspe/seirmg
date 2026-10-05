@@ -629,8 +629,16 @@ p.seirmg-atribuido-para.seirmg-atribuido-para-mais {
   color: #667085;
 }
 
+.seirmg-visitado-recente-linha {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
 .seirmg-visitado-recente-item {
   display: flex;
+  flex: 1;
+  min-width: 0;
   flex-direction: column;
   gap: 1px;
   padding: 6px 4px;
@@ -651,6 +659,37 @@ p.seirmg-atribuido-para.seirmg-atribuido-para-mais {
 .seirmg-visitado-recente-tipo {
   font-size: 11px;
   opacity: 0.7;
+}
+
+.seirmg-visitado-recente-favoritar {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: inherit;
+  opacity: 0.55;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+}
+
+.seirmg-visitado-recente-favoritar:hover {
+  background: rgba(0, 0, 0, 0.06);
+  opacity: 1;
+  color: var(--seirmg-accent-color);
+}
+
+.seirmg-visitado-recente-favoritar svg {
+  width: 13px;
+  height: 13px;
+}
+
+.seirmg-visitado-recente-favoritar:disabled {
+  opacity: 0.3;
+  cursor: default;
 }
 
 .seirmg-anotacao-texto {

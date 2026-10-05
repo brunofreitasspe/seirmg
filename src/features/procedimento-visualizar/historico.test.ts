@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { registrarProcessoVisitado, podarPorJanela, filtrarHistoricoPorTexto, prepararListaRecentes } from './historico'
+import {
+  registrarProcessoVisitado,
+  podarPorJanela,
+  filtrarHistoricoPorTexto,
+  prepararListaRecentes,
+  historicoEntryParaFavorito,
+} from './historico'
 import type { HistoricoProcessoEntry } from '../../lib/storage'
 
 function entrada(idProcedimento: string, acessadoEm = '2026-07-20T10:00:00.000Z'): HistoricoProcessoEntry {
@@ -116,5 +122,21 @@ describe('prepararListaRecentes', () => {
 
   it('respeita o máximo de itens', () => {
     expect(prepararListaRecentes(historico, null, 1)).toEqual([historico[0]])
+  })
+})
+
+describe('historicoEntryParaFavorito', () => {
+  it('converte entrada de histórico em favorito, com link seguro por id_procedimento', () => {
+    const entry: HistoricoProcessoEntry = {
+      idProcedimento: '123456',
+      numero: '1234.001/2026',
+      tipo: 'Ofício',
+      acessadoEm: '2026-07-20T10:00:00.000Z',
+    }
+    expect(historicoEntryParaFavorito(entry, '2026-07-21T00:00:00.000Z')).toEqual({
+      numero: '1234.001/2026',
+      link: 'controlador.php?acao=procedimento_trabalhar&id_procedimento=123456',
+      adicionadoEm: '2026-07-21T00:00:00.000Z',
+    })
   })
 })
