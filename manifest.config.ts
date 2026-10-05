@@ -38,7 +38,7 @@ export default defineManifest({
   optional_host_permissions: ['*://*/*'],
   web_accessible_resources: [
     {
-      resources: ['src/dashboard/index.html'],
+      resources: ['src/dashboard/index.html', 'src/ferramentas-pdf/index.html'],
       matches: ['*://*.br/*', '*://*.org/*'],
     },
   ],

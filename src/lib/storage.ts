@@ -148,6 +148,10 @@ export interface DashboardConfig {
   ativo: boolean
 }
 
+export interface FerramentasPdfConfig {
+  ativo: boolean
+}
+
 export interface ControleProcessosConfig {
   prazos: PrazosConfig
   coresProcesso: CoresProcessoConfig
@@ -253,6 +257,7 @@ export interface SyncConfig {
   tarefas: TarefasConfig
   historicoProcessos: HistoricoProcessosConfig
   dashboard: DashboardConfig
+  ferramentasPdf: FerramentasPdfConfig
 }
 
 export interface NotificadoState {
@@ -390,6 +395,9 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     janelaDias: 7,
   },
   dashboard: {
+    ativo: false,
+  },
+  ferramentasPdf: {
     ativo: false,
   },
 }

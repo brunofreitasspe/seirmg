@@ -14,6 +14,7 @@ export default defineConfig({
       // instead of being built like the popup/options pages.
       input: {
         dashboard: 'src/dashboard/index.html',
+        ferramentasPdf: 'src/ferramentas-pdf/index.html',
       },
     },
   },

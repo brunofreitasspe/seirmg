@@ -9,6 +9,7 @@ import externalLinkIconSvg from 'lucide-static/icons/external-link.svg?raw'
 import settingsIconSvg from 'lucide-static/icons/settings.svg?raw'
 import layoutDashboardIconSvg from 'lucide-static/icons/layout-dashboard.svg?raw'
 import starIconSvg from 'lucide-static/icons/star.svg?raw'
+import fileStackIconSvg from 'lucide-static/icons/file-stack.svg?raw'
 
 let historicoCompleto: HistoricoProcessoEntry[] = []
 let baseUrlSeiAtual: string | undefined
@@ -126,6 +127,16 @@ async function render(): Promise<void> {
       if (iconeDashboard) iconeDashboard.innerHTML = layoutDashboardIconSvg
       botaoDashboard.addEventListener('click', () => {
         chrome.tabs.create({ url: chrome.runtime.getURL('src/dashboard/index.html') })
+      })
+    }
+
+    const botaoFerramentasPdf = document.getElementById('abrir-ferramentas-pdf') as HTMLButtonElement | null
+    if (botaoFerramentasPdf && syncConfig.ferramentasPdf?.ativo) {
+      botaoFerramentasPdf.style.display = ''
+      const iconeFerramentasPdf = document.getElementById('icone-ferramentas-pdf')
+      if (iconeFerramentasPdf) iconeFerramentasPdf.innerHTML = fileStackIconSvg
+      botaoFerramentasPdf.addEventListener('click', () => {
+        chrome.tabs.create({ url: chrome.runtime.getURL('src/ferramentas-pdf/index.html') })
       })
     }
 

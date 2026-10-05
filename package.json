@@ -16,7 +16,10 @@
     "hunspell-asm": "^4.0.2",
     "jquery": "^4.0.0",
     "katex": "^0.17.0",
-    "lucide-static": "^1.23.0"
+    "lucide-static": "^1.23.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.4.299",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "@crxjs/vite-plugin": "^2.7.1",

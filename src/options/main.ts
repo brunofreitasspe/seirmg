@@ -9,6 +9,7 @@ import infoIconSvg from 'lucide-static/icons/info.svg?raw'
 import spellCheckIconSvg from 'lucide-static/icons/spell-check.svg?raw'
 import kanbanIconSvg from 'lucide-static/icons/kanban.svg?raw'
 import archiveIconSvg from 'lucide-static/icons/archive.svg?raw'
+import fileStackIconSvg from 'lucide-static/icons/file-stack.svg?raw'
 import { ativarAba } from './tabs'
 import {
   createLocalConfigStore,
@@ -53,6 +54,7 @@ const ICONES_ABA: Record<string, string> = {
   corretor: spellCheckIconSvg,
   ia: sparklesIconSvg,
   kanban: kanbanIconSvg,
+  'ferramentas-pdf': fileStackIconSvg,
   backup: archiveIconSvg,
   notificacoes: bellIconSvg,
   integracoes: plugIconSvg,
@@ -765,6 +767,41 @@ async function carregarAbaKanban(): Promise<void> {
   }
 }
 
+async function carregarAbaFerramentasPdf(): Promise<void> {
+  try {
+    const store = createSyncConfigStore()
+    const config = await store.get()
+    const ferramentasPdf = config.ferramentasPdf ?? DEFAULT_SYNC_CONFIG.ferramentasPdf
+
+    const inputAtivo = document.getElementById('ferramentas-pdf-ativo') as HTMLInputElement | null
+    const status = document.getElementById('ferramentas-pdf-status')
+
+    if (inputAtivo) inputAtivo.checked = ferramentasPdf.ativo
+
+    document.getElementById('ferramentas-pdf-salvar')?.addEventListener('click', async () => {
+      try {
+        const atualizado = {
+          ...config,
+          ferramentasPdf: {
+            ativo: inputAtivo?.checked ?? false,
+          },
+        }
+        await store.set(atualizado)
+        if (status) {
+          status.textContent = 'Salvo!'
+          setTimeout(() => {
+            status.textContent = ''
+          }, 2000)
+        }
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao salvar configuração de Ferramentas de PDF:', error)
+      }
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao carregar aba Ferramentas de PDF:', error)
+  }
+}
+
 async function carregarAbaBackup(): Promise<void> {
   try {
     const btnBaixar = document.getElementById('backup-baixar')
@@ -858,4 +895,5 @@ carregarAbaGeral()
 carregarAbaAssinatura()
 carregarAbaIntegracoes()
 carregarAbaKanban()
+carregarAbaFerramentasPdf()
 carregarAbaBackup()

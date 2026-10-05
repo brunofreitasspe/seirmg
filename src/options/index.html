@@ -25,6 +25,7 @@
         <button data-aba="notificacoes" class="aba-btn">Notificações</button>
         <button data-aba="processos" class="aba-btn">Processos</button>
         <button data-aba="kanban" class="aba-btn">Kanban</button>
+        <button data-aba="ferramentas-pdf" class="aba-btn">Ferramentas de PDF</button>
         <button data-aba="sobre" class="aba-btn">Sobre</button>
       </nav>
       <main class="conteudo">
@@ -393,6 +394,19 @@
         >
       </p>
       <span id="integracoes-status"></span>
+    </section>
+    <section id="painel-ferramentas-pdf" class="painel">
+      <h2>Ferramentas de PDF</h2>
+      <label>
+        <input type="checkbox" id="ferramentas-pdf-ativo" />
+        Ativar Ferramentas de PDF (botão no popup da extensão)
+      </label>
+      <p style="font-size: 0.85em; color: #666; max-width: 480px;">
+        Processamento 100% local no seu navegador — nenhum arquivo é enviado a servidor algum.
+      </p>
+      <br />
+      <button id="ferramentas-pdf-salvar">Salvar</button>
+      <span id="ferramentas-pdf-status"></span>
     </section>
     <section id="painel-sobre" class="painel">
       <p>SEIRMG unifica as extensões Sei++ e Sei Pro para o Sistema Eletrônico de Informações (SEI).</p>
