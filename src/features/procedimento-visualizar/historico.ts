@@ -17,3 +17,15 @@ export function registrarProcessoVisitado(
   const semDuplicata = historicoAtual.filter((item) => item.idProcedimento !== novo.idProcedimento)
   return [novo, ...semDuplicata].slice(0, limite)
 }
+
+const MILISSEGUNDOS_POR_DIA = 24 * 60 * 60 * 1000
+
+export function podarPorJanela(
+  historico: HistoricoProcessoEntry[],
+  agoraIso: string,
+  janelaDias: number
+): HistoricoProcessoEntry[] {
+  if (janelaDias <= 0) return historico
+  const limiteMs = new Date(agoraIso).getTime() - janelaDias * MILISSEGUNDOS_POR_DIA
+  return historico.filter((item) => new Date(item.acessadoEm).getTime() >= limiteMs)
+}

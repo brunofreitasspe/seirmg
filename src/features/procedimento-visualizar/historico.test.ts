@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { registrarProcessoVisitado } from './historico'
+import { registrarProcessoVisitado, podarPorJanela } from './historico'
 import type { HistoricoProcessoEntry } from '../../lib/storage'
 
 function entrada(idProcedimento: string, acessadoEm = '2026-07-20T10:00:00.000Z'): HistoricoProcessoEntry {
@@ -53,5 +53,26 @@ describe('ehNivelAcessoCapturavel', () => {
 
   it('bloqueia nível desconhecido (não há garantia de que é público)', () => {
     expect(ehNivelAcessoCapturavel('')).toBe(false)
+  })
+})
+
+describe('podarPorJanela', () => {
+  const agora = '2026-07-20T10:00:00.000Z'
+
+  function entrada(id: string, acessadoEm: string): HistoricoProcessoEntry {
+    return { idProcedimento: id, numero: id, tipo: 'Ofício', acessadoEm }
+  }
+
+  it('remove entradas mais antigas que a janela', () => {
+    const historico = [
+      entrada('1', '2026-07-20T09:00:00.000Z'), // hoje
+      entrada('2', '2026-07-10T09:00:00.000Z'), // 10 dias atrás
+    ]
+    expect(podarPorJanela(historico, agora, 7)).toEqual([historico[0]])
+  })
+
+  it('janelaDias <= 0 desativa a poda por tempo', () => {
+    const historico = [entrada('1', '2020-01-01T00:00:00.000Z')]
+    expect(podarPorJanela(historico, agora, 0)).toEqual(historico)
   })
 })

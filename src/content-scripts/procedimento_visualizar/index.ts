@@ -25,7 +25,11 @@ import {
 } from '../../features/procedimento-visualizar/painelLateral'
 import { fetchText } from '../../lib/fetchViaBackground'
 import { createLocalConfigStore, createSyncConfigStore, type HistoricoProcessoEntry, type EventoHistorico } from '../../lib/storage'
-import { ehNivelAcessoCapturavel, registrarProcessoVisitado } from '../../features/procedimento-visualizar/historico'
+import {
+  ehNivelAcessoCapturavel,
+  registrarProcessoVisitado,
+  podarPorJanela,
+} from '../../features/procedimento-visualizar/historico'
 import { registrarEvento } from '../../features/dashboard/historicoEventos'
 import { ehLinkConcluirIndividual } from '../../features/dashboard/concluirProcesso'
 import { tokenValido } from '../../features/planka/token'
@@ -127,7 +131,10 @@ async function registrarHistoricoVisita(
     tipo,
     acessadoEm: new Date().toISOString(),
   }
-  const historico = registrarProcessoVisitado(localConfig.historicoProcessosVisitados ?? [], novo)
+  const limiteItens = syncConfig.historicoProcessos?.limiteItens ?? 50
+  const janelaDias = syncConfig.historicoProcessos?.janelaDias ?? 7
+  const historicoComNovo = registrarProcessoVisitado(localConfig.historicoProcessosVisitados ?? [], novo, limiteItens)
+  const historico = podarPorJanela(historicoComNovo, novo.acessadoEm, janelaDias)
   await localStore.set({ ...localConfig, historicoProcessosVisitados: historico })
 }
 

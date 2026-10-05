@@ -128,6 +128,10 @@ export interface HistoricoProcessoEntry {
 
 export interface HistoricoProcessosConfig {
   ativo: boolean
+  // 0 = sem limite de quantidade.
+  limiteItens: number
+  // Entradas mais antigas que essa janela são podadas a cada nova visita. 0 = sem janela.
+  janelaDias: number
 }
 
 export type TipoEventoHistorico = 'acesso' | 'enviado' | 'documento' | 'concluido'
@@ -382,6 +386,8 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
   },
   historicoProcessos: {
     ativo: false,
+    limiteItens: 50,
+    janelaDias: 7,
   },
   dashboard: {
     ativo: false,

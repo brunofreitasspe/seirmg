@@ -277,6 +277,8 @@ async function carregarAbaProcessos(): Promise<void> {
       'processos-alerta-nao-assinados-ativo'
     ) as HTMLInputElement | null
     const inputHistoricoAtivo = document.getElementById('processos-historico-ativo') as HTMLInputElement | null
+    const inputHistoricoLimite = document.getElementById('processos-historico-limite') as HTMLInputElement | null
+    const inputHistoricoJanela = document.getElementById('processos-historico-janela') as HTMLInputElement | null
     const status = document.getElementById('processos-status')
 
     if (inputPrazosAtivo) inputPrazosAtivo.checked = config.controleProcessos.prazos.ativo
@@ -300,6 +302,8 @@ async function carregarAbaProcessos(): Promise<void> {
       inputAlertaNaoAssinadosAtivo.checked = config.controleProcessos.alertaNaoAssinados.ativo
     }
     if (inputHistoricoAtivo) inputHistoricoAtivo.checked = config.historicoProcessos?.ativo ?? false
+    if (inputHistoricoLimite) inputHistoricoLimite.value = String(config.historicoProcessos?.limiteItens ?? 50)
+    if (inputHistoricoJanela) inputHistoricoJanela.value = String(config.historicoProcessos?.janelaDias ?? 7)
 
     const containerCores = document.getElementById('processos-cores-lista')
     const listaCores = containerCores
@@ -375,6 +379,8 @@ async function carregarAbaProcessos(): Promise<void> {
           },
           historicoProcessos: {
             ativo: inputHistoricoAtivo?.checked ?? false,
+            limiteItens: Number(inputHistoricoLimite?.value ?? 50),
+            janelaDias: Number(inputHistoricoJanela?.value ?? 7),
           },
         }
         await store.set(atualizado)

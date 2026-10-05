@@ -174,7 +174,16 @@
       <h3>Histórico de processos visitados</h3>
       <label>
         <input type="checkbox" id="processos-historico-ativo" />
-        Guardar histórico de processos visitados (mostrado no popup da extensão)
+        Guardar histórico de processos visitados (mostrado no popup e dentro do SEI)
+      </label>
+      <br />
+      <label>
+        Manter no máximo (itens, 0 = sem limite):
+        <input type="number" id="processos-historico-limite" min="0" step="1" />
+      </label>
+      <label>
+        Manter só dos últimos (dias, 0 = sem limite):
+        <input type="number" id="processos-historico-janela" min="0" step="1" />
       </label>
 
       <br />
