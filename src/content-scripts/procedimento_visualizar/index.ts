@@ -29,6 +29,7 @@ import {
   ehNivelAcessoCapturavel,
   registrarProcessoVisitado,
   podarPorJanela,
+  prepararListaRecentes,
 } from '../../features/procedimento-visualizar/historico'
 import { registrarEvento } from '../../features/dashboard/historicoEventos'
 import { ehLinkConcluirIndividual } from '../../features/dashboard/concluirProcesso'
@@ -50,6 +51,7 @@ import pencilIconSvg from 'lucide-static/icons/pencil.svg?raw'
 import trash2IconSvg from 'lucide-static/icons/trash-2.svg?raw'
 import xIconSvg from 'lucide-static/icons/x.svg?raw'
 import checkIconSvg from 'lucide-static/icons/check.svg?raw'
+import historyIconSvg from 'lucide-static/icons/history.svg?raw'
 
 function ajustarElementosNativos(): void {
   try {
@@ -581,6 +583,32 @@ function renderizarAtribuicao(container: HTMLElement, dados: DadosAtribuicao): v
   container.appendChild(secao)
 }
 
+function renderizarVisitadosRecentemente(
+  container: HTMLElement,
+  recentes: HistoricoProcessoEntry[],
+  baseUrlSei: string
+): void {
+  if (recentes.length === 0) return
+  const { secao, corpo } = criarSecao('Visitados recentemente', historyIconSvg)
+  corpo.id = 'seirmg-visitados-recentemente'
+  recentes.forEach((item) => {
+    const link = document.createElement('a')
+    link.className = 'seirmg-visitado-recente-item'
+    link.target = '_blank'
+    link.rel = 'noopener'
+    link.href = `${baseUrlSei}/controlador.php?acao=procedimento_trabalhar&id_procedimento=${item.idProcedimento}`
+    const numero = document.createElement('span')
+    numero.className = 'seirmg-visitado-recente-numero'
+    numero.textContent = item.numero
+    const tipo = document.createElement('span')
+    tipo.className = 'seirmg-visitado-recente-tipo'
+    tipo.textContent = item.tipo
+    link.append(numero, tipo)
+    corpo.appendChild(link)
+  })
+  container.appendChild(secao)
+}
+
 async function montarPainelTipoEInteressados(): Promise<void> {
   const numero = obterNumeroProcesso(document)
   const headHtml = document.head.innerHTML
@@ -610,6 +638,18 @@ async function montarPainelTipoEInteressados(): Promise<void> {
   const historicoVisitaFeito = registrarHistoricoVisita(numero, tipo, nivelAcesso.nivel).catch((error) => {
     console.error('[SEIRMG] Falha ao registrar processo no histórico:', error)
   })
+
+  const idProcedimentoAtual = obterIdProcedimento()
+  createLocalConfigStore()
+    .get()
+    .then((localConfig) => {
+      if (!localConfig.baseUrlSei) return
+      const recentes = prepararListaRecentes(localConfig.historicoProcessosVisitados ?? [], idProcedimentoAtual)
+      renderizarVisitadosRecentemente(container, recentes, localConfig.baseUrlSei)
+    })
+    .catch((error) => {
+      console.error('[SEIRMG] Falha ao renderizar visitados recentemente:', error)
+    })
 
   renderizarNivelAcesso(container, nivelAcesso)
   const especificacao = extrairEspecificacao(doc)

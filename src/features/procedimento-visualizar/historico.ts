@@ -43,3 +43,14 @@ export function filtrarHistoricoPorTexto(
       item.numero.toLowerCase().includes(termoNormalizado) || item.tipo.toLowerCase().includes(termoNormalizado)
   )
 }
+
+// Usado pelo painel "Visitados recentemente" dentro do próprio SEI (procedimento_visualizar):
+// remove o processo atualmente aberto (ele ainda não foi persistido no histórico nesse momento,
+// mas por segurança também o filtramos caso já esteja) e limita a quantidade exibida.
+export function prepararListaRecentes(
+  historico: HistoricoProcessoEntry[],
+  idProcedimentoAtual: string | null,
+  max = 5
+): HistoricoProcessoEntry[] {
+  return historico.filter((item) => item.idProcedimento !== idProcedimentoAtual).slice(0, max)
+}

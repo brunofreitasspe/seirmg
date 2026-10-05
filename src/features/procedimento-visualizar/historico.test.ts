@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { registrarProcessoVisitado, podarPorJanela, filtrarHistoricoPorTexto } from './historico'
+import { registrarProcessoVisitado, podarPorJanela, filtrarHistoricoPorTexto, prepararListaRecentes } from './historico'
 import type { HistoricoProcessoEntry } from '../../lib/storage'
 
 function entrada(idProcedimento: string, acessadoEm = '2026-07-20T10:00:00.000Z'): HistoricoProcessoEntry {
@@ -100,5 +100,21 @@ describe('filtrarHistoricoPorTexto', () => {
 
   it('filtra por tipo', () => {
     expect(filtrarHistoricoPorTexto(historico, 'ofício')).toEqual([historico[0]])
+  })
+})
+
+describe('prepararListaRecentes', () => {
+  const historico: HistoricoProcessoEntry[] = [
+    { idProcedimento: '1', numero: 'A', tipo: 'Ofício', acessadoEm: '2026-07-20T10:00:00.000Z' },
+    { idProcedimento: '2', numero: 'B', tipo: 'Ofício', acessadoEm: '2026-07-20T09:00:00.000Z' },
+    { idProcedimento: '3', numero: 'C', tipo: 'Ofício', acessadoEm: '2026-07-20T08:00:00.000Z' },
+  ]
+
+  it('remove o processo atualmente aberto da lista', () => {
+    expect(prepararListaRecentes(historico, '1', 5)).toEqual([historico[1], historico[2]])
+  })
+
+  it('respeita o máximo de itens', () => {
+    expect(prepararListaRecentes(historico, null, 1)).toEqual([historico[0]])
   })
 })
