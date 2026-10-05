@@ -61,6 +61,8 @@
       #historico { display: none; flex-direction: column; gap: 6px; }
       #historico.visivel { display: flex; }
       .secao-rotulo { font-size: 10.5px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); padding: 0 2px; }
+      #historico-busca { width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg); color: var(--text); font-size: 12px; font-family: inherit; }
+      #historico-busca:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
       .lista-recentes { display: flex; flex-direction: column; gap: 2px; }
       .item-recente { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 8px; text-decoration: none; color: inherit; }
       .item-recente:hover { background: var(--bg-subtle); }
@@ -104,6 +106,7 @@
 
     <div id="historico">
       <div class="secao-rotulo">Processos recentes</div>
+      <input id="historico-busca" type="search" placeholder="Buscar por número ou tipo..." />
       <div id="lista-recentes" class="lista-recentes"></div>
     </div>
 

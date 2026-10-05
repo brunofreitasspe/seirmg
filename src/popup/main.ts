@@ -1,11 +1,15 @@
 import { createLocalConfigStore, createSyncConfigStore, type HistoricoProcessoEntry } from '../lib/storage'
 import { consultarBlocosAoVivo, type ConsultaBlocosAoVivo } from '../features/bloco-assinatura/consultarAoVivo'
+import { filtrarHistoricoPorTexto } from '../features/procedimento-visualizar/historico'
 import checkIconSvg from 'lucide-static/icons/check.svg?raw'
 import alertIconSvg from 'lucide-static/icons/triangle-alert.svg?raw'
 import infoIconSvg from 'lucide-static/icons/info.svg?raw'
 import externalLinkIconSvg from 'lucide-static/icons/external-link.svg?raw'
 import settingsIconSvg from 'lucide-static/icons/settings.svg?raw'
 import layoutDashboardIconSvg from 'lucide-static/icons/layout-dashboard.svg?raw'
+
+let historicoCompleto: HistoricoProcessoEntry[] = []
+let baseUrlSeiAtual: string | undefined
 
 function montarItemHistorico(entrada: HistoricoProcessoEntry, baseUrlSei: string): HTMLAnchorElement {
   const item = document.createElement('a')
@@ -66,6 +70,15 @@ function renderizarStatus(consulta: ConsultaBlocosAoVivo): void {
   }
 }
 
+function renderizarListaHistorico(termo: string): void {
+  const listaRecentes = document.getElementById('lista-recentes')
+  if (!listaRecentes || !baseUrlSeiAtual) return
+  listaRecentes.innerHTML = ''
+  filtrarHistoricoPorTexto(historicoCompleto, termo).forEach((entradaHistorico) => {
+    listaRecentes.appendChild(montarItemHistorico(entradaHistorico, baseUrlSeiAtual!))
+  })
+}
+
 async function render(): Promise<void> {
   try {
     const localConfig = await createLocalConfigStore().get()
@@ -84,15 +97,15 @@ async function render(): Promise<void> {
     const consulta = await consultarBlocosAoVivo(localConfig.baseUrlSei)
     renderizarStatus(consulta)
 
-    const historico = localConfig.historicoProcessosVisitados ?? []
-    const baseUrlSei = localConfig.baseUrlSei
+    historicoCompleto = localConfig.historicoProcessosVisitados ?? []
+    baseUrlSeiAtual = localConfig.baseUrlSei
     const secaoHistorico = document.getElementById('historico')
-    const listaRecentes = document.getElementById('lista-recentes')
-    if (secaoHistorico && listaRecentes && historico.length > 0 && baseUrlSei) {
-      historico.forEach((entradaHistorico) => {
-        listaRecentes.appendChild(montarItemHistorico(entradaHistorico, baseUrlSei))
-      })
+    if (secaoHistorico && historicoCompleto.length > 0 && baseUrlSeiAtual) {
+      renderizarListaHistorico('')
       secaoHistorico.classList.add('visivel')
+      document.getElementById('historico-busca')?.addEventListener('input', (evento) => {
+        renderizarListaHistorico((evento.target as HTMLInputElement).value)
+      })
     }
 
     const iconeOpcoes = document.getElementById('icone-opcoes')

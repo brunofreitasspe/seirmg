@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { registrarProcessoVisitado, podarPorJanela } from './historico'
+import { registrarProcessoVisitado, podarPorJanela, filtrarHistoricoPorTexto } from './historico'
 import type { HistoricoProcessoEntry } from '../../lib/storage'
 
 function entrada(idProcedimento: string, acessadoEm = '2026-07-20T10:00:00.000Z'): HistoricoProcessoEntry {
@@ -81,5 +81,24 @@ describe('podarPorJanela', () => {
   it('janelaDias <= 0 desativa a poda por tempo', () => {
     const historico = [entrada('1', '2020-01-01T00:00:00.000Z')]
     expect(podarPorJanela(historico, agora, 0)).toEqual(historico)
+  })
+})
+
+describe('filtrarHistoricoPorTexto', () => {
+  const historico: HistoricoProcessoEntry[] = [
+    { idProcedimento: '1', numero: '1234.001/2026', tipo: 'Ofício', acessadoEm: '2026-07-20T10:00:00.000Z' },
+    { idProcedimento: '2', numero: '5678.002/2026', tipo: 'Memorando', acessadoEm: '2026-07-20T11:00:00.000Z' },
+  ]
+
+  it('termo vazio devolve tudo', () => {
+    expect(filtrarHistoricoPorTexto(historico, '')).toEqual(historico)
+  })
+
+  it('filtra por número, sem distinguir maiúscula/minúscula', () => {
+    expect(filtrarHistoricoPorTexto(historico, '5678')).toEqual([historico[1]])
+  })
+
+  it('filtra por tipo', () => {
+    expect(filtrarHistoricoPorTexto(historico, 'ofício')).toEqual([historico[0]])
   })
 })

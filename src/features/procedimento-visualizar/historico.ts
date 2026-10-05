@@ -31,3 +31,15 @@ export function podarPorJanela(
   const limiteMs = new Date(agoraIso).getTime() - janelaDias * MILISSEGUNDOS_POR_DIA
   return historico.filter((item) => new Date(item.acessadoEm).getTime() >= limiteMs)
 }
+
+export function filtrarHistoricoPorTexto(
+  historico: HistoricoProcessoEntry[],
+  termo: string
+): HistoricoProcessoEntry[] {
+  const termoNormalizado = termo.trim().toLowerCase()
+  if (!termoNormalizado) return historico
+  return historico.filter(
+    (item) =>
+      item.numero.toLowerCase().includes(termoNormalizado) || item.tipo.toLowerCase().includes(termoNormalizado)
+  )
+}
