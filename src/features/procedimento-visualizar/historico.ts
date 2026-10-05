@@ -15,7 +15,9 @@ export function registrarProcessoVisitado(
   limite = 10
 ): HistoricoProcessoEntry[] {
   const semDuplicata = historicoAtual.filter((item) => item.idProcedimento !== novo.idProcedimento)
-  return [novo, ...semDuplicata].slice(0, limite)
+  const atualizado = [novo, ...semDuplicata]
+  if (limite <= 0) return atualizado
+  return atualizado.slice(0, limite)
 }
 
 const MILISSEGUNDOS_POR_DIA = 24 * 60 * 60 * 1000

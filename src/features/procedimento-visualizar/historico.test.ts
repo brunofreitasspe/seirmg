@@ -37,6 +37,13 @@ describe('registrarProcessoVisitado', () => {
     expect(resultado[0]).toEqual(entrada('11'))
     expect(resultado.find((item) => item.idProcedimento === '10')).toBeUndefined()
   })
+
+  it('limite <= 0 desativa o corte por quantidade (mantém todas as entradas)', () => {
+    const historico = Array.from({ length: 15 }, (_, i) => entrada(String(i + 1)))
+    const resultado = registrarProcessoVisitado(historico, entrada('16'), 0)
+    expect(resultado).toHaveLength(16)
+    expect(resultado[0]).toEqual(entrada('16'))
+  })
 })
 
 import { ehNivelAcessoCapturavel } from './historico'
