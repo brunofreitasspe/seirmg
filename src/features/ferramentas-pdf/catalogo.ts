@@ -16,7 +16,7 @@ const FERRAMENTAS: FerramentaPdf[] = [
   {
     id: 'tarjar',
     nome: 'Tarjar (sigilo)',
-    descricao: 'Apaga de verdade (não só visualmente) trechos sigilosos de um PDF, com sugestão automática de CPF/CNPJ.',
+    descricao: 'Cobre com retângulo preto opaco trechos sigilosos de um PDF, com sugestão automática de CPF/CNPJ.',
   },
 ]
 
