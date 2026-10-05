@@ -1,6 +1,9 @@
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist'
 import { aplicarTarjas, type Tarja } from '../../features/ferramentas-pdf/tarjar'
 import { encontrarCpfCnpj } from '../../features/ferramentas-pdf/cpfCnpj'
+import { criarBotaoEnviarAoProcesso } from '../ui/botaoEnviarAoProcesso'
+
+const NOME_ARQUIVO_RESULTADO = 'pdf-tarjado.pdf'
 
 GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href
 
@@ -101,6 +104,13 @@ export function montar(container: HTMLElement): void {
   let bytesOriginais: Uint8Array | null = null
   let candidatos: Candidato[] = []
   let proximoIdManual = 0
+  let ultimoResultado: Uint8Array | null = null
+
+  const botaoEnviar = criarBotaoEnviarAoProcesso({
+    nomeArquivoPadrao: NOME_ARQUIVO_RESULTADO,
+    obterBytes: () => ultimoResultado,
+  })
+  if (botaoEnviar) container.appendChild(botaoEnviar)
 
   // Por página: o viewport (pra converter pixel de canvas <-> ponto PDF) e os elementos onde
   // redesenhar() repinta as marcações -- nada aqui guarda estado de negócio, só referências DOM.
@@ -249,6 +259,7 @@ export function montar(container: HTMLElement): void {
       status.textContent = 'Carregando páginas...'
 
       bytesOriginais = new Uint8Array(await arquivo.arrayBuffer())
+      ultimoResultado = null
       const pdf = await getDocument({ data: bytesOriginais.slice() }).promise
 
       for (let numero = 1; numero <= pdf.numPages; numero++) {
@@ -324,11 +335,12 @@ export function montar(container: HTMLElement): void {
       }
 
       const resultado = await aplicarTarjas(bytesOriginais, tarjasConfirmadas)
+      ultimoResultado = resultado
       const blob = new Blob([resultado as BlobPart], { type: 'application/pdf' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'pdf-tarjado.pdf'
+      link.download = NOME_ARQUIVO_RESULTADO
       link.click()
       URL.revokeObjectURL(url)
     } catch (error) {

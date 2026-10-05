@@ -55,6 +55,7 @@ import xIconSvg from 'lucide-static/icons/x.svg?raw'
 import checkIconSvg from 'lucide-static/icons/check.svg?raw'
 import historyIconSvg from 'lucide-static/icons/history.svg?raw'
 import starIconSvg from 'lucide-static/icons/star.svg?raw'
+import wrenchIconSvg from 'lucide-static/icons/wrench.svg?raw'
 
 function ajustarElementosNativos(): void {
   try {
@@ -739,6 +740,34 @@ async function montarPainelAtribuicao(): Promise<void> {
   renderizarAtribuicao(container, dados)
 }
 
+// Atalho pra aba standalone de Ferramentas de PDF (juntar, dividir, tarjar etc.), análogo ao
+// item de menu "Ferramentas do Processo" do seipro -- leva o id_procedimento atual na própria URL
+// (?idProcedimento=...) pra essa aba oferecer "Enviar ao processo aberto no SEI" como alternativa
+// ao simples download do resultado (ver ferramentas-pdf/ui/botaoEnviarAoProcesso.ts).
+function montarAtalhoFerramentasPdf(): void {
+  try {
+    const idProcedimento = obterIdProcedimento()
+    if (!idProcedimento) return
+
+    const container = document.getElementById('container') ?? document.body
+    const { secao, corpo } = criarSecao('Ferramentas de PDF', wrenchIconSvg)
+
+    const link = document.createElement('a')
+    link.className = 'seirmg-ferramentas-pdf-link'
+    link.target = '_blank'
+    link.rel = 'noopener'
+    link.href = chrome.runtime.getURL(
+      `src/ferramentas-pdf/index.html?idProcedimento=${encodeURIComponent(idProcedimento)}`
+    )
+    link.textContent = 'Juntar, dividir, tarjar e outras ferramentas de PDF'
+    corpo.appendChild(link)
+
+    container.appendChild(secao)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao montar atalho de Ferramentas de PDF:', error)
+  }
+}
+
 function montarPainelLateral(): void {
   try {
     esperarElemento('body.infraArvore', "a[target$='Visualizacao']", () => {
@@ -762,6 +791,7 @@ function bootstrap(): void {
   alterarTitulo()
   montarPainelLateral()
   montarPainelAnotacao()
+  montarAtalhoFerramentasPdf()
 }
 
 bootstrap()

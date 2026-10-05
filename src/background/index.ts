@@ -12,6 +12,8 @@ import {
 } from './notifications/notify'
 import { processarTarefasVencidas } from './tarefasPipeline'
 import { ALARME_LEMBRETE_BLOCO_ASSINATURA, agendarLembreteBlocoAssinatura } from './lembreteBlocoAssinatura'
+import { construirOpcoesFetchSei } from './fetchSeiOptions'
+import type { ArquivoParaUpload } from '../lib/fetchViaBackground'
 import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
 
 const ACAO_BLOCO_ASSINATURA = 'bloco_assinatura_listar'
@@ -41,6 +43,9 @@ interface MensagemFetchSei {
   method?: string
   body?: string
   bodyRaw?: string
+  // Presente só quando o chamador precisa de um upload multipart real (ex.: enviarAoProcesso.ts,
+  // ferramentas de PDF enviando o resultado pro processo aberto) -- ver fetchSeiOptions.ts.
+  upload?: ArquivoParaUpload
 }
 
 interface MensagemFetchIA {
@@ -191,16 +196,7 @@ chrome.runtime.onMessage.addListener((mensagem) => {
 
 chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
   if (!ehMensagemFetchSei(mensagem)) return false
-  fetchTextComGate(mensagem.url, {
-    method: mensagem.method,
-    body:
-      mensagem.bodyRaw !== undefined
-        ? mensagem.bodyRaw
-        : mensagem.body !== undefined
-          ? new URLSearchParams(mensagem.body)
-          : undefined,
-    headers: mensagem.bodyRaw !== undefined ? { 'Content-Type': 'application/x-www-form-urlencoded' } : undefined,
-  })
+  fetchTextComGate(mensagem.url, construirOpcoesFetchSei(mensagem))
     .then(responder)
     .catch((error) => responder({ ok: false, error: String(error) }))
   return true

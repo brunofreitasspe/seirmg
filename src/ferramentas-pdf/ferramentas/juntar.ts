@@ -1,4 +1,7 @@
 import { juntarPdfs } from '../../features/ferramentas-pdf/juntar'
+import { criarBotaoEnviarAoProcesso } from '../ui/botaoEnviarAoProcesso'
+
+const NOME_ARQUIVO_RESULTADO = 'processo-unido.pdf'
 
 export function montar(container: HTMLElement): void {
   container.innerHTML = `
@@ -11,10 +14,19 @@ export function montar(container: HTMLElement): void {
   const botao = document.getElementById('juntar-processar') as HTMLButtonElement
   const lista = document.getElementById('juntar-lista') as HTMLParagraphElement
 
+  let ultimoResultado: Uint8Array | null = null
+
+  const botaoEnviar = criarBotaoEnviarAoProcesso({
+    nomeArquivoPadrao: NOME_ARQUIVO_RESULTADO,
+    obterBytes: () => ultimoResultado,
+  })
+  if (botaoEnviar) container.appendChild(botaoEnviar)
+
   input.addEventListener('change', () => {
     const arquivos = Array.from(input.files ?? [])
     lista.textContent = arquivos.map((a) => a.name).join(', ')
     botao.disabled = arquivos.length < 2
+    ultimoResultado = null
   })
 
   botao.addEventListener('click', async () => {
@@ -22,11 +34,12 @@ export function montar(container: HTMLElement): void {
       const arquivos = Array.from(input.files ?? [])
       const bytes = await Promise.all(arquivos.map(async (a) => new Uint8Array(await a.arrayBuffer())))
       const resultado = await juntarPdfs(bytes)
+      ultimoResultado = resultado
       const blob = new Blob([resultado as BlobPart], { type: 'application/pdf' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'processo-unido.pdf'
+      link.download = NOME_ARQUIVO_RESULTADO
       link.click()
       URL.revokeObjectURL(url)
     } catch (error) {

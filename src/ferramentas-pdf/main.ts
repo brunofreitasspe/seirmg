@@ -1,4 +1,5 @@
 import { listarFerramentasPdf } from '../features/ferramentas-pdf/catalogo'
+import { montarUrlFerramenta } from '../features/ferramentas-pdf/catalogoUrl'
 
 // Ícones próprios (traço simples, geométrico — círculos/retângulos/linhas) em vez de emoji,
 // pra recolorir com --accent via `stroke="currentColor"` e casar com o resto da extensão.
@@ -63,13 +64,18 @@ function obterFerramentaDaUrl(): string | null {
   return new URL(window.location.href).searchParams.get('ferramenta')
 }
 
+function obterIdProcedimentoDaUrl(): string | null {
+  return new URL(window.location.href).searchParams.get('idProcedimento')
+}
+
 function renderizarCatalogo(container: HTMLElement): void {
+  const idProcedimento = obterIdProcedimentoDaUrl()
   const lista = document.createElement('div')
   lista.className = 'catalogo'
   listarFerramentasPdf().forEach((ferramenta) => {
     const card = document.createElement('a')
     card.className = 'catalogo-card'
-    card.href = `?ferramenta=${ferramenta.id}`
+    card.href = montarUrlFerramenta(ferramenta.id, idProcedimento)
 
     const icone = document.createElement('div')
     icone.className = 'catalogo-card-icone'
