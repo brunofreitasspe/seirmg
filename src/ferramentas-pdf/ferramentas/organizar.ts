@@ -48,10 +48,18 @@ export function montar(container: HTMLElement): void {
   input.addEventListener('change', async () => {
     const arquivo = input.files?.[0]
     if (!arquivo) return
-    bytesOriginais = new Uint8Array(await arquivo.arrayBuffer())
-    const totalPaginas = (await PDFDocument.load(bytesOriginais)).getPageCount()
-    ordem = Array.from({ length: totalPaginas }, (_, i) => i)
-    renderizarLista()
+    try {
+      bytesOriginais = new Uint8Array(await arquivo.arrayBuffer())
+      const totalPaginas = (await PDFDocument.load(bytesOriginais)).getPageCount()
+      ordem = Array.from({ length: totalPaginas }, (_, i) => i)
+      renderizarLista()
+    } catch (error) {
+      console.error('[SEIRMG] Falha ao ler PDF para organizar:', error)
+      alert('Não foi possível ler o arquivo selecionado. Confira se é um PDF válido.')
+      bytesOriginais = null
+      ordem = []
+      renderizarLista()
+    }
   })
 
   botao.addEventListener('click', async () => {
