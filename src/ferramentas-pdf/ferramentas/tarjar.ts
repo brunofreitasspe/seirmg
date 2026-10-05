@@ -158,7 +158,7 @@ export function montar(container: HTMLElement): void {
       texto.textContent = `${rotuloOrigem(candidato)} — ${candidato.status}`
       const botaoConfirmar = document.createElement('button')
       botaoConfirmar.textContent = 'Confirmar tarja'
-      botaoConfirmar.disabled = candidato.status === 'confirmada'
+      botaoConfirmar.disabled = candidato.status !== 'pendente'
       botaoConfirmar.addEventListener('click', () => confirmar(candidato.id))
       const botaoDescartar = document.createElement('button')
       botaoDescartar.textContent = 'Descartar'
