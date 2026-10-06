@@ -4,6 +4,7 @@ import {
 } from '../../features/procedimento-visualizar/ajustarElementosNativos'
 import { montarTituloJanela } from '../../features/procedimento-visualizar/alterarTitulo'
 import { extrairUrlIncluirDocumento } from '../../features/procedimento-visualizar/dropzone'
+import { ehPedidoRecarregarArvore } from '../../features/ferramentas-pdf/recarregarArvore'
 import { obterNumeroProcesso, ehVisualizacaoDoProcesso } from '../../features/procedimento-visualizar/numeroProcesso'
 import {
   montarCorpoSalvarAnotacao,
@@ -793,12 +794,21 @@ function montarPainelLateral(): void {
   }
 }
 
+// A aba de Ferramentas de PDF avisa quando incluiu um documento neste processo -- recarrega a
+// árvore pra ele aparecer (ver features/ferramentas-pdf/recarregarArvore.ts).
+function escutarPedidoRecarregarArvore(): void {
+  chrome.runtime.onMessage.addListener((mensagem) => {
+    if (ehPedidoRecarregarArvore(mensagem, obterIdProcedimento())) location.reload()
+  })
+}
+
 function bootstrap(): void {
   ajustarElementosNativos()
   alterarTitulo()
   montarPainelLateral()
   montarPainelAnotacao()
   montarAtalhoFerramentasPdf()
+  escutarPedidoRecarregarArvore()
 }
 
 bootstrap()

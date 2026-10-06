@@ -4,6 +4,20 @@
 // de menu "Ferramentas do Processo" do seipro) -- sem esse parâmetro não há processo-alvo, então
 // nem vale a pena montar o botão.
 import { enviarPdfAoProcesso } from '../enviarAoProcesso'
+import { TIPO_RECARREGAR_ARVORE, type MensagemRecarregarArvore } from '../../features/ferramentas-pdf/recarregarArvore'
+import { createLocalConfigStore } from '../../lib/storage'
+
+// Melhor esforço: avisa as abas do SEI pra árvore do processo mostrar o documento novo. Abas sem
+// o content script (ou em outro processo) simplesmente ignoram/rejeitam -- não é erro do envio.
+async function pedirRecarregarArvore(idProcedimento: string): Promise<void> {
+  const { baseUrlSei } = await createLocalConfigStore().get()
+  if (!baseUrlSei) return
+  const abas = await chrome.tabs.query({ url: `${new URL(baseUrlSei).origin}/*` })
+  const mensagem: MensagemRecarregarArvore = { type: TIPO_RECARREGAR_ARVORE, idProcedimento }
+  await Promise.all(
+    abas.map((aba) => (aba.id === undefined ? undefined : chrome.tabs.sendMessage(aba.id, mensagem).catch(() => undefined)))
+  )
+}
 
 export function obterIdProcedimentoDaUrl(): string | null {
   return new URL(window.location.href).searchParams.get('idProcedimento')
@@ -59,6 +73,9 @@ export function criarBotaoEnviarAoProcesso(opcoes: OpcoesBotaoEnviarAoProcesso):
       .then((resultado) => {
         if (resultado.ok) {
           status.textContent = 'Enviado com sucesso ao processo aberto no SEI.'
+          pedirRecarregarArvore(idProcedimento).catch((error) => {
+            console.error('[SEIRMG] Falha ao pedir recarga da árvore do processo:', error)
+          })
           return
         }
         status.textContent = `Falha ao enviar: ${resultado.error}`
