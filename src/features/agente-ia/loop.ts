@@ -64,6 +64,20 @@ export function montarMensagemResultados(resultados: ResultadoChamada[]): Mensag
   }
 }
 
+// Depois de uma parada ('parar'), o histórico precisa continuar aceito pela API na próxima mensagem:
+// - recusa: volta pra antes da mensagem recusada (reenviar o pedido tende a ser recusado de novo,
+//   e a resposta pode vir sem conteúdo -- assistente vazio é rejeitado pela API);
+// - max_tokens: um tool_use cortado não tem tool_result possível, e turno vazio é inválido --
+//   descarta só o turno do assistente; texto cortado fica como contexto.
+export function historicoAposParada(historico: MensagemAgente[], tamanhoAntesDaMensagem: number, stopReason: string): MensagemAgente[] {
+  if (stopReason === 'refusal') return historico.slice(0, tamanhoAntesDaMensagem)
+  const ultima = historico[historico.length - 1]
+  if (ultima?.role === 'assistant' && (ultima.content.length === 0 || ultima.content.some(ehBlocoToolUse))) {
+    return historico.slice(0, -1)
+  }
+  return historico
+}
+
 export function textoDaResposta(blocos: BlocoConteudo[]): string {
   return blocos
     .filter(ehBlocoTexto)

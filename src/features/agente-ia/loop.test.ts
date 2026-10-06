@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { decidirProximoPasso, montarMensagemResultados, textoDaResposta } from './loop'
+import { decidirProximoPasso, historicoAposParada, montarMensagemResultados, textoDaResposta } from './loop'
 import type { FerramentaAgenteDescricao } from './tools'
-import type { BlocoConteudo, RespostaExtraida } from './mensagens'
+import type { BlocoConteudo, MensagemAgente, RespostaExtraida } from './mensagens'
 
 const ferramentas: FerramentaAgenteDescricao[] = [
   { id: 'leitura_x', nome: 'X', descricao: '', escrita: false, inputSchema: {} },
@@ -87,6 +87,32 @@ describe('montarMensagemResultados', () => {
         { type: 'tool_result', tool_use_id: '2', content: 'Usuário recusou executar esta ação.', is_error: true },
       ],
     })
+  })
+})
+
+describe('historicoAposParada', () => {
+  const pergunta: MensagemAgente = { role: 'user', content: [{ type: 'text', text: 'oi' }] }
+  const anterior: MensagemAgente[] = [
+    { role: 'user', content: [{ type: 'text', text: 'antes' }] },
+    { role: 'assistant', content: [{ type: 'text', text: 'resposta' }] },
+  ]
+
+  it('recusa: volta pro histórico de antes da mensagem recusada (não reenvia o pedido nem a recusa vazia)', () => {
+    const historico = [...anterior, pergunta, { role: 'assistant' as const, content: [] }]
+    expect(historicoAposParada(historico, anterior.length, 'refusal')).toEqual(anterior)
+  })
+
+  it('max_tokens com texto: mantém a resposta cortada como contexto', () => {
+    const cortada: MensagemAgente = { role: 'assistant', content: [{ type: 'text', text: 'meia resposta' }] }
+    const historico = [...anterior, pergunta, cortada]
+    expect(historicoAposParada(historico, anterior.length, 'max_tokens')).toEqual(historico)
+  })
+
+  it('max_tokens com tool_use (sem tool_result possível) ou vazio: descarta o turno do assistente', () => {
+    const comToolUse: MensagemAgente = { role: 'assistant', content: [{ type: 'tool_use', id: '1', name: 'x', input: {} }] }
+    expect(historicoAposParada([...anterior, pergunta, comToolUse], anterior.length, 'max_tokens')).toEqual([...anterior, pergunta])
+    const vazio: MensagemAgente = { role: 'assistant', content: [] }
+    expect(historicoAposParada([...anterior, pergunta, vazio], anterior.length, 'max_tokens')).toEqual([...anterior, pergunta])
   })
 })
 

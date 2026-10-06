@@ -490,6 +490,9 @@ textarea {
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+#lista-ferramentas li span:first-child {
+  white-space: normal;
+}
 .lista-simples small {
   color: var(--seirmg-text-muted);
   font-size: 11.5px;

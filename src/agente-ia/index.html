@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Agente de IA — SEIRMG</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="topo">
+      <div class="topo-interno">
+        <a class="marca" href="./index.html">
+          <img src="../assets/icons/icon-48.png" alt="" />
+          <span><strong>Agente de IA</strong><small>SEIRMG · Claude</small></span>
+        </a>
+        <span id="custo-acumulado" class="custo" title="Custo estimado de todas as conversas nesta máquina, pela tabela de preços da Anthropic"></span>
+        <a class="btn" href="./estudio.html" target="_blank" id="link-estudio"></a>
+        <button class="btn" type="button" id="abrir-opcoes"></button>
+      </div>
+    </header>
+
+    <div class="layout">
+      <section class="chat" aria-label="Conversa com o agente">
+        <div class="chat-cabecalho">
+          <label class="rotulo" for="seletor-skill">Skill</label>
+          <select id="seletor-skill"></select>
+          <button class="btn btn-fantasma" type="button" id="editar-skills">Editar skills</button>
+          <span class="espaco"></span>
+          <select id="seletor-fluxo" aria-label="Rodar um fluxo"></select>
+          <button class="btn" type="button" id="nova-conversa"></button>
+        </div>
+
+        <div id="conversa" class="conversa" aria-live="polite"></div>
+        <div id="fluxo-em-andamento" class="fluxo-em-andamento" hidden></div>
+        <div id="aprovacao-pendente" class="aprovacao" hidden></div>
+
+        <form id="form-mensagem" class="composer">
+          <textarea id="campo-mensagem" rows="1" placeholder="Pergunte algo… (Enter envia, Shift+Enter quebra linha)"></textarea>
+          <button class="btn btn-primario" type="submit" id="botao-enviar"></button>
+        </form>
+      </section>
+
+      <aside class="lateral">
+        <div class="cartao">
+          <h2>Ferramentas desta skill</h2>
+          <ul id="lista-ferramentas" class="lista-simples"></ul>
+        </div>
+        <div class="cartao">
+          <h2>Ações recentes</h2>
+          <ul id="lista-desfazer" class="lista-simples"></ul>
+        </div>
+      </aside>
+    </div>
+
+    <dialog id="dialogo-skills" aria-labelledby="titulo-dialogo-skills">
+      <div class="dialogo-cabecalho">
+        <h2 id="titulo-dialogo-skills">Skills do agente</h2>
+      </div>
+      <div class="dialogo-corpo" id="corpo-dialogo-skills"></div>
+      <div class="dialogo-rodape">
+        <button class="btn btn-fantasma" type="button" id="nova-skill">Nova skill</button>
+        <span style="flex: 1"></span>
+        <button class="btn" type="button" id="cancelar-skills">Cancelar</button>
+        <button class="btn btn-primario" type="button" id="salvar-skills">Salvar</button>
+      </div>
+    </dialog>
+
+    <script type="module" src="./main.ts"></script>
+  </body>
+</html>
