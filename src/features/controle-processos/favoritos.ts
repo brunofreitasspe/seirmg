@@ -1,4 +1,4 @@
-import type { FavoritoProcesso, SnapshotFavorito } from '../../lib/storage'
+import type { FavoritoProcesso, FavoritoRemovido, SnapshotFavorito } from '../../lib/storage'
 import { extrairEspecificacaoParaExibicao } from './especificacao'
 
 export function extrairHrefDaLinha(linha: Element): string | null {
@@ -58,6 +58,45 @@ export function calcularOcultacaoPorFavorito(
 export function adicionarFavoritoSeNovo(itens: FavoritoProcesso[], novo: FavoritoProcesso): FavoritoProcesso[] {
   if (itens.some((item) => item.numero === novo.numero)) return itens
   return [...itens, novo]
+}
+
+// Lixeira: favorito removido fica disponível pra restaurar por um tempo (mais recente no topo).
+export function moverParaLixeira(
+  lixeiraAtual: FavoritoRemovido[],
+  removido: FavoritoProcesso,
+  removidoEm: string,
+  limite = 20
+): FavoritoRemovido[] {
+  const semDuplicata = lixeiraAtual.filter((item) => item.numero !== removido.numero)
+  return [{ ...removido, removidoEm }, ...semDuplicata].slice(0, limite)
+}
+
+const MILISSEGUNDOS_POR_DIA = 24 * 60 * 60 * 1000
+
+export function podarLixeiraPorJanela(lixeira: FavoritoRemovido[], agoraIso: string, janelaDias = 30): FavoritoRemovido[] {
+  if (janelaDias <= 0) return lixeira
+  const limiteMs = new Date(agoraIso).getTime() - janelaDias * MILISSEGUNDOS_POR_DIA
+  return lixeira.filter((item) => new Date(item.removidoEm).getTime() >= limiteMs)
+}
+
+export function restaurarDaLixeira(
+  itens: FavoritoProcesso[],
+  lixeira: FavoritoRemovido[],
+  numero: string
+): { itens: FavoritoProcesso[]; lixeira: FavoritoRemovido[] } {
+  const encontrado = lixeira.find((item) => item.numero === numero)
+  if (!encontrado) return { itens, lixeira }
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { removidoEm, ...favorito } = encontrado
+  return {
+    itens: adicionarFavoritoSeNovo(itens, favorito),
+    lixeira: lixeira.filter((item) => item.numero !== numero),
+  }
+}
+
+export function removerDefinitivamenteDaLixeira(lixeira: FavoritoRemovido[], numero: string): FavoritoRemovido[] {
+  return lixeira.filter((item) => item.numero !== numero)
 }
 
 export function ordenarFavoritosPorData(itens: FavoritoProcesso[]): FavoritoProcesso[] {

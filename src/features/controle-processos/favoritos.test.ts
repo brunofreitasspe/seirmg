@@ -1,4 +1,6 @@
 import { describe, expect, it } from 'vitest'
+import { moverParaLixeira, podarLixeiraPorJanela, restaurarDaLixeira, removerDefinitivamenteDaLixeira } from './favoritos'
+import type { FavoritoRemovido } from '../../lib/storage'
 import {
   adicionarFavoritoSeNovo,
   atualizarSnapshotsFavoritos,
@@ -235,5 +237,68 @@ describe('atualizarSnapshotsFavoritos', () => {
     expect(resultado.itens[0].ultimoSnapshot).toEqual(snapshotIgual)
     expect(resultado.itens[1].ultimoSnapshot).toEqual(snapshotNovo)
     expect(resultado.itens[2].ultimoSnapshot).toBeUndefined()
+  })
+})
+
+describe('moverParaLixeira', () => {
+  it('adiciona no topo e respeita o limite', () => {
+    const lixeira: FavoritoRemovido[] = [
+      { numero: 'A', link: null, adicionadoEm: '2026-07-01T00:00:00.000Z', removidoEm: '2026-07-02T00:00:00.000Z' },
+    ]
+    const removido = { numero: 'B', link: null, adicionadoEm: '2026-07-01T00:00:00.000Z' }
+    const resultado = moverParaLixeira(lixeira, removido, '2026-07-20T00:00:00.000Z', 1)
+    expect(resultado).toEqual([{ ...removido, removidoEm: '2026-07-20T00:00:00.000Z' }])
+  })
+
+  it('não duplica: remover de novo o mesmo processo só atualiza a data e sobe pro topo', () => {
+    const lixeira: FavoritoRemovido[] = [
+      { numero: 'A', link: null, adicionadoEm: '2026-07-01T00:00:00.000Z', removidoEm: '2026-07-02T00:00:00.000Z' },
+      { numero: 'B', link: null, adicionadoEm: '2026-07-01T00:00:00.000Z', removidoEm: '2026-07-01T00:00:00.000Z' },
+    ]
+    const resultado = moverParaLixeira(lixeira, { numero: 'B', link: null, adicionadoEm: '2026-07-01T00:00:00.000Z' }, '2026-07-20T00:00:00.000Z')
+    expect(resultado.map((item) => [item.numero, item.removidoEm])).toEqual([
+      ['B', '2026-07-20T00:00:00.000Z'],
+      ['A', '2026-07-02T00:00:00.000Z'],
+    ])
+  })
+})
+
+describe('podarLixeiraPorJanela', () => {
+  it('remove entradas mais antigas que a janela', () => {
+    const lixeira: FavoritoRemovido[] = [
+      { numero: 'A', link: null, adicionadoEm: '2026-01-01T00:00:00.000Z', removidoEm: '2026-07-19T00:00:00.000Z' },
+      { numero: 'B', link: null, adicionadoEm: '2026-01-01T00:00:00.000Z', removidoEm: '2026-01-01T00:00:00.000Z' },
+    ]
+    expect(podarLixeiraPorJanela(lixeira, '2026-07-20T00:00:00.000Z', 30)).toEqual([lixeira[0]])
+  })
+})
+
+describe('restaurarDaLixeira', () => {
+  it('move o item da lixeira de volta pros favoritos, sem duplicar', () => {
+    const itens = [{ numero: 'A', link: null, adicionadoEm: '2026-07-01T00:00:00.000Z' }]
+    const lixeira: FavoritoRemovido[] = [
+      { numero: 'B', link: 'controlador.php?x=1', adicionadoEm: '2026-06-01T00:00:00.000Z', removidoEm: '2026-07-19T00:00:00.000Z' },
+    ]
+    const resultado = restaurarDaLixeira(itens, lixeira, 'B')
+    expect(resultado.itens).toEqual([
+      ...itens,
+      { numero: 'B', link: 'controlador.php?x=1', adicionadoEm: '2026-06-01T00:00:00.000Z' },
+    ])
+    expect(resultado.lixeira).toEqual([])
+  })
+
+  it('não faz nada se o número não está na lixeira', () => {
+    const itens = [{ numero: 'A', link: null, adicionadoEm: '2026-07-01T00:00:00.000Z' }]
+    const resultado = restaurarDaLixeira(itens, [], 'Z')
+    expect(resultado).toEqual({ itens, lixeira: [] })
+  })
+})
+
+describe('removerDefinitivamenteDaLixeira', () => {
+  it('remove o item pelo número', () => {
+    const lixeira: FavoritoRemovido[] = [
+      { numero: 'A', link: null, adicionadoEm: '2026-07-01T00:00:00.000Z', removidoEm: '2026-07-19T00:00:00.000Z' },
+    ]
+    expect(removerDefinitivamenteDaLixeira(lixeira, 'A')).toEqual([])
   })
 })
