@@ -54,7 +54,12 @@ interface MensagemFetchIA {
   method: string
   headers: Record<string, string>
   body: string
+  // Opcional: o Agente de IA pede mais que o padrão (resposta com raciocínio pode passar de 1 min).
+  timeoutMs?: number
 }
+
+const TIMEOUT_FETCH_IA_PADRAO_MS = 60_000
+const TIMEOUT_FETCH_IA_MAXIMO_MS = 300_000
 
 interface MensagemTelaLoginDetectada {
   type: 'seirmg:tela-login-detectada'
@@ -208,7 +213,7 @@ chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
     method: mensagem.method,
     headers: mensagem.headers,
     body: mensagem.body,
-    timeoutMs: 60000,
+    timeoutMs: Math.min(mensagem.timeoutMs ?? TIMEOUT_FETCH_IA_PADRAO_MS, TIMEOUT_FETCH_IA_MAXIMO_MS),
   })
     .then(responder)
     .catch((error) => responder({ ok: false, error: String(error) }))
