@@ -67,3 +67,17 @@ export function notificarTarefaVencida(tarefa: { id: string; titulo: string }): 
     priority: 1,
   })
 }
+
+export const NOTIFICATION_ID_LEMBRETE_FAVORITO_PREFIX = 'seirmg-lembrete-favorito-'
+
+export function notificarLembreteFavorito(favorito: { numero: string; lembreteNota?: string }): void {
+  chrome.notifications.create(`${NOTIFICATION_ID_LEMBRETE_FAVORITO_PREFIX}${favorito.numero}`, {
+    type: 'basic',
+    iconUrl: chrome.runtime.getURL('src/assets/icons/icon-128.png'),
+    title: 'SEIRMG — Lembrete de favorito',
+    message: favorito.lembreteNota
+      ? `${favorito.numero}: ${favorito.lembreteNota}`
+      : `Lembrete do processo favorito ${favorito.numero}.`,
+    priority: 1,
+  })
+}

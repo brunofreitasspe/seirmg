@@ -7,11 +7,15 @@ import {
   NOTIFICATION_ID_LEMBRETE_BLOCO_ASSINATURA,
   NOTIFICATION_ID_BLOCO_DISPONIBILIZADO_PREFIX,
   NOTIFICATION_ID_TAREFA_VENCIDA_PREFIX,
+  NOTIFICATION_ID_LEMBRETE_FAVORITO_PREFIX,
   notificarLembreteBlocoAssinatura,
   notificarBlocoDisponibilizado,
 } from './notifications/notify'
 import { processarTarefasVencidas } from './tarefasPipeline'
 import { ALARME_LEMBRETE_BLOCO_ASSINATURA, agendarLembreteBlocoAssinatura } from './lembreteBlocoAssinatura'
+import { agendarChecagemLembretesFavoritos, ALARME_CHECAGEM_LEMBRETES_FAVORITOS } from './lembreteFavoritosAlarme'
+import { processarLembretesFavoritos } from './lembreteFavoritosPipeline'
+import { extrairIdProcedimentoDoLink } from '../features/controle-processos/favoritos'
 import { construirOpcoesFetchSei } from './fetchSeiOptions'
 import type { ArquivoUploadMensagem } from '../lib/fetchViaBackground'
 import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
@@ -138,6 +142,17 @@ async function reagendarLembreteBlocoAssinatura(): Promise<void> {
   agendarLembreteBlocoAssinatura(config.blocoAssinatura.lembreteIntervaloMinutos)
 }
 
+async function reagendarChecagemLembretesFavoritos(): Promise<void> {
+  const config = await createSyncConfigStore().get()
+  agendarChecagemLembretesFavoritos(config.controleProcessos.favoritos.ativo)
+}
+
+function reagendarChecagemLembretesFavoritosComLog(): void {
+  reagendarChecagemLembretesFavoritos().catch((error) => {
+    console.error('[SEIRMG] Falha ao agendar checagem de lembretes de favoritos:', error)
+  })
+}
+
 chrome.runtime.onInstalled.addListener(() => {
   marcarIndicadorConfiguracao().catch((error) => {
     console.error('[SEIRMG] Falha ao marcar indicador de configuração pendente:', error)
@@ -145,12 +160,14 @@ chrome.runtime.onInstalled.addListener(() => {
   reagendarLembreteBlocoAssinatura().catch((error) => {
     console.error('[SEIRMG] Falha ao agendar lembrete de bloco de assinatura:', error)
   })
+  reagendarChecagemLembretesFavoritosComLog()
 })
 
 chrome.runtime.onStartup.addListener(() => {
   reagendarLembreteBlocoAssinatura().catch((error) => {
     console.error('[SEIRMG] Falha ao reagendar lembrete de bloco de assinatura:', error)
   })
+  reagendarChecagemLembretesFavoritosComLog()
 })
 
 chrome.storage.onChanged.addListener((mudancas, area) => {
@@ -158,11 +175,19 @@ chrome.storage.onChanged.addListener((mudancas, area) => {
   reagendarLembreteBlocoAssinatura().catch((error) => {
     console.error('[SEIRMG] Falha ao reagendar lembrete de bloco de assinatura após mudança de config:', error)
   })
+  reagendarChecagemLembretesFavoritosComLog()
 })
 
 chrome.alarms.onAlarm.addListener((alarme) => {
   if (alarme.name !== ALARME_LEMBRETE_BLOCO_ASSINATURA) return
   notificarLembreteBlocoAssinatura()
+})
+
+chrome.alarms.onAlarm.addListener((alarme) => {
+  if (alarme.name !== ALARME_CHECAGEM_LEMBRETES_FAVORITOS) return
+  processarLembretesFavoritos().catch((error) => {
+    console.error('[SEIRMG] Falha ao processar lembretes de favoritos:', error)
+  })
 })
 
 chrome.runtime.onMessage.addListener((mensagem) => {
@@ -240,6 +265,17 @@ chrome.notifications.onClicked.addListener(async (notificationId) => {
       // Sem tela dedicada de tarefas -- o painel convive em qualquer página do SEI, então só
       // focamos/abrimos a aba do SEI onde o usuário já estava.
       await abrirOuFocarAba(localConfig.baseUrlSei, localConfig.baseUrlSei)
+    } else if (notificationId.startsWith(NOTIFICATION_ID_LEMBRETE_FAVORITO_PREFIX)) {
+      // Mesmo jeito do Dashboard: o link salvo carrega um infra_hash que expira, então abrimos
+      // pelo id_procedimento.
+      const numero = notificationId.slice(NOTIFICATION_ID_LEMBRETE_FAVORITO_PREFIX.length)
+      const syncConfig = await createSyncConfigStore().get()
+      const favorito = syncConfig.controleProcessos.favoritos.itens.find((item) => item.numero === numero)
+      const id = extrairIdProcedimentoDoLink(favorito?.link ?? null)
+      const url = id
+        ? `${localConfig.baseUrlSei}/controlador.php?acao=procedimento_trabalhar&id_procedimento=${id}`
+        : localConfig.baseUrlSei
+      await abrirOuFocarAba(localConfig.baseUrlSei, url)
     }
 
     chrome.notifications.clear(notificationId)
