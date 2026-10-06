@@ -75,6 +75,13 @@ export interface FavoritoProcesso {
   adicionadoEm: string
   especificacao?: string
   ultimoSnapshot?: SnapshotFavorito
+  // Data (yyyy-mm-dd) em que o lembrete deve notificar. Ausente = sem lembrete.
+  lembreteData?: string
+  lembreteNota?: string
+}
+
+export interface FavoritoRemovido extends FavoritoProcesso {
+  removidoEm: string
 }
 
 export interface SnapshotPrazoProcesso {
@@ -290,6 +297,11 @@ export interface LocalConfig {
   // Última data (yyyy-mm-dd) em que cada tarefa vencida já notificou -- no máximo 1x por dia por
   // tarefa (chave = Tarefa.id).
   tarefasNotificadas: NotificadoState
+  // Última notificação de lembrete de cada favorito (chave = número do processo) -- no máximo 1x
+  // por dia por favorito.
+  favoritosLembretesNotificados: NotificadoState
+  // Favoritos removidos recentemente, pra desfazer. Local (não sincroniza entre dispositivos).
+  favoritosLixeira: FavoritoRemovido[]
   baseUrlSei?: string
   seiVersionAtLeast4?: boolean
   atribuicaoSelecionada?: string
@@ -409,6 +421,8 @@ export const DEFAULT_LOCAL_CONFIG: LocalConfig = {
   blocoAssinaturaEstadosConhecidos: {},
   blocoAssinaturaUltimaChecagemOportunista: '',
   tarefasNotificadas: {},
+  favoritosLembretesNotificados: {},
+  favoritosLixeira: [],
   historicoProcessosVisitados: [],
   historicoEventos: [],
   snapshotPrazosProcessos: [],
