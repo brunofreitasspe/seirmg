@@ -226,6 +226,17 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
     width: 13px;
     height: 13px;
   }
+  .seirmg-favoritos-lembrete-data,
+  .seirmg-favoritos-lembrete-nota {
+    display: block;
+    width: 100%;
+    font-size: 11px;
+    padding: 2px 4px;
+    margin-bottom: 2px;
+    box-sizing: border-box;
+    border: 1px solid #d6dbe3;
+    border-radius: 4px;
+  }
   .seirmg-favoritos-badge {
     display: inline-block;
     border-radius: 10px;
@@ -1302,6 +1313,40 @@ function montarCelulaRemover(item: FavoritoProcesso): HTMLTableCellElement {
   return td
 }
 
+// Data + nota do lembrete (notificação nativa no dia, ver background/lembreteFavoritosPipeline.ts).
+function montarCelulaLembrete(item: FavoritoProcesso): HTMLTableCellElement {
+  const td = document.createElement('td')
+
+  const inputData = document.createElement('input')
+  inputData.type = 'date'
+  inputData.className = 'seirmg-favoritos-lembrete-data'
+  inputData.title = 'Data do lembrete (notifica a partir deste dia, uma vez por dia, até ser apagado)'
+  inputData.value = item.lembreteData ?? ''
+
+  const inputNota = document.createElement('input')
+  inputNota.type = 'text'
+  inputNota.className = 'seirmg-favoritos-lembrete-nota'
+  inputNota.placeholder = 'Nota (opcional)'
+  inputNota.value = item.lembreteNota ?? ''
+
+  function salvar(): void {
+    // Pela lista em memória + persistirFavoritosAtualizados, não direto no storage: a lista em
+    // memória é a que as próximas gravações (snapshots, importação) vão escrever por cima.
+    itensFavoritados = itensFavoritados.map((favorito) =>
+      favorito.numero === item.numero
+        ? { ...favorito, lembreteData: inputData.value || undefined, lembreteNota: inputNota.value || undefined }
+        : favorito
+    )
+    persistirFavoritosAtualizados()
+  }
+
+  inputData.addEventListener('change', salvar)
+  inputNota.addEventListener('change', salvar)
+
+  td.append(inputData, inputNota)
+  return td
+}
+
 function montarLinhaPainelFavoritos(item: FavoritoProcesso, linhaNativa: Element | undefined): HTMLTableRowElement {
   const tr = document.createElement('tr')
   const especificacao = linhaNativa ? (obterEspecificacaoDaLinha(linhaNativa) ?? item.especificacao) : item.especificacao
@@ -1324,6 +1369,7 @@ function montarLinhaPainelFavoritos(item: FavoritoProcesso, linhaNativa: Element
     tr.appendChild(montarCelulaAtribuicao(item.ultimoSnapshot?.atribuicao ?? null))
   }
 
+  tr.appendChild(montarCelulaLembrete(item))
   tr.appendChild(montarCelulaRemover(item))
   return tr
 }
@@ -1341,7 +1387,7 @@ function textoCelulaParaCsv(celula: HTMLTableCellElement): string {
   const filhos = Array.from(celula.children)
   if (filhos.length === 0) return celula.textContent?.trim() ?? ''
   return filhos
-    .map((filho) => filho.textContent?.trim() ?? '')
+    .map((filho) => (filho instanceof HTMLInputElement ? filho.value : filho.textContent)?.trim() ?? '')
     .filter(Boolean)
     .join(' ')
 }
@@ -1458,7 +1504,7 @@ function renderizarPainelFavoritos(): void {
     tabela.style.width = '100%'
 
     const colgroup = document.createElement('colgroup')
-    ;[30, 24, 20, 18, 8].forEach((largura) => {
+    ;[26, 20, 16, 14, 16, 8].forEach((largura) => {
       const col = document.createElement('col')
       col.style.width = `${largura}%`
       colgroup.appendChild(col)
@@ -1467,7 +1513,7 @@ function renderizarPainelFavoritos(): void {
 
     const thead = document.createElement('thead')
     const trHead = document.createElement('tr')
-    ;['Processo', 'Marcadores', 'Prazo', 'Atribuição', ''].forEach((rotulo) => {
+    ;['Processo', 'Marcadores', 'Prazo', 'Atribuição', 'Lembrete', ''].forEach((rotulo) => {
       const th = document.createElement('th')
       th.className = 'infraTh'
       th.textContent = rotulo
