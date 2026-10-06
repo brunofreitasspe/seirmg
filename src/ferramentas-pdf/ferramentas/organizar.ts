@@ -1,5 +1,8 @@
 import { PDFDocument } from 'pdf-lib'
 import { organizarPaginas } from '../../features/ferramentas-pdf/organizar'
+import { criarBotaoEnviarAoProcesso } from '../ui/botaoEnviarAoProcesso'
+
+const NOME_ARQUIVO_RESULTADO = 'pdf-organizado.pdf'
 
 export function montar(container: HTMLElement): void {
   container.innerHTML = `
@@ -15,6 +18,8 @@ export function montar(container: HTMLElement): void {
   let ordem: number[] = []
 
   function renderizarLista(): void {
+    // qualquer mudança na ordem invalida o PDF salvo antes
+    ultimoResultado = null
     lista.innerHTML = ''
     ordem.forEach((indicePagina, posicao) => {
       const li = document.createElement('li')
@@ -45,6 +50,14 @@ export function montar(container: HTMLElement): void {
     botao.disabled = ordem.length === 0
   }
 
+  let ultimoResultado: Uint8Array | null = null
+
+  const botaoEnviar = criarBotaoEnviarAoProcesso({
+    nomeArquivoPadrao: NOME_ARQUIVO_RESULTADO,
+    obterBytes: () => ultimoResultado,
+  })
+  if (botaoEnviar) container.appendChild(botaoEnviar)
+
   input.addEventListener('change', async () => {
     const arquivo = input.files?.[0]
     if (!arquivo) return
@@ -66,11 +79,12 @@ export function montar(container: HTMLElement): void {
     try {
       if (!bytesOriginais) return
       const resultado = await organizarPaginas(bytesOriginais, ordem)
+      ultimoResultado = resultado
       const blob = new Blob([resultado as BlobPart], { type: 'application/pdf' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'pdf-organizado.pdf'
+      link.download = NOME_ARQUIVO_RESULTADO
       link.click()
       URL.revokeObjectURL(url)
     } catch (error) {

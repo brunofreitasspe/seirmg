@@ -1,4 +1,7 @@
 import { imagensParaPdf, type ImagemEntrada } from '../../features/ferramentas-pdf/imagemParaPdf'
+import { criarBotaoEnviarAoProcesso } from '../ui/botaoEnviarAoProcesso'
+
+const NOME_ARQUIVO_RESULTADO = 'imagens-convertidas.pdf'
 
 export function montar(container: HTMLElement): void {
   container.innerHTML = `
@@ -9,8 +12,17 @@ export function montar(container: HTMLElement): void {
   const input = document.getElementById('imagem-arquivos') as HTMLInputElement
   const botao = document.getElementById('imagem-processar') as HTMLButtonElement
 
+  let ultimoResultado: Uint8Array | null = null
+
+  const botaoEnviar = criarBotaoEnviarAoProcesso({
+    nomeArquivoPadrao: NOME_ARQUIVO_RESULTADO,
+    obterBytes: () => ultimoResultado,
+  })
+  if (botaoEnviar) container.appendChild(botaoEnviar)
+
   input.addEventListener('change', () => {
     botao.disabled = (input.files?.length ?? 0) === 0
+    ultimoResultado = null
   })
 
   botao.addEventListener('click', async () => {
@@ -23,11 +35,12 @@ export function montar(container: HTMLElement): void {
         }))
       )
       const resultado = await imagensParaPdf(imagens)
+      ultimoResultado = resultado
       const blob = new Blob([resultado as BlobPart], { type: 'application/pdf' })
       const url = URL.createObjectURL(blob)
       const link = document.createElement('a')
       link.href = url
-      link.download = 'imagens-convertidas.pdf'
+      link.download = NOME_ARQUIVO_RESULTADO
       link.click()
       URL.revokeObjectURL(url)
     } catch (error) {

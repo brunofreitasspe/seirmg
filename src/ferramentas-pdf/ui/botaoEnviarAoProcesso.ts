@@ -16,6 +16,8 @@ function obterUrlIncluirDaUrl(): string | null {
 
 export interface OpcoesBotaoEnviarAoProcesso {
   nomeArquivoPadrao: string
+  // Texto do botão -- ex.: "Enviar parte 2 ao processo" quando há vários resultados (dividir).
+  rotulo?: string
   // Lazy: cada clique relê o resultado mais recente -- a ferramenta pode ter sido usada de novo
   // (novo arquivo, novas tarjas, etc.) entre a primeira renderização do botão e o clique.
   obterBytes: () => Uint8Array | null
@@ -33,7 +35,7 @@ export function criarBotaoEnviarAoProcesso(opcoes: OpcoesBotaoEnviarAoProcesso):
 
   const botao = document.createElement('button')
   botao.type = 'button'
-  botao.textContent = 'Enviar ao processo aberto no SEI'
+  botao.textContent = opcoes.rotulo ?? 'Enviar ao processo aberto no SEI'
 
   const status = document.createElement('span')
   status.className = 'seirmg-enviar-ao-processo-status'
