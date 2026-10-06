@@ -17,7 +17,9 @@ import {
   createLocalConfigStore,
   createSyncConfigStore,
   lerAgenteIAConfig,
+  lerCredenciaisClaude,
   type AgenteIAConfig,
+  type ProvedorIAConfig,
   type FluxoAgenteIA,
   type SkillAgenteIA,
   type UsoModeloAgenteIA,
@@ -71,6 +73,11 @@ async function lerConfig(): Promise<AgenteIAConfig> {
   return lerAgenteIAConfig(await syncStore.get())
 }
 
+// Chave e modelo do Claude: os mesmos do assistente do editor (Opções › Inteligência Artificial).
+async function lerCredenciais(): Promise<ProvedorIAConfig> {
+  return lerCredenciaisClaude(await syncStore.get())
+}
+
 // ------------------------------------------------------------------------------------- conversa
 
 function rolarParaFim(): void {
@@ -86,7 +93,7 @@ function adicionarBolha(tipo: 'usuario' | 'agente' | 'erro' | 'sistema', texto: 
   rolarParaFim()
 }
 
-function mostrarBoasVindas(config: AgenteIAConfig): void {
+function mostrarBoasVindas(apiKey: string): void {
   const caixa = criarElemento('div', 'boas-vindas')
   caixa.append(
     criarIcone(sparklesIconSvg),
@@ -97,9 +104,9 @@ function mostrarBoasVindas(config: AgenteIAConfig): void {
       'Converse com o agente sobre seus processos. Ações que alteram alguma coisa sempre pedem sua aprovação antes, e podem ser desfeitas no painel ao lado.'
     )
   )
-  if (!config.apiKey) {
+  if (!apiKey) {
     const aviso = criarElemento('div', 'aviso')
-    aviso.append(criarIcone(shieldAlertIconSvg), criarElemento('span', undefined, 'Falta a chave de API da Anthropic. Cadastre em Opções › Agente de IA.'))
+    aviso.append(criarIcone(shieldAlertIconSvg), criarElemento('span', undefined, 'Falta a chave de API do Claude (Anthropic). Cadastre em Opções › Inteligência Artificial.'))
     const abrir = criarBotao('Abrir Opções', { icone: settingsIconSvg })
     abrir.addEventListener('click', () => chrome.runtime.openOptionsPage())
     caixa.append(aviso, criarElemento('br'), abrir)
@@ -248,23 +255,24 @@ function pedirAprovacao(chamadas: ChamadaFerramenta[]): Promise<Map<string, bool
 async function rodarAgente(tamanhoAntesDaMensagem: number): Promise<void> {
   for (let rodada = 0; rodada < MAX_RODADAS_POR_MENSAGEM; rodada++) {
     const config = await lerConfig()
+    const credenciais = await lerCredenciais()
     const skill = encontrarSkillAtiva(config.skills, config.skillAtivaId)
     const ferramentas = ferramentasPermitidasParaSkill(skill, listarFerramentasAgente())
 
     const requisicao = montarRequisicaoAgente({
-      apiKey: config.apiKey,
-      modelo: config.modelo,
+      apiKey: credenciais.apiKey,
+      modelo: credenciais.modelo,
       systemPrompt: skill.systemPrompt,
       ferramentas,
       mensagens: historico,
     })
     const extraida = extrairBlocos(await chamarApi(requisicao))
-    await registrarUso(extraida.modelo ?? config.modelo, extraida.uso)
+    await registrarUso(extraida.modelo ?? credenciais.modelo, extraida.uso)
 
     historico = [...historico, { role: 'assistant', content: extraida.blocos }]
     const texto = textoDaResposta(extraida.blocos).trim()
     if (texto) adicionarBolha('agente', texto)
-    if (extraida.modelo && extraida.modelo !== config.modelo) {
+    if (extraida.modelo && extraida.modelo !== credenciais.modelo) {
       adicionarBolha('sistema', `Respondido por ${extraida.modelo} (o modelo escolhido recusou e a API redirecionou).`, infoIconSvg)
     }
 
@@ -294,9 +302,8 @@ async function rodarAgente(tamanhoAntesDaMensagem: number): Promise<void> {
 
 async function enviarMensagem(texto: string): Promise<void> {
   if (ocupado || !texto.trim()) return
-  const config = await lerConfig()
-  if (!config.apiKey) {
-    adicionarBolha('erro', 'Cadastre a chave de API da Anthropic em Opções › Agente de IA antes de conversar.')
+  if (!(await lerCredenciais()).apiKey) {
+    adicionarBolha('erro', 'Cadastre a chave de API do Claude em Opções › Inteligência Artificial antes de conversar.')
     return
   }
   adicionarBolha('usuario', texto.trim())
@@ -532,7 +539,7 @@ function ligarEventos(): void {
     historico = []
     fluxoAtivo = null
     renderizarFluxo()
-    mostrarBoasVindas(await lerConfig())
+    mostrarBoasVindas((await lerCredenciais()).apiKey)
   })
   document.getElementById('editar-skills')?.addEventListener('click', () => {
     abrirEditorSkills().catch((error) => console.error('[SEIRMG] Falha ao abrir editor de skills:', error))
@@ -561,8 +568,7 @@ async function iniciar(): Promise<void> {
   document.getElementById('nova-conversa')?.append(criarIcone(messageSquarePlusIconSvg), 'Nova conversa')
 
   ligarEventos()
-  const config = await lerConfig()
-  mostrarBoasVindas(config)
+  mostrarBoasVindas((await lerCredenciais()).apiKey)
   await Promise.all([renderizarSeletores(), renderizarDesfazer(), atualizarCusto()])
   elementos.campo.focus()
 }

@@ -5,6 +5,7 @@ import {
   DEFAULT_LOCAL_CONFIG,
   DEFAULT_SYNC_CONFIG,
   lerAgenteIAConfig,
+  lerCredenciaisClaude,
   type StorageArea,
   type SyncConfig,
 } from './storage'
@@ -17,10 +18,38 @@ describe('lerAgenteIAConfig', () => {
   })
 
   it('preserva o que foi salvo e completa campos ausentes', () => {
-    const salvo = { ativo: true, apiKey: 'k', modelo: 'claude-sonnet-5-5' } as SyncConfig['agenteIA']
+    const salvo = { ativo: true } as SyncConfig['agenteIA']
     const resultado = lerAgenteIAConfig({ ...DEFAULT_SYNC_CONFIG, agenteIA: salvo })
-    expect(resultado).toMatchObject({ ativo: true, apiKey: 'k', modelo: 'claude-sonnet-5-5', fluxos: [] })
+    expect(resultado).toMatchObject({ ativo: true, fluxos: [] })
     expect(resultado.skills).toEqual(DEFAULT_SYNC_CONFIG.agenteIA.skills)
+  })
+})
+
+describe('lerCredenciaisClaude', () => {
+  function comClaude(apiKey: string, modelo: string, agenteLegado?: Record<string, unknown>): SyncConfig {
+    return {
+      ...DEFAULT_SYNC_CONFIG,
+      ferramentasIA: { ...DEFAULT_SYNC_CONFIG.ferramentasIA, claude: { apiKey, modelo } },
+      ...(agenteLegado && { agenteIA: { ...DEFAULT_SYNC_CONFIG.agenteIA, ...agenteLegado } as SyncConfig['agenteIA'] }),
+    }
+  }
+
+  it('uma chave e um modelo só, os da seção Claude da Inteligência Artificial', () => {
+    expect(lerCredenciaisClaude(comClaude('sk-1', 'claude-sonnet-5-5'))).toEqual({ apiKey: 'sk-1', modelo: 'claude-sonnet-5-5' })
+  })
+
+  it('aproveita a chave colada na antiga aba do Agente de IA quando a seção Claude está vazia', () => {
+    const config = comClaude('', 'claude-opus-5-5', { apiKey: 'sk-legado', modelo: 'claude-haiku-4-5' })
+    expect(lerCredenciaisClaude(config)).toEqual({ apiKey: 'sk-legado', modelo: 'claude-haiku-4-5' })
+  })
+
+  it('a chave da seção Claude prevalece sobre a antiga do agente', () => {
+    const config = comClaude('sk-novo', 'claude-opus-5-5', { apiKey: 'sk-legado', modelo: 'claude-haiku-4-5' })
+    expect(lerCredenciaisClaude(config)).toEqual({ apiKey: 'sk-novo', modelo: 'claude-opus-5-5' })
+  })
+
+  it('modelo padrão do Claude é o atual (Opus 5.5)', () => {
+    expect(DEFAULT_SYNC_CONFIG.ferramentasIA.claude.modelo).toBe('claude-opus-5-5')
   })
 })
 
@@ -265,7 +294,7 @@ describe('createSyncConfigStore', () => {
       provedorAtivo: 'openai',
       openai: { apiKey: '', modelo: 'gpt-4o-mini' },
       gemini: { apiKey: '', modelo: 'gemini-2.0-flash' },
-      claude: { apiKey: '', modelo: 'claude-3-5-haiku-20241022' },
+      claude: { apiKey: '', modelo: 'claude-opus-5-5' },
     })
   })
 

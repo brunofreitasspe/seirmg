@@ -137,7 +137,7 @@ export function extrairBlocos(corpoResposta: string): RespostaExtraida {
 // comuns em linguagem do usuário.
 const EXPLICACAO_POR_STATUS: Record<string, string> = {
   '400': 'A API recusou o pedido como inválido (HTTP 400). Se persistir, comece uma conversa nova.',
-  '401': 'Chave de API inválida ou ausente. Confira a chave nas Opções da extensão, aba Agente de IA.',
+  '401': 'Chave de API inválida ou ausente. Confira a chave do Claude nas Opções da extensão, aba Inteligência Artificial.',
   '403': 'A chave de API não tem permissão pra este modelo ou recurso (HTTP 403).',
   '404': 'Modelo não encontrado (HTTP 404). Escolha outro modelo nas Opções.',
   '413': 'A conversa ficou grande demais (HTTP 413). Comece uma conversa nova.',

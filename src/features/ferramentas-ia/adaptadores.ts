@@ -39,7 +39,8 @@ export function montarRequisicao(
       'x-api-key': apiKey,
       'anthropic-version': '2023-06-01',
     },
-    body: JSON.stringify({ model: modelo, max_tokens: 1024, messages: [{ role: 'user', content: prompt }] }),
+    // Thinking (sempre ligado nos modelos atuais) consome o mesmo orçamento: 1024 cortava a resposta.
+    body: JSON.stringify({ model: modelo, max_tokens: 8000, messages: [{ role: 'user', content: prompt }] }),
   }
 }
 
@@ -50,7 +51,7 @@ interface RespostaGemini {
   candidates?: Array<{ content?: { parts?: Array<{ text?: string }> } }>
 }
 interface RespostaClaude {
-  content?: Array<{ text?: string }>
+  content?: Array<{ type?: string; text?: string }>
 }
 
 export function extrairResposta(provedor: ProvedorIA, corpoResposta: string): string | null {
@@ -63,7 +64,11 @@ export function extrairResposta(provedor: ProvedorIA, corpoResposta: string): st
     if (provedor === 'gemini') {
       return (json as RespostaGemini).candidates?.[0]?.content?.parts?.[0]?.text ?? null
     }
-    return (json as RespostaClaude).content?.[0]?.text ?? null
+    // Modelos atuais devolvem um bloco de thinking antes do texto -- junta só os blocos de texto.
+    const textos = ((json as RespostaClaude).content ?? [])
+      .filter((bloco) => (bloco.type === undefined || bloco.type === 'text') && typeof bloco.text === 'string')
+      .map((bloco) => bloco.text as string)
+    return textos.length > 0 ? textos.join('\n') : null
   } catch {
     return null
   }

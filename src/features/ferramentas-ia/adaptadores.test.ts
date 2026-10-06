@@ -23,13 +23,14 @@ describe('montarRequisicao', () => {
   })
 
   it('monta requisição do Claude com x-api-key e anthropic-version', () => {
-    const req = montarRequisicao('claude', 'claude-3-5-haiku-20241022', 'Olá', 'sk-ant-teste')
+    const req = montarRequisicao('claude', 'claude-opus-5-5', 'Olá', 'sk-ant-teste')
     expect(req.url).toBe('https://api.anthropic.com/v1/messages')
     expect(req.headers['x-api-key']).toBe('sk-ant-teste')
     expect(req.headers['anthropic-version']).toBe('2023-06-01')
     expect(JSON.parse(req.body)).toEqual({
-      model: 'claude-3-5-haiku-20241022',
-      max_tokens: 1024,
+      model: 'claude-opus-5-5',
+      // thinking sempre ligado nos modelos atuais sai do mesmo orçamento -- 1024 cortava a resposta
+      max_tokens: 8000,
       messages: [{ role: 'user', content: 'Olá' }],
     })
   })
@@ -49,6 +50,22 @@ describe('extrairResposta', () => {
   it('extrai o texto da resposta do Claude', () => {
     const corpo = JSON.stringify({ content: [{ text: 'Resposta do Claude' }] })
     expect(extrairResposta('claude', corpo)).toBe('Resposta do Claude')
+  })
+
+  // Modelos atuais (ex.: Opus 5.5) sempre devolvem um bloco de thinking antes do texto.
+  it('ignora blocos de thinking e junta os blocos de texto do Claude', () => {
+    const corpo = JSON.stringify({
+      content: [
+        { type: 'thinking', thinking: '', signature: 'abc' },
+        { type: 'text', text: 'Parte 1.' },
+        { type: 'text', text: 'Parte 2.' },
+      ],
+    })
+    expect(extrairResposta('claude', corpo)).toBe('Parte 1.\nParte 2.')
+  })
+
+  it('Claude sem bloco de texto devolve null', () => {
+    expect(extrairResposta('claude', JSON.stringify({ content: [{ type: 'thinking', thinking: '' }] }))).toBeNull()
   })
 
   it('retorna null quando o corpo não tem o formato esperado', () => {

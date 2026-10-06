@@ -415,7 +415,7 @@ function montarHtmlPainel(
 
   return `
     <div class="seirmg-ia-cabecalho">
-      <span>Ferramentas de IA</span>
+      <span>Assistente de IA</span>
       <span data-acao="fechar">✕</span>
     </div>
     <div class="seirmg-ia-provedores">${montarHtmlProvedores(config)}</div>
@@ -600,8 +600,8 @@ function montarBotaoFlutuante(editor: EditorSEI, config: FerramentasIAConfig): v
   const botao = document.createElement('button')
   botao.type = 'button'
   botao.id = 'seirmg-botao-ia'
-  botao.innerHTML = `${sparklesIconSvg}<span>Ferramentas de IA</span>`
-  botao.title = 'Ferramentas de IA'
+  botao.innerHTML = `${sparklesIconSvg}<span>Assistente de IA</span>`
+  botao.title = 'Assistente de IA'
   botao.addEventListener('click', () => montarPainel(config, editor))
   document.body.appendChild(botao)
 }

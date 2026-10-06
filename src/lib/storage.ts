@@ -269,10 +269,10 @@ export interface FluxoAgenteIA {
   passos: PassoFluxoAgenteIA[]
 }
 
+// A chave e o modelo do Claude ficam em ferramentasIA.claude (uma chave só pra toda a parte de
+// Inteligência Artificial) -- ler com lerCredenciaisClaude.
 export interface AgenteIAConfig {
   ativo: boolean
-  apiKey: string
-  modelo: string
   skillAtivaId: string
   skills: SkillAgenteIA[]
   fluxos: FluxoAgenteIA[]
@@ -438,7 +438,7 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
     provedorAtivo: 'openai',
     openai: { apiKey: '', modelo: 'gpt-4o-mini' },
     gemini: { apiKey: '', modelo: 'gemini-2.0-flash' },
-    claude: { apiKey: '', modelo: 'claude-3-5-haiku-20241022' },
+    claude: { apiKey: '', modelo: 'claude-opus-5-5' },
   },
   corretorOrtografico: {
     ativo: false,
@@ -468,8 +468,6 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
   },
   agenteIA: {
     ativo: false,
-    apiKey: '',
-    modelo: 'claude-opus-5-5',
     skillAtivaId: 'padrao',
     skills: [
       {
@@ -491,11 +489,22 @@ export function lerAgenteIAConfig(config: SyncConfig): AgenteIAConfig {
   const salvo = (config as Partial<SyncConfig>).agenteIA
   if (!salvo) return padrao
   return {
-    ...padrao,
-    ...salvo,
+    ativo: salvo.ativo ?? padrao.ativo,
+    skillAtivaId: salvo.skillAtivaId ?? padrao.skillAtivaId,
     skills: salvo.skills?.length ? salvo.skills : padrao.skills,
     fluxos: salvo.fluxos ?? [],
   }
+}
+
+// Chave e modelo do Claude, compartilhados pelo assistente do editor e pelo Agente de IA. Versões
+// anteriores guardavam uma chave própria do agente (agenteIA.apiKey/modelo): ela ainda é usada
+// enquanto a seção Claude estiver vazia, pra ninguém perder a configuração na atualização.
+export function lerCredenciaisClaude(config: SyncConfig): ProvedorIAConfig {
+  const claude = config.ferramentasIA?.claude ?? DEFAULT_SYNC_CONFIG.ferramentasIA.claude
+  if (claude.apiKey) return { apiKey: claude.apiKey, modelo: claude.modelo || DEFAULT_SYNC_CONFIG.ferramentasIA.claude.modelo }
+  const legado = (config as { agenteIA?: { apiKey?: string; modelo?: string } }).agenteIA
+  if (legado?.apiKey) return { apiKey: legado.apiKey, modelo: legado.modelo || claude.modelo }
+  return { apiKey: '', modelo: claude.modelo || DEFAULT_SYNC_CONFIG.ferramentasIA.claude.modelo }
 }
 
 export const DEFAULT_LOCAL_CONFIG: LocalConfig = {

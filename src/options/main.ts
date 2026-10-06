@@ -16,7 +16,9 @@ import {
   createSyncConfigStore,
   DEFAULT_SYNC_CONFIG,
   lerAgenteIAConfig,
+  lerCredenciaisClaude,
   type ConfiguracaoCor,
+  type ProvedorIA,
   type ConfiguracaoPontoControle,
   type FormatoDocumento,
   type ModoEspecificacao,
@@ -540,50 +542,60 @@ async function carregarAbaCorretor(): Promise<void> {
   }
 }
 
+// Aba "Inteligência Artificial": chaves de API (uma vez só) + onde usar (assistente do editor e
+// Agente de IA). A chave/modelo do Claude servem aos dois.
 async function carregarAbaIA(): Promise<void> {
   try {
     const store = createSyncConfigStore()
     const config = await store.get()
+    const credenciaisClaude = lerCredenciaisClaude(config)
 
-    const inputIaAtivo = document.getElementById('ia-ativo') as HTMLInputElement | null
-    const inputIaOpenaiKey = document.getElementById('ia-openai-key') as HTMLInputElement | null
-    const inputIaOpenaiModelo = document.getElementById('ia-openai-modelo') as HTMLInputElement | null
-    const inputIaGeminiKey = document.getElementById('ia-gemini-key') as HTMLInputElement | null
-    const inputIaGeminiModelo = document.getElementById('ia-gemini-modelo') as HTMLInputElement | null
-    const inputIaClaudeKey = document.getElementById('ia-claude-key') as HTMLInputElement | null
-    const inputIaClaudeModelo = document.getElementById('ia-claude-modelo') as HTMLInputElement | null
+    const campo = <T extends HTMLElement>(id: string): T | null => document.getElementById(id) as T | null
+    const inputIaAtivo = campo<HTMLInputElement>('ia-ativo')
+    const selectProvedor = campo<HTMLSelectElement>('ia-provedor-padrao')
+    const inputAgenteAtivo = campo<HTMLInputElement>('agente-ia-ativo')
+    const inputOpenaiKey = campo<HTMLInputElement>('ia-openai-key')
+    const inputOpenaiModelo = campo<HTMLInputElement>('ia-openai-modelo')
+    const inputGeminiKey = campo<HTMLInputElement>('ia-gemini-key')
+    const inputGeminiModelo = campo<HTMLInputElement>('ia-gemini-modelo')
+    const inputClaudeKey = campo<HTMLInputElement>('ia-claude-key')
+    const selectClaudeModelo = campo<HTMLSelectElement>('ia-claude-modelo')
     const status = document.getElementById('ia-status')
 
     if (inputIaAtivo) inputIaAtivo.checked = config.ferramentasIA.ativo
-    if (inputIaOpenaiKey) inputIaOpenaiKey.value = config.ferramentasIA.openai.apiKey
-    if (inputIaOpenaiModelo) inputIaOpenaiModelo.value = config.ferramentasIA.openai.modelo
-    if (inputIaGeminiKey) inputIaGeminiKey.value = config.ferramentasIA.gemini.apiKey
-    if (inputIaGeminiModelo) inputIaGeminiModelo.value = config.ferramentasIA.gemini.modelo
-    if (inputIaClaudeKey) inputIaClaudeKey.value = config.ferramentasIA.claude.apiKey
-    if (inputIaClaudeModelo) inputIaClaudeModelo.value = config.ferramentasIA.claude.modelo
+    if (selectProvedor) selectProvedor.value = config.ferramentasIA.provedorAtivo
+    if (inputAgenteAtivo) inputAgenteAtivo.checked = lerAgenteIAConfig(config).ativo
+    if (inputOpenaiKey) inputOpenaiKey.value = config.ferramentasIA.openai.apiKey
+    if (inputOpenaiModelo) inputOpenaiModelo.value = config.ferramentasIA.openai.modelo
+    if (inputGeminiKey) inputGeminiKey.value = config.ferramentasIA.gemini.apiKey
+    if (inputGeminiModelo) inputGeminiModelo.value = config.ferramentasIA.gemini.modelo
+    if (inputClaudeKey) inputClaudeKey.value = credenciaisClaude.apiKey
+    if (selectClaudeModelo) {
+      // Modelo salvo que não está mais na lista (versão anterior) continua selecionável.
+      if (!Array.from(selectClaudeModelo.options).some((opcao) => opcao.value === credenciaisClaude.modelo)) {
+        selectClaudeModelo.add(new Option(credenciaisClaude.modelo, credenciaisClaude.modelo))
+      }
+      selectClaudeModelo.value = credenciaisClaude.modelo
+    }
 
     document.getElementById('ia-salvar')?.addEventListener('click', async () => {
       try {
-        const atualizado = {
-          ...config,
+        // Relê na hora de salvar: skills/fluxos do agente podem ter mudado em outra aba.
+        const atual = await store.get()
+        const padrao = DEFAULT_SYNC_CONFIG.ferramentasIA
+        await store.set({
+          ...atual,
           ferramentasIA: {
             ativo: inputIaAtivo?.checked ?? false,
-            provedorAtivo: config.ferramentasIA.provedorAtivo,
-            openai: {
-              apiKey: inputIaOpenaiKey?.value ?? '',
-              modelo: inputIaOpenaiModelo?.value.trim() || 'gpt-4o-mini',
-            },
-            gemini: {
-              apiKey: inputIaGeminiKey?.value ?? '',
-              modelo: inputIaGeminiModelo?.value.trim() || 'gemini-2.0-flash',
-            },
-            claude: {
-              apiKey: inputIaClaudeKey?.value ?? '',
-              modelo: inputIaClaudeModelo?.value.trim() || 'claude-3-5-haiku-20241022',
-            },
+            provedorAtivo: (selectProvedor?.value as ProvedorIA | undefined) ?? atual.ferramentasIA.provedorAtivo,
+            openai: { apiKey: inputOpenaiKey?.value.trim() ?? '', modelo: inputOpenaiModelo?.value.trim() || padrao.openai.modelo },
+            gemini: { apiKey: inputGeminiKey?.value.trim() ?? '', modelo: inputGeminiModelo?.value.trim() || padrao.gemini.modelo },
+            claude: { apiKey: inputClaudeKey?.value.trim() ?? '', modelo: selectClaudeModelo?.value || padrao.claude.modelo },
           },
-        }
-        await store.set(atualizado)
+          // A chave do agente agora é a do Claude acima (lerCredenciaisClaude); gravar sem os
+          // campos antigos apiKey/modelo encerra a migração.
+          agenteIA: { ...lerAgenteIAConfig(atual), ativo: inputAgenteAtivo?.checked ?? false },
+        })
         if (status) {
           status.textContent = 'Salvo!'
           setTimeout(() => {
@@ -591,11 +603,11 @@ async function carregarAbaIA(): Promise<void> {
           }, 2000)
         }
       } catch (error) {
-        console.error('[SEIRMG] Falha ao salvar configuração da aba Ferramentas de IA:', error)
+        console.error('[SEIRMG] Falha ao salvar configuração de Inteligência Artificial:', error)
       }
     })
   } catch (error) {
-    console.error('[SEIRMG] Falha ao carregar aba Ferramentas de IA:', error)
+    console.error('[SEIRMG] Falha ao carregar aba Inteligência Artificial:', error)
   }
 }
 
@@ -803,55 +815,6 @@ async function carregarAbaFerramentasPdf(): Promise<void> {
   }
 }
 
-async function carregarAbaAgenteIA(): Promise<void> {
-  try {
-    const store = createSyncConfigStore()
-    const agenteIA = lerAgenteIAConfig(await store.get())
-
-    const inputAtivo = document.getElementById('agente-ia-ativo') as HTMLInputElement | null
-    const inputApiKey = document.getElementById('agente-ia-api-key') as HTMLInputElement | null
-    const selectModelo = document.getElementById('agente-ia-modelo') as HTMLSelectElement | null
-    const status = document.getElementById('agente-ia-status')
-
-    if (inputAtivo) inputAtivo.checked = agenteIA.ativo
-    if (inputApiKey) inputApiKey.value = agenteIA.apiKey
-    if (selectModelo) {
-      // Modelo salvo que não está mais na lista (ex.: versão anterior) continua selecionável.
-      if (!Array.from(selectModelo.options).some((opcao) => opcao.value === agenteIA.modelo)) {
-        selectModelo.add(new Option(agenteIA.modelo, agenteIA.modelo))
-      }
-      selectModelo.value = agenteIA.modelo
-    }
-
-    document.getElementById('agente-ia-salvar')?.addEventListener('click', async () => {
-      try {
-        // Relê na hora de salvar: skills/fluxos podem ter mudado na página do agente enquanto
-        // esta aba estava aberta -- só ativo/chave/modelo são desta tela.
-        const atual = await store.get()
-        await store.set({
-          ...atual,
-          agenteIA: {
-            ...lerAgenteIAConfig(atual),
-            ativo: inputAtivo?.checked ?? false,
-            apiKey: inputApiKey?.value.trim() ?? '',
-            modelo: selectModelo?.value || DEFAULT_SYNC_CONFIG.agenteIA.modelo,
-          },
-        })
-        if (status) {
-          status.textContent = 'Salvo!'
-          setTimeout(() => {
-            status.textContent = ''
-          }, 2000)
-        }
-      } catch (error) {
-        console.error('[SEIRMG] Falha ao salvar configuração do Agente de IA:', error)
-      }
-    })
-  } catch (error) {
-    console.error('[SEIRMG] Falha ao carregar aba Agente de IA:', error)
-  }
-}
-
 async function carregarAbaBackup(): Promise<void> {
   try {
     const btnBaixar = document.getElementById('backup-baixar')
@@ -946,5 +909,4 @@ carregarAbaAssinatura()
 carregarAbaIntegracoes()
 carregarAbaKanban()
 carregarAbaFerramentasPdf()
-carregarAbaAgenteIA()
 carregarAbaBackup()
