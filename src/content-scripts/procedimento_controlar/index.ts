@@ -84,6 +84,8 @@ import {
   ordenarFavoritosPorData,
   moverParaLixeira,
   podarLixeiraPorJanela,
+  restaurarDaLixeira,
+  removerDefinitivamenteDaLixeira,
   atualizarSnapshotsFavoritos,
 } from '../../features/controle-processos/favoritos'
 import {
@@ -110,6 +112,8 @@ import {
 import type { FavoritoProcesso, SnapshotFavorito } from '../../lib/storage'
 import starIconSvg from 'lucide-static/icons/star.svg?raw'
 import starOffIconSvg from 'lucide-static/icons/star-off.svg?raw'
+import rotateCcwIconSvg from 'lucide-static/icons/rotate-ccw.svg?raw'
+import trash2IconSvg from 'lucide-static/icons/trash-2.svg?raw'
 import flagIconSvg from 'lucide-static/icons/flag.svg?raw'
 import userIconSvg from 'lucide-static/icons/user.svg?raw'
 import bookmarkPlusIconSvg from 'lucide-static/icons/bookmark-plus.svg?raw'
@@ -227,6 +231,34 @@ const ESTILO_FILTROS_E_ESPECIFICACAO = `
   .seirmg-favoritos-btn-icone svg {
     width: 13px;
     height: 13px;
+  }
+  .seirmg-favoritos-lixeira {
+    margin-top: 10px;
+    padding: 8px 10px;
+    border: 1px dashed #d6dbe3;
+    border-radius: 4px;
+    background: #fafbfc;
+  }
+  .seirmg-favoritos-lixeira-titulo {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    opacity: 0.6;
+    margin-bottom: 4px;
+  }
+  .seirmg-favoritos-lixeira-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 3px 0;
+    font-size: 12px;
+  }
+  .seirmg-favoritos-lixeira-item span {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   .seirmg-favoritos-lembrete-data,
   .seirmg-favoritos-lembrete-nota {
@@ -1485,7 +1517,103 @@ function montarCabecalhoPainelFavoritos(): HTMLDivElement {
   return cabecalho
 }
 
+// Lixeira de favoritos: dentro do painel quando ele existe; senão (nenhum favorito ativo -- ex.:
+// acabou de remover o último) sozinha, no mesmo lugar onde o painel entraria.
+async function renderizarLixeiraFavoritos(): Promise<void> {
+  try {
+    const lixeira = (await createLocalConfigStore().get()).favoritosLixeira ?? []
+    // Depois do await: outra renderização pode ter rodado no meio -- sempre parte do zero.
+    document.getElementById('seirmg-favoritos-lixeira')?.remove()
+    if (!favoritosAtivo || lixeira.length === 0) return
+
+    const container = document.createElement('div')
+    container.id = 'seirmg-favoritos-lixeira'
+    container.className = 'seirmg-favoritos-lixeira'
+
+    const titulo = document.createElement('div')
+    titulo.className = 'seirmg-favoritos-lixeira-titulo'
+    titulo.textContent = `Lixeira — removidos nos últimos 30 dias (${lixeira.length})`
+    container.appendChild(titulo)
+
+    lixeira.forEach((item) => {
+      const linha = document.createElement('div')
+      linha.className = 'seirmg-favoritos-lixeira-item'
+
+      const numero = document.createElement('span')
+      numero.textContent = item.especificacao ? `${item.numero} — ${item.especificacao}` : item.numero
+      numero.title = `Removido em ${new Date(item.removidoEm).toLocaleString('pt-BR')}`
+      linha.appendChild(numero)
+
+      const btnRestaurar = criarBotaoIconeFavoritos('Restaurar favorito', rotateCcwIconSvg)
+      btnRestaurar.addEventListener('click', async () => {
+        try {
+          const syncStore = createSyncConfigStore()
+          const localStore = createLocalConfigStore()
+          const [atual, localAtual] = await Promise.all([syncStore.get(), localStore.get()])
+          const resultado = restaurarDaLixeira(
+            atual.controleProcessos.favoritos.itens,
+            localAtual.favoritosLixeira ?? [],
+            item.numero
+          )
+          await syncStore.set({
+            ...atual,
+            controleProcessos: {
+              ...atual.controleProcessos,
+              favoritos: { ...atual.controleProcessos.favoritos, itens: resultado.itens },
+            },
+          })
+          await localStore.set({ ...localAtual, favoritosLixeira: resultado.lixeira })
+          itensFavoritados = resultado.itens
+          aplicarFiltroFavoritoEmTodasAsTabelas()
+          atualizarTodasAsEstrelas()
+          renderizarPainelFavoritos()
+        } catch (error) {
+          console.error('[SEIRMG] Falha ao restaurar favorito da lixeira:', error)
+        }
+      })
+
+      const btnRemover = criarBotaoIconeFavoritos('Remover definitivamente', trash2IconSvg)
+      btnRemover.addEventListener('click', async () => {
+        try {
+          const localStore = createLocalConfigStore()
+          const localAtual = await localStore.get()
+          await localStore.set({
+            ...localAtual,
+            favoritosLixeira: removerDefinitivamenteDaLixeira(localAtual.favoritosLixeira ?? [], item.numero),
+          })
+          await renderizarLixeiraFavoritos()
+        } catch (error) {
+          console.error('[SEIRMG] Falha ao remover favorito definitivamente da lixeira:', error)
+        }
+      })
+
+      linha.append(btnRestaurar, btnRemover)
+      container.appendChild(linha)
+    })
+
+    const painel = document.getElementById('seirmg-favoritos-painel')
+    if (painel) {
+      painel.appendChild(container)
+      return
+    }
+    const referencia = referenciaParaPainel()
+    if (!referencia) return
+    container.classList.add('seirmg-favoritos-painel')
+    if (referencia.comoFilho) referencia.elemento.appendChild(container)
+    else referencia.elemento.insertAdjacentElement('afterend', container)
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao renderizar lixeira de favoritos:', error)
+  }
+}
+
 function renderizarPainelFavoritos(): void {
+  renderizarTabelaFavoritos()
+  renderizarLixeiraFavoritos().catch((error) => {
+    console.error('[SEIRMG] Falha ao renderizar lixeira de favoritos:', error)
+  })
+}
+
+function renderizarTabelaFavoritos(): void {
   try {
     document.getElementById('seirmg-favoritos-painel')?.remove()
 
