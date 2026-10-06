@@ -242,6 +242,52 @@ export interface TarefasConfig {
   itens: Tarefa[]
 }
 
+// Agente de IA (features/agente-ia, página src/agente-ia/) -- só Claude, com a chave do usuário.
+export interface SkillAgenteIA {
+  id: string
+  nome: string
+  systemPrompt: string
+  // ids de FerramentaAgenteDescricao.id (features/agente-ia/tools.ts) -- vazio = nenhuma
+  // ferramenta liberada pra essa skill (só conversa).
+  ferramentasPermitidas: string[]
+}
+
+export interface PassoFluxoAgenteIA {
+  instrucao: string
+}
+
+export interface FluxoAgenteIA {
+  id: string
+  nome: string
+  passos: PassoFluxoAgenteIA[]
+}
+
+export interface AgenteIAConfig {
+  ativo: boolean
+  apiKey: string
+  modelo: string
+  skillAtivaId: string
+  skills: SkillAgenteIA[]
+  fluxos: FluxoAgenteIA[]
+}
+
+export interface UsoModeloAgenteIA {
+  inputTokens: number
+  outputTokens: number
+}
+
+export interface AgenteIAUsoAcumulado {
+  porModelo: Record<string, UsoModeloAgenteIA>
+}
+
+export interface AcaoAgenteParaDesfazer {
+  id: string
+  descricao: string
+  ferramenta: string
+  estadoAnterior: unknown
+  criadoEm: string
+}
+
 export interface SyncConfig {
   schemaVersion: 1
   featureFlags: FeatureFlags
@@ -258,6 +304,7 @@ export interface SyncConfig {
   historicoProcessos: HistoricoProcessosConfig
   dashboard: DashboardConfig
   ferramentasPdf: FerramentasPdfConfig
+  agenteIA: AgenteIAConfig
 }
 
 export interface NotificadoState {
@@ -290,6 +337,10 @@ export interface LocalConfig {
   // Última data (yyyy-mm-dd) em que cada tarefa vencida já notificou -- no máximo 1x por dia por
   // tarefa (chave = Tarefa.id).
   tarefasNotificadas: NotificadoState
+  // Agente de IA: tokens gastos por modelo (custo exibido na página) e ações que dá pra desfazer.
+  // Ausentes em localConfig salvo antes -- ler com ?? { porModelo: {} } / ?? [].
+  agenteIAUsoAcumulado: AgenteIAUsoAcumulado
+  agenteIAHistoricoDesfazer: AcaoAgenteParaDesfazer[]
   baseUrlSei?: string
   seiVersionAtLeast4?: boolean
   atribuicaoSelecionada?: string
@@ -400,6 +451,36 @@ export const DEFAULT_SYNC_CONFIG: SyncConfig = {
   ferramentasPdf: {
     ativo: false,
   },
+  agenteIA: {
+    ativo: false,
+    apiKey: '',
+    modelo: 'claude-opus-5-5',
+    skillAtivaId: 'padrao',
+    skills: [
+      {
+        id: 'padrao',
+        nome: 'Padrão',
+        systemPrompt:
+          'Você é um assistente dentro do SEI (Sistema Eletrônico de Informações). Responda em português do Brasil, de forma objetiva.',
+        ferramentasPermitidas: [],
+      },
+    ],
+    fluxos: [],
+  },
+}
+
+// config salvo antes do Agente de IA existir não tem `agenteIA` (o store não mescla defaults) --
+// todo consumidor lê por aqui.
+export function lerAgenteIAConfig(config: SyncConfig): AgenteIAConfig {
+  const padrao = DEFAULT_SYNC_CONFIG.agenteIA
+  const salvo = (config as Partial<SyncConfig>).agenteIA
+  if (!salvo) return padrao
+  return {
+    ...padrao,
+    ...salvo,
+    skills: salvo.skills?.length ? salvo.skills : padrao.skills,
+    fluxos: salvo.fluxos ?? [],
+  }
 }
 
 export const DEFAULT_LOCAL_CONFIG: LocalConfig = {
@@ -409,6 +490,8 @@ export const DEFAULT_LOCAL_CONFIG: LocalConfig = {
   blocoAssinaturaEstadosConhecidos: {},
   blocoAssinaturaUltimaChecagemOportunista: '',
   tarefasNotificadas: {},
+  agenteIAUsoAcumulado: { porModelo: {} },
+  agenteIAHistoricoDesfazer: [],
   historicoProcessosVisitados: [],
   historicoEventos: [],
   snapshotPrazosProcessos: [],

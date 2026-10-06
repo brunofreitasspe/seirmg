@@ -15,6 +15,7 @@ import {
   createLocalConfigStore,
   createSyncConfigStore,
   DEFAULT_SYNC_CONFIG,
+  lerAgenteIAConfig,
   type ConfiguracaoCor,
   type ConfiguracaoPontoControle,
   type FormatoDocumento,
@@ -802,6 +803,55 @@ async function carregarAbaFerramentasPdf(): Promise<void> {
   }
 }
 
+async function carregarAbaAgenteIA(): Promise<void> {
+  try {
+    const store = createSyncConfigStore()
+    const agenteIA = lerAgenteIAConfig(await store.get())
+
+    const inputAtivo = document.getElementById('agente-ia-ativo') as HTMLInputElement | null
+    const inputApiKey = document.getElementById('agente-ia-api-key') as HTMLInputElement | null
+    const selectModelo = document.getElementById('agente-ia-modelo') as HTMLSelectElement | null
+    const status = document.getElementById('agente-ia-status')
+
+    if (inputAtivo) inputAtivo.checked = agenteIA.ativo
+    if (inputApiKey) inputApiKey.value = agenteIA.apiKey
+    if (selectModelo) {
+      // Modelo salvo que não está mais na lista (ex.: versão anterior) continua selecionável.
+      if (!Array.from(selectModelo.options).some((opcao) => opcao.value === agenteIA.modelo)) {
+        selectModelo.add(new Option(agenteIA.modelo, agenteIA.modelo))
+      }
+      selectModelo.value = agenteIA.modelo
+    }
+
+    document.getElementById('agente-ia-salvar')?.addEventListener('click', async () => {
+      try {
+        // Relê na hora de salvar: skills/fluxos podem ter mudado na página do agente enquanto
+        // esta aba estava aberta -- só ativo/chave/modelo são desta tela.
+        const atual = await store.get()
+        await store.set({
+          ...atual,
+          agenteIA: {
+            ...lerAgenteIAConfig(atual),
+            ativo: inputAtivo?.checked ?? false,
+            apiKey: inputApiKey?.value.trim() ?? '',
+            modelo: selectModelo?.value || DEFAULT_SYNC_CONFIG.agenteIA.modelo,
+          },
+        })
+        if (status) {
+          status.textContent = 'Salvo!'
+          setTimeout(() => {
+            status.textContent = ''
+          }, 2000)
+        }
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao salvar configuração do Agente de IA:', error)
+      }
+    })
+  } catch (error) {
+    console.error('[SEIRMG] Falha ao carregar aba Agente de IA:', error)
+  }
+}
+
 async function carregarAbaBackup(): Promise<void> {
   try {
     const btnBaixar = document.getElementById('backup-baixar')
@@ -896,4 +946,5 @@ carregarAbaAssinatura()
 carregarAbaIntegracoes()
 carregarAbaKanban()
 carregarAbaFerramentasPdf()
+carregarAbaAgenteIA()
 carregarAbaBackup()

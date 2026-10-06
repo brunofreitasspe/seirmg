@@ -26,6 +26,7 @@
         <button data-aba="processos" class="aba-btn">Processos</button>
         <button data-aba="kanban" class="aba-btn">Kanban</button>
         <button data-aba="ferramentas-pdf" class="aba-btn">Ferramentas de PDF</button>
+        <button data-aba="agente-ia" class="aba-btn">Agente de IA</button>
         <button data-aba="sobre" class="aba-btn">Sobre</button>
       </nav>
       <main class="conteudo">
@@ -407,6 +408,31 @@
       <br />
       <button id="ferramentas-pdf-salvar">Salvar</button>
       <span id="ferramentas-pdf-status"></span>
+    </section>
+    <section id="painel-agente-ia" class="painel">
+      <h2>Agente de IA</h2>
+      <label>
+        <input type="checkbox" id="agente-ia-ativo" />
+        Ativar Agente de IA (botão no popup da extensão)
+      </label>
+      <br />
+      <label>Chave de API (Anthropic/Claude): <input type="password" id="agente-ia-api-key" autocomplete="off" /></label>
+      <br />
+      <label>
+        Modelo:
+        <select id="agente-ia-modelo">
+          <option value="claude-opus-5-5">Claude Opus 5.5 (mais capaz)</option>
+          <option value="claude-sonnet-5-5">Claude Sonnet 5.5 (equilíbrio entre custo e capacidade)</option>
+          <option value="claude-haiku-4-5">Claude Haiku 4.5 (mais rápido e barato)</option>
+        </select>
+      </label>
+      <p style="font-size: 0.85em; color: #666; max-width: 480px;">
+        A chave fica salva só nas configurações da extensão e é usada apenas pra chamar a API da Anthropic.
+        Skills e fluxos são gerenciados dentro da própria tela do Agente de IA (botão no popup).
+      </p>
+      <br />
+      <button id="agente-ia-salvar">Salvar</button>
+      <span id="agente-ia-status"></span>
     </section>
     <section id="painel-sobre" class="painel">
       <p>SEIRMG unifica as extensões Sei++ e Sei Pro para o Sistema Eletrônico de Informações (SEI).</p>
