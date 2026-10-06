@@ -42,6 +42,17 @@ describe('checklist', () => {
     corpo.remove()
   })
 
+  it('alterna a caixa quando o corpo vive no iframe do CKEditor (outro realm de Element)', () => {
+    const iframe = document.createElement('iframe')
+    document.body.append(iframe)
+    const corpo = iframe.contentDocument!.body
+    corpo.innerHTML = '<p><span class="seirmg-checklist" data-marcado="nao">☐</span></p>'
+    ligarAlternanciaChecklist(criarEditorFalso(corpo))
+    ;(corpo.querySelector('.seirmg-checklist') as HTMLElement).click()
+    expect(corpo.querySelector('.seirmg-checklist')?.textContent).toBe('☑')
+    iframe.remove()
+  })
+
   it('ligar a alternância duas vezes no mesmo corpo não faz um clique alternar duas vezes', () => {
     const corpo = document.createElement('div')
     corpo.innerHTML = '<p><span class="seirmg-checklist" data-marcado="nao">☐</span></p>'

@@ -44,7 +44,9 @@ export function ligarAlternanciaChecklist(editor: EditorSEI): void {
   if (corposComChecklist.has(editor.corpo)) return
   corposComChecklist.add(editor.corpo)
   editor.corpo.addEventListener('click', (evento) => {
-    const alvo = evento.target instanceof Element ? evento.target.closest<HTMLElement>(`.${CLASSE_CHECKLIST}`) : null
+    // Sem instanceof Element: o alvo vem do iframe do CKEditor, cujo Element é outro realm.
+    const destino = evento.target as Partial<Element> | null
+    const alvo = typeof destino?.closest === 'function' ? destino.closest<HTMLElement>(`.${CLASSE_CHECKLIST}`) : null
     if (!alvo) return
     const proximo = alternarChecklist(alvo.dataset.marcado === 'sim')
     alvo.textContent = proximo.simbolo
