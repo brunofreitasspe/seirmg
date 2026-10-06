@@ -274,6 +274,9 @@ export interface AgenteIAConfig {
 export interface UsoModeloAgenteIA {
   inputTokens: number
   outputTokens: number
+  // Prompt caching: gravar no cache e ler do cache têm preço próprio (ver features/agente-ia/custo.ts).
+  cacheCriacaoTokens?: number
+  cacheLeituraTokens?: number
 }
 
 export interface AgenteIAUsoAcumulado {
