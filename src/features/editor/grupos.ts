@@ -57,3 +57,27 @@ export function organizarEmGrupos<T>(disponiveis: Map<IdBotaoEditor, T>): Array<
     }),
   })).filter((bloco) => bloco.itens.length > 0)
 }
+
+// Cor do traço de cada ícone, no estilo colorido dos ícones do SEI: cada um ligado ao que faz
+// (verde = marcar/tabela, azul = links/importar, roxo = notas/equação...). O Record obriga todo
+// botão novo a ganhar uma cor.
+export const CORES_ICONES: Record<IdBotaoEditor, string> = {
+  checklist: '#16a34a',
+  qrcode: '#4f46e5',
+  importar: '#2563eb',
+  latex: '#c026d3',
+  sumario: '#0d9488',
+  'referencia-interna': '#ea580c',
+  'link-curto': '#0284c7',
+  'nota-rodape': '#7c3aed',
+  'alinhar-esquerda': '#1d4ed8',
+  'alinhar-centro': '#1d4ed8',
+  'alinhar-direita': '#1d4ed8',
+  'alinhar-justificado': '#1d4ed8',
+  'fonte-aumentar': '#0891b2',
+  'fonte-reduzir': '#0891b2',
+  maiuscula: '#b45309',
+  'copiar-formatacao': '#db2777',
+  'quebra-pagina': '#dc2626',
+  tabela: '#15803d',
+}

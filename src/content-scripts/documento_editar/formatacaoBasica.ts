@@ -23,7 +23,7 @@ import { montarQuebraPaginaHtml } from '../../features/formatacao-basica/quebraP
 import { CLASSES_PARAGRAFO_NUMERADO } from '../../features/formatacao-basica/numeracaoParagrafos'
 import { extrairItensSumario, montarSumarioHtml } from '../../features/formatacao-basica/sumario'
 import { montarChamadaHtml, montarEntradaHtml } from '../../features/formatacao-basica/notaRodape'
-import { organizarEmGrupos, type IdBotaoEditor } from '../../features/editor/grupos'
+import { CORES_ICONES, organizarEmGrupos, type IdBotaoEditor } from '../../features/editor/grupos'
 import { ligarAlternanciaChecklist, montarBotoesInserir } from './botoesInserir'
 import type { DescritorEstiloTexto } from './protocolo'
 import type { EditorSEI } from './ponteEditor'
@@ -99,13 +99,18 @@ function aguardarToolbox(iframe: HTMLIFrameElement, intervaloMs: number, tentati
 
 // O ícone vai como imagem de fundo (como os nativos do CKEditor), não como <svg> inline: o CSS de
 // reset do CKEditor zera width/height de <rect>, e os ícones perdiam os quadrados (checklist, QR,
-// tabela). Numa imagem currentColor não vale, então usa a cor dos ícones nativos, com traço mais fino.
-function prepararIconeSvg(svg: string): string {
+// tabela). Numa imagem currentColor não vale: cada botão usa a sua cor de CORES_ICONES (cinza-escuro
+// dos nativos se faltar).
+function prepararIconeSvg(svg: string, cor: string): string {
   return svg
     .replace(/<!--[\s\S]*?-->/g, '')
-    .replace(/currentColor/g, '#333333')
-    .replace(/stroke-width="2"/, 'stroke-width="1.75"')
+    .replace(/currentColor/g, cor)
     .trim()
+}
+
+function corDoIcone(id: string): string {
+  const chave = id.replace(/^seirmg-cke-/, '')
+  return chave in CORES_ICONES ? CORES_ICONES[chave as IdBotaoEditor] : '#333333'
 }
 
 export function criarBotaoToolbar(id: string, titulo: string, iconeSvg: string, aoClicar: () => void): HTMLElement {
@@ -116,7 +121,7 @@ export function criarBotaoToolbar(id: string, titulo: string, iconeSvg: string, 
   botao.className = 'cke_button cke_button_off seirmg-cke-button'
   const icone = document.createElement('span')
   icone.className = 'cke_button_icon seirmg-cke-button-icone'
-  icone.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(prepararIconeSvg(iconeSvg))}")`
+  icone.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(prepararIconeSvg(iconeSvg, corDoIcone(id)))}")`
   botao.append(icone)
   botao.addEventListener('click', (evento) => {
     evento.preventDefault()

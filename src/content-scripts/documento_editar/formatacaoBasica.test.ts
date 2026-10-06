@@ -370,3 +370,17 @@ describe('ícones da barra', () => {
     expect(fundo).not.toContain('licença')
   })
 })
+
+describe('cores dos ícones', () => {
+  it('todo botão da barra tem ícone colorido (nenhum fica no cinza-escuro padrão)', async () => {
+    const { iframe, toolbox } = montarToolboxFalsa()
+    await iniciarFormatacaoBasica(criarEditorFalso(iframe), { ativo: true, atalhos: [] })
+    const icones = Array.from(toolbox.querySelectorAll<HTMLElement>('.seirmg-cke-button-icone'))
+    expect(icones.length).toBeGreaterThan(10)
+    const pretos = icones
+      .filter((icone) => decodeURIComponent(icone.style.backgroundImage).includes('#333333'))
+      .map((icone) => icone.parentElement?.id)
+    expect(pretos).toEqual([])
+    document.body.innerHTML = ''
+  })
+})
