@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Estúdio de Fluxos — SEIRMG</title>
+    <link rel="stylesheet" href="./style.css" />
+  </head>
+  <body>
+    <header class="topo">
+      <div class="topo-interno">
+        <a class="marca" href="./index.html">
+          <img src="../assets/icons/icon-48.png" alt="" />
+          <span><strong>Estúdio de Fluxos</strong><small>Agente de IA · SEIRMG</small></span>
+        </a>
+        <span id="status-salvo" class="salvo" aria-live="polite"></span>
+      </div>
+    </header>
+    <main class="estudio">
+      <div class="estudio-intro">
+        <h1>Fluxos</h1>
+        <p>
+          Um fluxo é uma sequência de instruções enviadas ao agente uma de cada vez. Entre um passo e o
+          próximo você revisa a resposta. Rode um fluxo pelo botão "Fluxos" na tela do Agente de IA.
+        </p>
+      </div>
+      <div id="conteudo"></div>
+    </main>
+    <script type="module" src="./estudioMain.ts"></script>
+  </body>
+</html>
