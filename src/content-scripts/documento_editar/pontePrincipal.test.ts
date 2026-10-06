@@ -167,6 +167,28 @@ describe('criarPonteMainWorld', () => {
     ponte.destruir()
   })
 
+  it('registrarAlteracao dispara saveSnapshot e change na instância editável', async () => {
+    const janela = criarJanelaFalsa()
+    const instancia = criarInstanciaFalsa('corpo', true)
+    definirCkeditor(janela, { corpo: instancia })
+    const ponte = criarPonteMainWorld(janela, 10, 5)
+
+    const resposta = new Promise<DetalheResposta>((resolve) => {
+      janela.addEventListener(
+        EVENTO_RESPOSTA,
+        (evento) => resolve((evento as CustomEvent<DetalheResposta>).detail),
+        { once: true }
+      )
+    })
+    const comando: DetalheComando = { id: '9', tipo: 'registrarAlteracao', args: [] }
+    janela.dispatchEvent(new CustomEvent(EVENTO_COMANDO, { detail: comando }))
+
+    await expect(resposta).resolves.toEqual({ id: '9', resultado: null, erro: null })
+    expect(instancia.fire).toHaveBeenCalledWith('saveSnapshot')
+    expect(instancia.fire).toHaveBeenCalledWith('change')
+    ponte.destruir()
+  })
+
   it('responde com erro quando nenhuma instância está disponível ainda', async () => {
     const janela = criarJanelaFalsa()
     const ponte = criarPonteMainWorld(janela, 10, 0)

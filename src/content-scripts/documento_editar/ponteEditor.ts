@@ -9,6 +9,7 @@ export interface EditorSEI {
   aplicarClasseParagrafo: (classe: string) => Promise<void>
   aplicarEstiloTexto: (estilo: DescritorEstiloTexto) => Promise<void>
   ativarInterceptacaoLinkSei: () => Promise<void>
+  registrarAlteracao: () => Promise<void>
   corpo: HTMLElement
   documento: Document
   janela: Window
@@ -108,6 +109,7 @@ export function criarClienteEditor(janelaGlobal: Window, timeoutComandoMs = TIME
       aplicarEstiloTexto: (estilo: DescritorEstiloTexto) =>
         enviarComando('aplicarEstiloTexto', [estilo]).then(() => undefined),
       ativarInterceptacaoLinkSei: () => enviarComando('ativarInterceptacaoLinkSei', []).then(() => undefined),
+      registrarAlteracao: () => enviarComando('registrarAlteracao', []).then(() => undefined),
     }
   }
 

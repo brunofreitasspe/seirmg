@@ -18,6 +18,7 @@ export type TipoComando =
   | 'aplicarClasseParagrafo'
   | 'aplicarEstiloTexto'
   | 'ativarInterceptacaoLinkSei'
+  | 'registrarAlteracao'
 
 export interface DetalheComando {
   id: string

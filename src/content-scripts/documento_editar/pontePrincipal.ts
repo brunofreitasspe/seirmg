@@ -155,6 +155,13 @@ function executarComando(
     case 'ativarInterceptacaoLinkSei':
       interceptarDialogLinkSei(janelaGlobal, instancia)
       return null
+    case 'registrarAlteracao':
+      // Mudança feita direto no DOM do corpo pelo isolated world (ex.: marcar checklist,
+      // âncora de referência interna): registra no histórico de desfazer e marca o
+      // documento como alterado, pra entrar no salvar.
+      instancia.fire('saveSnapshot')
+      instancia.fire('change')
+      return null
     default:
       return null
   }
