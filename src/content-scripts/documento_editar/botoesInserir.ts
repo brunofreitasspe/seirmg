@@ -3,6 +3,7 @@
 import squareCheckIconSvg from 'lucide-static/icons/square-check.svg?raw'
 import link2IconSvg from 'lucide-static/icons/link-2.svg?raw'
 import hashIconSvg from 'lucide-static/icons/hash.svg?raw'
+import qrCodeIconSvg from 'lucide-static/icons/qr-code.svg?raw'
 import fileInputIconSvg from 'lucide-static/icons/file-input.svg?raw'
 import fileWarningIconSvg from 'lucide-static/icons/file-warning.svg?raw'
 import { alternarChecklist, CLASSE_CHECKLIST, montarChecklistHtml } from '../../features/editor/checklist'
@@ -11,6 +12,7 @@ import { montarLinkHtml, validarUrlHttp } from '../../features/editor/linkCurto'
 import { abrirDialogoLinkCurto } from './linkCurtoDialogo'
 import { abrirDialogoReferenciaInterna } from './referenciaInternaDialogo'
 import { escolherEImportarArquivo } from './importarArquivo'
+import { abrirDialogoQrCode } from './qrCodeDialogo'
 import { criarPainelFlutuante, fecharPainel } from './dialogoFlutuante'
 import { criarBotaoToolbar } from './formatacaoBasica'
 import type { EditorSEI } from './ponteEditor'
@@ -87,6 +89,21 @@ export function montarBotoesInserir(editor: EditorSEI): Map<IdBotaoEditor, HTMLE
       escolherEImportarArquivo((html) => {
         editor.inserirHtml(html).catch(tratarErro('Falha ao inserir conteúdo importado'))
       }, mostrarErroImportacao)
+    })
+  )
+  botoes.set(
+    'qrcode',
+    criarBotaoToolbar('seirmg-cke-qrcode', 'Gerar QR Code', qrCodeIconSvg, () => {
+      editor
+        .obterTextoSelecionado()
+        .then((selecao) => {
+          // Pré-preenche só com um link válido; texto comum selecionado não vira conteúdo do QR.
+          const link = validarUrlHttp(selecao)
+          abrirDialogoQrCode(link.ok ? link.url : '', (html) => {
+            editor.inserirHtml(html).catch(tratarErro('Falha ao inserir QR Code'))
+          })
+        })
+        .catch(tratarErro('Falha ao abrir o QR Code'))
     })
   )
   return botoes

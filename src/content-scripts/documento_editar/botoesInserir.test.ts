@@ -66,3 +66,23 @@ describe('checklist', () => {
     corpo.remove()
   })
 })
+
+describe('QR Code', () => {
+  it('abre o diálogo pré-preenchido com o link selecionado', async () => {
+    const editor = criarEditorFalso()
+    vi.mocked(editor.obterTextoSelecionado).mockResolvedValue('  https://exemplo.gov.br/a  ')
+    montarBotoesInserir(editor).get('qrcode')?.dispatchEvent(new MouseEvent('click', { cancelable: true }))
+    await vi.waitFor(() => expect(document.querySelector('.seirmg-painel-flutuante textarea')).not.toBeNull())
+    expect((document.querySelector('.seirmg-painel-flutuante textarea') as HTMLTextAreaElement).value).toBe('https://exemplo.gov.br/a')
+    document.querySelector('.seirmg-painel-flutuante')?.remove()
+  })
+
+  it('seleção que não é link abre o diálogo vazio', async () => {
+    const editor = criarEditorFalso()
+    vi.mocked(editor.obterTextoSelecionado).mockResolvedValue('texto qualquer')
+    montarBotoesInserir(editor).get('qrcode')?.dispatchEvent(new MouseEvent('click', { cancelable: true }))
+    await vi.waitFor(() => expect(document.querySelector('.seirmg-painel-flutuante textarea')).not.toBeNull())
+    expect((document.querySelector('.seirmg-painel-flutuante textarea') as HTMLTextAreaElement).value).toBe('')
+    document.querySelector('.seirmg-painel-flutuante')?.remove()
+  })
+})
