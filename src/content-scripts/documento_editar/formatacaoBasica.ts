@@ -23,11 +23,18 @@ import { montarQuebraPaginaHtml } from '../../features/formatacao-basica/quebraP
 import { CLASSES_PARAGRAFO_NUMERADO } from '../../features/formatacao-basica/numeracaoParagrafos'
 import { extrairItensSumario, montarSumarioHtml } from '../../features/formatacao-basica/sumario'
 import { montarChamadaHtml, montarEntradaHtml } from '../../features/formatacao-basica/notaRodape'
+import { organizarEmGrupos, type IdBotaoEditor } from '../../features/editor/grupos'
+import { montarBotoesInserir } from './botoesInserir'
 import type { DescritorEstiloTexto } from './protocolo'
 import type { EditorSEI } from './ponteEditor'
 import type { AtalhoParagrafo, FormatacaoBasicaConfig } from '../../lib/storage'
 
 const ESTILO_BOTOES = `
+  .seirmg-cke-grupo + .seirmg-cke-grupo {
+    margin-left: 6px;
+    padding-left: 6px;
+    border-left: 1px solid #d1d5db;
+  }
   .seirmg-cke-button-icone svg {
     width: 16px;
     height: 16px;
@@ -91,7 +98,7 @@ function aguardarToolbox(iframe: HTMLIFrameElement, intervaloMs: number, tentati
   })
 }
 
-function criarBotaoToolbar(id: string, titulo: string, iconeSvg: string, aoClicar: () => void): HTMLElement {
+export function criarBotaoToolbar(id: string, titulo: string, iconeSvg: string, aoClicar: () => void): HTMLElement {
   const botao = document.createElement('a')
   botao.id = id
   botao.href = '#'
@@ -294,10 +301,16 @@ function registrarAtalhos(editor: EditorSEI, atalhos: AtalhoParagrafo[]): void {
   })
 }
 
-function montarConjuntoBotoes(editor: EditorSEI): HTMLElement[] {
-  return [
-    ...montarBotoesAlinhamento(editor),
-    ...montarBotoesFonte(editor),
+// Botões indexados pelo id (o mesmo sufixo do id DOM `seirmg-cke-<id>`), pra organizarEmGrupos
+// distribuí-los nos blocos da barra.
+function montarConjuntoBotoes(editor: EditorSEI): Map<IdBotaoEditor, HTMLElement> {
+  const botoes = new Map<IdBotaoEditor, HTMLElement>()
+  const registrar = (botao: HTMLElement): void => {
+    botoes.set(botao.id.replace(/^seirmg-cke-/, '') as IdBotaoEditor, botao)
+  }
+  montarBotoesAlinhamento(editor).forEach(registrar)
+  montarBotoesFonte(editor).forEach(registrar)
+  ;[
     montarBotaoCopiarFormatacao(editor),
     montarBotaoMaiuscula(editor),
     montarBotaoTabelaRapida(editor),
@@ -305,14 +318,36 @@ function montarConjuntoBotoes(editor: EditorSEI): HTMLElement[] {
     montarBotaoSumario(editor),
     montarBotaoNotaRodape(editor),
     montarBotaoLatex(editor),
-  ]
+  ].forEach(registrar)
+  montarBotoesInserir(editor).forEach((botao, id) => botoes.set(id, botao))
+  return botoes
+}
+
+// Um bloco por grupo, com a estrutura dos grupos nativos do CKEditor 4
+// (span.cke_toolbar > span.cke_toolgroup), pra herdar o espaçamento e o separador da barra.
+function montarBlocoGrupo(grupo: { id: string; titulo: string }, botoes: HTMLElement[]): HTMLElement {
+  const barra = document.createElement('span')
+  barra.className = 'cke_toolbar seirmg-cke-grupo'
+  barra.dataset.seirmgGrupo = grupo.id
+  barra.title = grupo.titulo
+  const inicio = document.createElement('span')
+  inicio.className = 'cke_toolbar_start'
+  const grupoEl = document.createElement('span')
+  grupoEl.className = 'cke_toolgroup'
+  grupoEl.append(...botoes)
+  const fim = document.createElement('span')
+  fim.className = 'cke_toolbar_end'
+  barra.append(inicio, grupoEl, fim)
+  return barra
 }
 
 // Injeta um conjunto NOVO de botões (não reaproveita nós de outra toolbox — um elemento
 // só pode ter um pai) nessa toolbox específica, a menos que ela já tenha os nossos.
 function injetarBotoesSeAusente(toolbox: HTMLElement, editor: EditorSEI): void {
   if (toolbox.querySelector('.seirmg-cke-button')) return
-  montarConjuntoBotoes(editor).forEach((botao) => toolbox.appendChild(botao))
+  organizarEmGrupos(montarConjuntoBotoes(editor)).forEach(({ grupo, itens }) => {
+    toolbox.appendChild(montarBlocoGrupo(grupo, itens))
+  })
 }
 
 // Confirmado ao vivo numa instância SEI real (2026-07-23): a tela de edição de

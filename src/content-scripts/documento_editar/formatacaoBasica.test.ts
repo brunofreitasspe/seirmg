@@ -42,6 +42,31 @@ describe('iniciarFormatacaoBasica', () => {
     expect(toolbox.querySelectorAll('.seirmg-cke-button').length).toBeGreaterThanOrEqual(6)
   })
 
+  it('monta um bloco por grupo, na ordem, com os botões de cada grupo', async () => {
+    const { iframe, toolbox } = montarToolboxFalsa()
+    const editor = criarEditorFalso(iframe)
+
+    await iniciarFormatacaoBasica(editor, { ativo: true, atalhos: [] })
+
+    const blocos = Array.from(toolbox.querySelectorAll<HTMLElement>('.seirmg-cke-grupo'))
+    expect(blocos.map((b) => b.dataset.seirmgGrupo)).toEqual(['inserir', 'referencias', 'formatacao', 'tabelas'])
+    expect(blocos.every((b) => b.classList.contains('cke_toolbar') && b.querySelector('.cke_toolgroup'))).toBe(true)
+    const formatacao = blocos[2].querySelectorAll('.seirmg-cke-button')
+    expect(Array.from(formatacao).map((b) => b.id)).toEqual([
+      'seirmg-cke-alinhar-esquerda',
+      'seirmg-cke-alinhar-centro',
+      'seirmg-cke-alinhar-direita',
+      'seirmg-cke-alinhar-justificado',
+      'seirmg-cke-fonte-aumentar',
+      'seirmg-cke-fonte-reduzir',
+      'seirmg-cke-maiuscula',
+      'seirmg-cke-copiar-formatacao',
+      'seirmg-cke-quebra-pagina',
+    ])
+    expect(blocos[3].querySelector('#seirmg-cke-tabela')).not.toBeNull()
+    expect(blocos[0].title).toBe('Inserir')
+  })
+
   it('clicar em "alinhar ao centro" chama aplicarClasseParagrafo com a classe certa', async () => {
     const { iframe, toolbox } = montarToolboxFalsa()
     const editor = criarEditorFalso(iframe)
