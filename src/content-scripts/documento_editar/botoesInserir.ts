@@ -1,8 +1,40 @@
 // Botões novos do editor (grupo Inserir e Referências e links). Cada task do plano acrescenta
 // o seu ao mapa; a ordem na barra vem de features/editor/grupos.ts, não da ordem de inserção aqui.
+import squareCheckIconSvg from 'lucide-static/icons/square-check.svg?raw'
+import { alternarChecklist, CLASSE_CHECKLIST, montarChecklistHtml } from '../../features/editor/checklist'
 import type { IdBotaoEditor } from '../../features/editor/grupos'
+import { criarBotaoToolbar } from './formatacaoBasica'
 import type { EditorSEI } from './ponteEditor'
 
-export function montarBotoesInserir(_editor: EditorSEI): Map<IdBotaoEditor, HTMLElement> {
-  return new Map()
+function tratarErro(contexto: string): (erro: unknown) => void {
+  return (erro) => console.error(`[SEIRMG] ${contexto}:`, erro)
+}
+
+// iniciarFormatacaoBasica pode rodar mais de uma vez na mesma página: um segundo listener no
+// mesmo corpo faria cada clique alternar duas vezes (sem efeito visível).
+const corposComChecklist = new WeakSet<HTMLElement>()
+
+// Clique numa caixa dentro do corpo do documento alterna marcada/desmarcada.
+export function ligarAlternanciaChecklist(editor: EditorSEI): void {
+  if (corposComChecklist.has(editor.corpo)) return
+  corposComChecklist.add(editor.corpo)
+  editor.corpo.addEventListener('click', (evento) => {
+    const alvo = evento.target instanceof Element ? evento.target.closest<HTMLElement>(`.${CLASSE_CHECKLIST}`) : null
+    if (!alvo) return
+    const proximo = alternarChecklist(alvo.dataset.marcado === 'sim')
+    alvo.textContent = proximo.simbolo
+    alvo.dataset.marcado = proximo.marcado ? 'sim' : 'nao'
+    editor.registrarAlteracao().catch(tratarErro('Falha ao registrar alteração do checklist'))
+  })
+}
+
+export function montarBotoesInserir(editor: EditorSEI): Map<IdBotaoEditor, HTMLElement> {
+  const botoes = new Map<IdBotaoEditor, HTMLElement>()
+  botoes.set(
+    'checklist',
+    criarBotaoToolbar('seirmg-cke-checklist', 'Inserir caixa de seleção (checklist)', squareCheckIconSvg, () => {
+      editor.inserirHtml(montarChecklistHtml()).catch(tratarErro('Falha ao inserir checklist'))
+    })
+  )
+  return botoes
 }

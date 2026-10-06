@@ -24,7 +24,7 @@ import { CLASSES_PARAGRAFO_NUMERADO } from '../../features/formatacao-basica/num
 import { extrairItensSumario, montarSumarioHtml } from '../../features/formatacao-basica/sumario'
 import { montarChamadaHtml, montarEntradaHtml } from '../../features/formatacao-basica/notaRodape'
 import { organizarEmGrupos, type IdBotaoEditor } from '../../features/editor/grupos'
-import { montarBotoesInserir } from './botoesInserir'
+import { ligarAlternanciaChecklist, montarBotoesInserir } from './botoesInserir'
 import type { DescritorEstiloTexto } from './protocolo'
 import type { EditorSEI } from './ponteEditor'
 import type { AtalhoParagrafo, FormatacaoBasicaConfig } from '../../lib/storage'
@@ -396,4 +396,5 @@ export async function iniciarFormatacaoBasica(
   injetarBotoesSeAusente(toolboxInicial, editor)
 
   registrarAtalhos(editor, config.atalhos)
+  ligarAlternanciaChecklist(editor)
 }
