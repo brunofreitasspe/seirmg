@@ -3,16 +3,34 @@
 import squareCheckIconSvg from 'lucide-static/icons/square-check.svg?raw'
 import link2IconSvg from 'lucide-static/icons/link-2.svg?raw'
 import hashIconSvg from 'lucide-static/icons/hash.svg?raw'
+import fileInputIconSvg from 'lucide-static/icons/file-input.svg?raw'
+import fileWarningIconSvg from 'lucide-static/icons/file-warning.svg?raw'
 import { alternarChecklist, CLASSE_CHECKLIST, montarChecklistHtml } from '../../features/editor/checklist'
 import type { IdBotaoEditor } from '../../features/editor/grupos'
 import { montarLinkHtml, validarUrlHttp } from '../../features/editor/linkCurto'
 import { abrirDialogoLinkCurto } from './linkCurtoDialogo'
 import { abrirDialogoReferenciaInterna } from './referenciaInternaDialogo'
+import { escolherEImportarArquivo } from './importarArquivo'
+import { criarPainelFlutuante, fecharPainel } from './dialogoFlutuante'
 import { criarBotaoToolbar } from './formatacaoBasica'
 import type { EditorSEI } from './ponteEditor'
 
 function tratarErro(contexto: string): (erro: unknown) => void {
   return (erro) => console.error(`[SEIRMG] ${contexto}:`, erro)
+}
+
+function mostrarErroImportacao(mensagem: string): void {
+  document.querySelectorAll('.seirmg-painel-flutuante').forEach((elemento) => elemento.remove())
+  const { painel, corpo } = criarPainelFlutuante('Importar Word/HTML', fileWarningIconSvg)
+  const texto = document.createElement('p')
+  texto.textContent = mensagem
+  const fechar = document.createElement('button')
+  fechar.type = 'button'
+  fechar.className = 'seirmg-btn-acao'
+  fechar.textContent = 'Fechar'
+  fechar.addEventListener('click', () => fecharPainel(painel))
+  corpo.append(texto, fechar)
+  document.body.appendChild(painel)
 }
 
 // iniciarFormatacaoBasica pode rodar mais de uma vez na mesma página: um segundo listener no
@@ -61,6 +79,14 @@ export function montarBotoesInserir(editor: EditorSEI): Map<IdBotaoEditor, HTMLE
     'referencia-interna',
     criarBotaoToolbar('seirmg-cke-referencia-interna', 'Inserir referência interna (parágrafo numerado)', hashIconSvg, () => {
       abrirDialogoReferenciaInterna(editor)
+    })
+  )
+  botoes.set(
+    'importar',
+    criarBotaoToolbar('seirmg-cke-importar', 'Importar conteúdo de Word (.docx) ou HTML', fileInputIconSvg, () => {
+      escolherEImportarArquivo((html) => {
+        editor.inserirHtml(html).catch(tratarErro('Falha ao inserir conteúdo importado'))
+      }, mostrarErroImportacao)
     })
   )
   return botoes
