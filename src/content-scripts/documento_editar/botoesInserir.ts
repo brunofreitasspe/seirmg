@@ -2,10 +2,12 @@
 // o seu ao mapa; a ordem na barra vem de features/editor/grupos.ts, não da ordem de inserção aqui.
 import squareCheckIconSvg from 'lucide-static/icons/square-check.svg?raw'
 import link2IconSvg from 'lucide-static/icons/link-2.svg?raw'
+import hashIconSvg from 'lucide-static/icons/hash.svg?raw'
 import { alternarChecklist, CLASSE_CHECKLIST, montarChecklistHtml } from '../../features/editor/checklist'
 import type { IdBotaoEditor } from '../../features/editor/grupos'
 import { montarLinkHtml, validarUrlHttp } from '../../features/editor/linkCurto'
 import { abrirDialogoLinkCurto } from './linkCurtoDialogo'
+import { abrirDialogoReferenciaInterna } from './referenciaInternaDialogo'
 import { criarBotaoToolbar } from './formatacaoBasica'
 import type { EditorSEI } from './ponteEditor'
 
@@ -53,6 +55,12 @@ export function montarBotoesInserir(editor: EditorSEI): Map<IdBotaoEditor, HTMLE
           })
         })
         .catch(tratarErro('Falha ao abrir o link curto'))
+    })
+  )
+  botoes.set(
+    'referencia-interna',
+    criarBotaoToolbar('seirmg-cke-referencia-interna', 'Inserir referência interna (parágrafo numerado)', hashIconSvg, () => {
+      abrirDialogoReferenciaInterna(editor)
     })
   )
   return botoes
