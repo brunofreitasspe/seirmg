@@ -15,7 +15,7 @@ export const GRUPOS_FERRAMENTAS_PDF: Array<{ id: GrupoFerramentaPdf; titulo: str
 
 const FERRAMENTAS: FerramentaPdf[] = [
   { id: 'juntar', grupo: 'montar', nome: 'Juntar PDFs', descricao: 'Une vários PDFs em um único arquivo, na ordem escolhida.' },
-  { id: 'dividir', grupo: 'montar', nome: 'Dividir PDF', descricao: 'Separa um PDF em vários arquivos, por página ou por intervalo.' },
+  { id: 'dividir', grupo: 'montar', nome: 'Dividir PDF', descricao: 'Separa um PDF em vários arquivos: por intervalo, por página ou por tamanho máximo.' },
   { id: 'organizar', grupo: 'montar', nome: 'Organizar páginas', descricao: 'Reordena ou remove páginas de um PDF, vendo as miniaturas.' },
   { id: 'numerar-paginas', grupo: 'montar', nome: 'Numerar páginas', descricao: 'Adiciona numeração sequencial no rodapé de cada página.' },
   { id: 'imagem-para-pdf', grupo: 'converter', nome: 'Imagem → PDF', descricao: 'Converte uma ou mais imagens (JPG/PNG) em um PDF.' },
