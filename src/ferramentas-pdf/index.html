@@ -2,15 +2,27 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Ferramentas de PDF — SEIRMG</title>
     <link rel="stylesheet" href="./style.css" />
   </head>
   <body>
-    <header class="cabecalho">
-      <h1>Ferramentas de PDF</h1>
-      <p>Processamento 100% local — nada sai do seu navegador.</p>
+    <header class="topo">
+      <div class="topo-interno">
+        <a class="marca" id="marca" href="?">
+          <img src="../assets/icons/icon-48.png" alt="" />
+          <span class="marca-textos">
+            <strong>Ferramentas de PDF</strong>
+            <small>SEIRMG</small>
+          </span>
+        </a>
+        <span class="selo-local" title="Os arquivos são processados aqui mesmo, no seu navegador. Nada é enviado a servidores externos.">
+          Processado no seu navegador
+        </span>
+      </div>
     </header>
-    <main id="conteudo"></main>
+    <div id="contexto" class="contexto-wrap"></div>
+    <main id="conteudo" class="conteudo"></main>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>

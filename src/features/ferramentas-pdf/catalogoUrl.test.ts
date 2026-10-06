@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { montarUrlFerramenta } from './catalogoUrl'
+import { montarUrlFerramenta, montarUrlCatalogo } from './catalogoUrl'
 
 describe('montarUrlFerramenta', () => {
   it('monta só ?ferramenta=x quando não há contexto de processo', () => {
@@ -19,6 +19,12 @@ describe('montarUrlFerramenta', () => {
     expect(resultado.get('idProcedimento')).toBe('1')
   })
 
+  it('preserva o número do processo', () => {
+    expect(montarUrlFerramenta('ocr', '?idProcedimento=1&numeroProcesso=2026.0.1-4')).toBe(
+      '?ferramenta=ocr&idProcedimento=1&numeroProcesso=2026.0.1-4'
+    )
+  })
+
   it('descarta outros parâmetros (ex.: a ferramenta anterior)', () => {
     expect(montarUrlFerramenta('dividir', '?ferramenta=juntar&idProcedimento=123')).toBe(
       '?ferramenta=dividir&idProcedimento=123'
@@ -27,5 +33,15 @@ describe('montarUrlFerramenta', () => {
 
   it('escapa caracteres especiais do idProcedimento', () => {
     expect(montarUrlFerramenta('tarjar', '?idProcedimento=12%263')).toBe('?ferramenta=tarjar&idProcedimento=12%263')
+  })
+})
+
+describe('montarUrlCatalogo', () => {
+  it('volta pro catálogo mantendo o contexto e descartando a ferramenta', () => {
+    expect(montarUrlCatalogo('?ferramenta=juntar&idProcedimento=1')).toBe('?idProcedimento=1')
+  })
+
+  it('modo avulso volta pra ? vazio', () => {
+    expect(montarUrlCatalogo('?ferramenta=juntar')).toBe('?')
   })
 })

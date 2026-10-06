@@ -1,56 +1,69 @@
 import { comprimirPdf } from '../../features/ferramentas-pdf/comprimir'
-import { criarBotaoEnviarAoProcesso } from '../ui/botaoEnviarAoProcesso'
-
-function formatarBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-}
-
-const NOME_ARQUIVO_RESULTADO = 'pdf-comprimido.pdf'
+import { criarPainelResultado } from '../ui/resultado'
+import {
+  comCarregando,
+  criarBarraAcoes,
+  criarBotao,
+  criarEtapa,
+  criarMensagem,
+  criarSeletorArquivos,
+  formatarBytes,
+  lerBytes,
+  montarEstruturaFerramenta,
+  nomeBase,
+} from '../ui/kit'
 
 export function montar(container: HTMLElement): void {
-  container.innerHTML = `
-    <h2>Comprimir PDF</h2>
-    <input type="file" id="comprimir-arquivo" accept="application/pdf" />
-    <p id="comprimir-resultado"></p>
-    <button id="comprimir-processar" disabled>Comprimir</button>
-  `
-  const input = document.getElementById('comprimir-arquivo') as HTMLInputElement
-  const botao = document.getElementById('comprimir-processar') as HTMLButtonElement
-  const resultadoTexto = document.getElementById('comprimir-resultado') as HTMLParagraphElement
+  const corpo = montarEstruturaFerramenta(container, 'comprimir')
 
-  let ultimoResultado: Uint8Array | null = null
-
-  const botaoEnviar = criarBotaoEnviarAoProcesso({
-    nomeArquivoPadrao: NOME_ARQUIVO_RESULTADO,
-    obterBytes: () => ultimoResultado,
+  const etapa = criarEtapa(1, 'Escolha o PDF')
+  const seletor = criarSeletorArquivos({
+    aceitar: 'application/pdf,.pdf',
+    titulo: 'Clique pra escolher o PDF',
+    dica: 'ou arraste o arquivo pra cá',
   })
-  if (botaoEnviar) container.appendChild(botaoEnviar)
+  const botao = criarBotao('Comprimir PDF', { variante: 'primario' })
+  botao.disabled = true
+  const mensagem = criarMensagem()
+  etapa.corpo.append(seletor.elemento, criarBarraAcoes(botao), mensagem.elemento)
 
-  input.addEventListener('change', () => {
-    botao.disabled = !input.files?.[0]
-    ultimoResultado = null
+  const resultado = criarPainelResultado(2)
+  corpo.append(etapa.secao, resultado.elemento)
+
+  seletor.aoMudar((arquivos) => {
+    botao.disabled = arquivos.length === 0
+    resultado.limpar()
+    mensagem.limpar()
   })
 
   botao.addEventListener('click', async () => {
-    try {
-      const arquivo = input.files?.[0]
-      if (!arquivo) return
-      const bytes = new Uint8Array(await arquivo.arrayBuffer())
-      const resultado = await comprimirPdf(bytes)
-      ultimoResultado = resultado.bytes
-      resultadoTexto.textContent = `${formatarBytes(resultado.tamanhoOriginal)} → ${formatarBytes(resultado.tamanhoFinal)}`
-      const blob = new Blob([resultado.bytes as BlobPart], { type: 'application/pdf' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = NOME_ARQUIVO_RESULTADO
-      link.click()
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('[SEIRMG] Falha ao comprimir PDF:', error)
-      alert('Não foi possível comprimir o PDF.')
-    }
+    mensagem.limpar()
+    resultado.limpar()
+    const [arquivo] = seletor.obterArquivos()
+    if (!arquivo) return
+    await comCarregando(botao, 'Comprimindo...', async () => {
+      try {
+        const { bytes, tamanhoOriginal, tamanhoFinal } = await comprimirPdf(await lerBytes(arquivo))
+        if (tamanhoFinal >= tamanhoOriginal) {
+          // Compressão estrutural não mexe em imagens: PDF já enxuto (ou escaneado) não diminui.
+          mensagem.mostrar(
+            'info',
+            `Este arquivo já está otimizado (${formatarBytes(tamanhoOriginal)}): a compressão estrutural não reduziu o tamanho. PDFs escaneados costumam ser grandes por causa das imagens, que esta ferramenta não recomprime.`
+          )
+          return
+        }
+        const economia = Math.round((1 - tamanhoFinal / tamanhoOriginal) * 100)
+        resultado.mostrar([
+          {
+            nome: `${nomeBase(arquivo)}-comprimido.pdf`,
+            bytes,
+            detalhe: `antes ${formatarBytes(tamanhoOriginal)} · ${economia}% menor`,
+          },
+        ])
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao comprimir PDF:', error)
+        mensagem.mostrar('erro', 'Não foi possível comprimir. Confira se é um PDF válido e sem senha.')
+      }
+    })
   })
 }

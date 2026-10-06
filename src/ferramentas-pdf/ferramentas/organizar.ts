@@ -1,95 +1,150 @@
-import { PDFDocument } from 'pdf-lib'
 import { organizarPaginas } from '../../features/ferramentas-pdf/organizar'
-import { criarBotaoEnviarAoProcesso } from '../ui/botaoEnviarAoProcesso'
+import { ICONES } from '../ui/icones'
+import { abrirPdf, escalaParaLargura, renderizarPagina } from '../ui/pdfjs'
+import { criarPainelResultado } from '../ui/resultado'
+import {
+  comCarregando,
+  criarBarraAcoes,
+  criarBotao,
+  criarBotaoIcone,
+  criarElemento,
+  criarEtapa,
+  criarMensagem,
+  criarSeletorArquivos,
+  lerBytes,
+  montarEstruturaFerramenta,
+  nomeBase,
+  rotuloPaginas,
+} from '../ui/kit'
 
-const NOME_ARQUIVO_RESULTADO = 'pdf-organizado.pdf'
+const LARGURA_MINIATURA = 120
 
 export function montar(container: HTMLElement): void {
-  container.innerHTML = `
-    <h2>Organizar páginas</h2>
-    <input type="file" id="organizar-arquivo" accept="application/pdf" />
-    <ol id="organizar-lista"></ol>
-    <button id="organizar-processar" disabled>Salvar PDF reorganizado</button>
-  `
-  const input = document.getElementById('organizar-arquivo') as HTMLInputElement
-  const lista = document.getElementById('organizar-lista') as HTMLOListElement
-  const botao = document.getElementById('organizar-processar') as HTMLButtonElement
-  let bytesOriginais: Uint8Array | null = null
-  let ordem: number[] = []
+  const corpo = montarEstruturaFerramenta(container, 'organizar')
 
-  function renderizarLista(): void {
-    // qualquer mudança na ordem invalida o PDF salvo antes
-    ultimoResultado = null
-    lista.innerHTML = ''
-    ordem.forEach((indicePagina, posicao) => {
-      const li = document.createElement('li')
-      li.textContent = `Página ${indicePagina + 1} `
-      const subir = document.createElement('button')
-      subir.textContent = '↑'
-      subir.disabled = posicao === 0
-      subir.addEventListener('click', () => {
-        ;[ordem[posicao - 1], ordem[posicao]] = [ordem[posicao], ordem[posicao - 1]]
-        renderizarLista()
-      })
-      const descer = document.createElement('button')
-      descer.textContent = '↓'
-      descer.disabled = posicao === ordem.length - 1
-      descer.addEventListener('click', () => {
-        ;[ordem[posicao], ordem[posicao + 1]] = [ordem[posicao + 1], ordem[posicao]]
-        renderizarLista()
-      })
-      const remover = document.createElement('button')
-      remover.textContent = '×'
+  const etapa1 = criarEtapa(1, 'Escolha o PDF')
+  const seletor = criarSeletorArquivos({
+    aceitar: 'application/pdf,.pdf',
+    titulo: 'Clique pra escolher o PDF',
+    dica: 'ou arraste o arquivo pra cá',
+  })
+  const mensagemArquivo = criarMensagem()
+  etapa1.corpo.append(seletor.elemento, mensagemArquivo.elemento)
+
+  const etapa2 = criarEtapa(2, 'Reordene ou remova páginas')
+  etapa2.secao.hidden = true
+  const resumo = criarElemento('div', 'resumo-numeros')
+  const restaurar = criarBotao('Restaurar ordem original', { variante: 'fantasma', icone: ICONES.rotateCcw })
+  const grade = criarElemento('div', 'miniaturas')
+  const botao = criarBotao('Salvar PDF organizado', { variante: 'primario' })
+  const mensagem = criarMensagem()
+  etapa2.corpo.append(criarBarraAcoes(resumo, restaurar), grade, criarBarraAcoes(botao), mensagem.elemento)
+
+  const resultado = criarPainelResultado(3)
+  corpo.append(etapa1.secao, etapa2.secao, resultado.elemento)
+
+  let arquivoAtual: File | null = null
+  let bytesOriginais: Uint8Array | null = null
+  let totalPaginas = 0
+  let ordem: number[] = []
+  // Uma miniatura (canvas) por página original, criada uma vez só -- reordenar só move os nós.
+  let miniaturas = new Map<number, HTMLCanvasElement>()
+
+  function renderizarGrade(): void {
+    resultado.limpar()
+    grade.replaceChildren()
+    ordem.forEach((paginaOriginal, posicao) => {
+      const cartao = criarElemento('div', 'miniatura')
+      const imagem = criarElemento('div', 'miniatura-imagem')
+      const canvas = miniaturas.get(paginaOriginal)
+      if (canvas) imagem.append(canvas)
+      imagem.append(criarElemento('span', 'miniatura-posicao', String(posicao + 1)))
+
+      const rodape = criarElemento('div', 'miniatura-rodape')
+      const anterior = criarBotaoIcone(ICONES.chevronLeft, `Mover página ${paginaOriginal + 1} pra antes`)
+      anterior.disabled = posicao === 0
+      anterior.addEventListener('click', () => mover(posicao, posicao - 1))
+      const proxima = criarBotaoIcone(ICONES.chevronRight, `Mover página ${paginaOriginal + 1} pra depois`)
+      proxima.disabled = posicao === ordem.length - 1
+      proxima.addEventListener('click', () => mover(posicao, posicao + 1))
+      const remover = criarBotaoIcone(ICONES.trash, `Remover página ${paginaOriginal + 1}`)
+      remover.disabled = ordem.length === 1
       remover.addEventListener('click', () => {
         ordem = ordem.filter((_, i) => i !== posicao)
-        renderizarLista()
+        renderizarGrade()
       })
-      li.append(subir, descer, remover)
-      lista.appendChild(li)
+      rodape.append(anterior, criarElemento('span', 'miniatura-rotulo', `pág. ${paginaOriginal + 1}`), proxima, remover)
+
+      cartao.append(imagem, rodape)
+      grade.append(cartao)
     })
-    botao.disabled = ordem.length === 0
+
+    const removidas = totalPaginas - ordem.length
+    resumo.replaceChildren(
+      criarElemento('strong', undefined, rotuloPaginas(ordem.length)),
+      removidas > 0 ? `${removidas} removida(s)` : 'nenhuma removida'
+    )
+    restaurar.hidden = ordem.length === totalPaginas && ordem.every((pagina, i) => pagina === i)
   }
 
-  let ultimoResultado: Uint8Array | null = null
+  function mover(de: number, para: number): void {
+    if (para < 0 || para >= ordem.length) return
+    ;[ordem[de], ordem[para]] = [ordem[para], ordem[de]]
+    renderizarGrade()
+  }
 
-  const botaoEnviar = criarBotaoEnviarAoProcesso({
-    nomeArquivoPadrao: NOME_ARQUIVO_RESULTADO,
-    obterBytes: () => ultimoResultado,
+  restaurar.addEventListener('click', () => {
+    ordem = Array.from({ length: totalPaginas }, (_, i) => i)
+    renderizarGrade()
   })
-  if (botaoEnviar) container.appendChild(botaoEnviar)
 
-  input.addEventListener('change', async () => {
-    const arquivo = input.files?.[0]
+  seletor.aoMudar(async ([arquivo]) => {
+    mensagemArquivo.limpar()
+    mensagem.limpar()
+    resultado.limpar()
+    etapa2.secao.hidden = true
+    arquivoAtual = arquivo ?? null
+    bytesOriginais = null
     if (!arquivo) return
     try {
-      bytesOriginais = new Uint8Array(await arquivo.arrayBuffer())
-      const totalPaginas = (await PDFDocument.load(bytesOriginais)).getPageCount()
+      const bytes = await lerBytes(arquivo)
+      const pdf = await abrirPdf(bytes)
+      if (arquivoAtual !== arquivo) return // trocou de arquivo enquanto carregava
+      bytesOriginais = bytes
+      totalPaginas = pdf.numPages
       ordem = Array.from({ length: totalPaginas }, (_, i) => i)
-      renderizarLista()
+      miniaturas = new Map()
+      etapa2.secao.hidden = false
+      renderizarGrade()
+
+      // Miniaturas aparecem progressivamente, sem travar a interação com a grade.
+      for (let numero = 1; numero <= totalPaginas; numero++) {
+        if (arquivoAtual !== arquivo) return
+        const pagina = await pdf.getPage(numero)
+        const { canvas } = await renderizarPagina(pagina, escalaParaLargura(pagina, LARGURA_MINIATURA))
+        miniaturas.set(numero - 1, canvas)
+        const posicao = ordem.indexOf(numero - 1)
+        if (posicao >= 0) grade.children[posicao]?.querySelector('.miniatura-imagem')?.prepend(canvas)
+      }
     } catch (error) {
       console.error('[SEIRMG] Falha ao ler PDF para organizar:', error)
-      alert('Não foi possível ler o arquivo selecionado. Confira se é um PDF válido.')
-      bytesOriginais = null
-      ordem = []
-      renderizarLista()
+      mensagemArquivo.mostrar('erro', 'Não foi possível ler o arquivo. Confira se é um PDF válido e sem senha.')
     }
   })
 
   botao.addEventListener('click', async () => {
-    try {
-      if (!bytesOriginais) return
-      const resultado = await organizarPaginas(bytesOriginais, ordem)
-      ultimoResultado = resultado
-      const blob = new Blob([resultado as BlobPart], { type: 'application/pdf' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = NOME_ARQUIVO_RESULTADO
-      link.click()
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('[SEIRMG] Falha ao organizar páginas:', error)
-      alert('Não foi possível salvar o PDF reorganizado.')
-    }
+    mensagem.limpar()
+    if (!bytesOriginais || !arquivoAtual) return
+    const original = bytesOriginais
+    const base = nomeBase(arquivoAtual)
+    await comCarregando(botao, 'Salvando...', async () => {
+      try {
+        const bytes = await organizarPaginas(original, ordem)
+        resultado.mostrar([{ nome: `${base}-organizado.pdf`, bytes, detalhe: rotuloPaginas(ordem.length) }])
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao organizar páginas:', error)
+        mensagem.mostrar('erro', 'Não foi possível salvar o PDF organizado.')
+      }
+    })
   })
 }

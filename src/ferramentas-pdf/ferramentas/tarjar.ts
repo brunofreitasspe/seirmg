@@ -1,15 +1,22 @@
-import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist'
 import { aplicarTarjas, type Tarja } from '../../features/ferramentas-pdf/tarjar'
 import { encontrarCpfCnpj } from '../../features/ferramentas-pdf/cpfCnpj'
-import { criarBotaoEnviarAoProcesso } from '../ui/botaoEnviarAoProcesso'
-
-const NOME_ARQUIVO_RESULTADO = 'pdf-tarjado.pdf'
-
-GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href
-
-type PDFDocumentProxy = Awaited<ReturnType<typeof getDocument>['promise']>
-type PDFPageProxy = Awaited<ReturnType<PDFDocumentProxy['getPage']>>
-type PageViewport = ReturnType<PDFPageProxy['getViewport']>
+import { trechoHorizontal } from '../../features/ferramentas-pdf/trechoTexto'
+import { ICONES } from '../ui/icones'
+import { abrirPdf, escalaParaLargura, renderizarPagina, type PageViewport, type PDFPageProxy } from '../ui/pdfjs'
+import { criarPainelResultado } from '../ui/resultado'
+import {
+  comCarregando,
+  criarAviso,
+  criarBotao,
+  criarElemento,
+  criarEtapa,
+  criarMensagem,
+  criarProgresso,
+  criarSeletorArquivos,
+  lerBytes,
+  montarEstruturaFerramenta,
+  nomeBase,
+} from '../ui/kit'
 
 // Cada candidato é uma tarja em potencial -- sugerida (CPF/CNPJ achado no texto) ou desenhada
 // a mão pelo usuário -- que só entra em `tarjasConfirmadas` (e portanto no PDF final) depois
@@ -28,18 +35,41 @@ interface Candidato {
 }
 
 const PADDING_SUGESTAO_PT = 1.5
+// A posição horizontal do trecho é estimada (fonte de medição != fonte do PDF): folga extra.
+const PADDING_HORIZONTAL_PT = 3
 const LIMIAR_ARRASTO_PX = 4
+const LARGURA_PAGINA_PX = 760
+// pdf.js às vezes devolve altura 0 em itens de texto (fontes Type3/sem métricas); 10pt é a
+// altura de um corpo de texto comum, suficiente pra tarja cobrir a linha.
+const ALTURA_TEXTO_PADRAO_PT = 10
+
+// Mede texto numa fonte sem serifa parecida com a da maioria dos PDFs -- só a proporção entre as
+// partes importa (ver trechoHorizontal), não o tamanho absoluto.
+let contextoMedicao: CanvasRenderingContext2D | null = null
+function medirTexto(texto: string): number {
+  contextoMedicao ??= document.createElement('canvas').getContext('2d')
+  if (!contextoMedicao) return 0
+  contextoMedicao.font = '100px Helvetica, Arial, sans-serif'
+  return contextoMedicao.measureText(texto).width
+}
 
 async function sugerirCandidatos(pagina: PDFPageProxy, paginaIndex: number): Promise<Candidato[]> {
   const conteudo = await pagina.getTextContent()
   let texto = ''
-  const limites: { inicio: number; fim: number; transform: number[]; largura: number; altura: number }[] = []
+  const limites: { inicio: number; fim: number; str: string; transform: number[]; largura: number; altura: number }[] = []
 
   for (const item of conteudo.items) {
     if (!('str' in item) || !('transform' in item)) continue // TextMarkedContent não tem posição
     const inicio = texto.length
     texto += item.str
-    limites.push({ inicio, fim: texto.length, transform: item.transform, largura: item.width, altura: item.height || 10 })
+    limites.push({
+      inicio,
+      fim: texto.length,
+      str: item.str,
+      transform: item.transform,
+      largura: item.width,
+      altura: item.height || ALTURA_TEXTO_PADRAO_PT,
+    })
   }
 
   const candidatos: Candidato[] = []
@@ -54,18 +84,26 @@ async function sugerirCandidatos(pagina: PDFPageProxy, paginaIndex: number): Pro
     let y1 = -Infinity
     for (const item of itensDoAchado) {
       const [, , , , e, f] = item.transform
-      x0 = Math.min(x0, e)
+      // Só a parte do item que é o CPF/CNPJ -- não a linha inteira em que ele aparece.
+      const trecho = trechoHorizontal(
+        item.str,
+        Math.max(achado.indice, item.inicio) - item.inicio,
+        Math.min(fimAchado, item.fim) - item.inicio,
+        item.largura,
+        medirTexto
+      )
+      x0 = Math.min(x0, e + trecho.inicio)
       y0 = Math.min(y0, f)
-      x1 = Math.max(x1, e + item.largura)
+      x1 = Math.max(x1, e + trecho.fim)
       y1 = Math.max(y1, f + item.altura)
     }
 
     candidatos.push({
       id: `sugestao-${paginaIndex}-${achado.indice}`,
       paginaIndex,
-      xPdf: x0 - PADDING_SUGESTAO_PT,
+      xPdf: x0 - PADDING_HORIZONTAL_PT,
       yPdf: y0 - PADDING_SUGESTAO_PT,
-      larguraPdf: x1 - x0 + PADDING_SUGESTAO_PT * 2,
+      larguraPdf: x1 - x0 + PADDING_HORIZONTAL_PT * 2,
       alturaPdf: y1 - y0 + PADDING_SUGESTAO_PT * 2,
       origem: achado.tipo,
       valor: achado.valor,
@@ -75,139 +113,174 @@ async function sugerirCandidatos(pagina: PDFPageProxy, paginaIndex: number): Pro
   return candidatos
 }
 
-function rotuloOrigem(candidato: Candidato): string {
-  if (candidato.origem === 'cpf') return `CPF sugerido: ${candidato.valor}`
-  if (candidato.origem === 'cnpj') return `CNPJ sugerido: ${candidato.valor}`
-  return 'Área desenhada manualmente'
-}
+const ROTULO_ORIGEM: Record<Candidato['origem'], string> = { cpf: 'CPF', cnpj: 'CNPJ', manual: 'Manual' }
+const ROTULO_STATUS: Record<Candidato['status'], string> = { pendente: 'Pendente', confirmada: 'Tarjada', descartada: 'Descartada' }
 
 export function montar(container: HTMLElement): void {
-  container.innerHTML = `
-    <h2>Tarjar (sigilo)</h2>
-    <p style="color:#b5530a">
-      Atenção: isto cobre a área com um retângulo preto opaco. É suficiente contra visualização e
-      impressão normais, mas <strong>não</strong> remove o conteúdo original de dentro do arquivo —
-      alguém com outra ferramenta de edição de PDF ainda pode recuperá-lo. Pra sigilo que precisa
-      resistir a isso, use a opção "Imagem → PDF" depois de imprimir/capturar a página como imagem.
-    </p>
-    <input type="file" id="tarjar-arquivo" accept="application/pdf" />
-    <p id="tarjar-status"></p>
-    <div id="tarjar-paginas"></div>
-    <button id="tarjar-aplicar" disabled>Aplicar tarjas confirmadas e baixar</button>
-  `
+  const corpo = montarEstruturaFerramenta(container, 'tarjar')
 
-  const input = document.getElementById('tarjar-arquivo') as HTMLInputElement
-  const status = document.getElementById('tarjar-status') as HTMLParagraphElement
-  const areaPaginas = document.getElementById('tarjar-paginas') as HTMLDivElement
-  const botaoAplicar = document.getElementById('tarjar-aplicar') as HTMLButtonElement
+  const etapa1 = criarEtapa(1, 'Escolha o PDF')
+  const aviso = criarElemento('div')
+  aviso.append(
+    criarElemento('p', undefined, 'A tarja cobre a área com um retângulo preto opaco: resolve pra visualização e impressão.'),
+    criarElemento(
+      'p',
+      undefined,
+      'Ela não apaga o texto original de dentro do arquivo: com outro editor de PDF ainda dá pra recuperá-lo. Se o sigilo precisa resistir a isso, depois de tarjar imprima ou capture as páginas como imagem e use "Imagem → PDF".'
+    )
+  )
+  const seletor = criarSeletorArquivos({
+    aceitar: 'application/pdf,.pdf',
+    titulo: 'Clique pra escolher o PDF',
+    dica: 'ou arraste o arquivo pra cá. CPFs e CNPJs são sugeridos automaticamente.',
+  })
+  const progresso = criarProgresso()
+  const mensagemArquivo = criarMensagem()
+  etapa1.corpo.append(criarAviso('aviso', aviso), seletor.elemento, progresso.elemento, mensagemArquivo.elemento)
 
+  const etapa2 = criarEtapa(2, 'Revise as tarjas')
+  etapa2.secao.hidden = true
+  const instrucao = criarAviso(
+    'info',
+    'Clique numa sugestão amarela pra confirmar, ou arraste o mouse sobre a página pra marcar outra área. Só as tarjas confirmadas vão pro arquivo.'
+  )
+  const areaPaginas = criarElemento('div', 'tarjar-paginas')
+  const barra = criarElemento('div', 'barra-fixa')
+  const resumo = criarElemento('div', 'resumo-numeros')
+  const acoesBarra = criarElemento('div', 'barra-acoes')
+  const confirmarTodas = criarBotao('Confirmar todas as pendentes', { icone: ICONES.check })
+  const aplicar = criarBotao('Aplicar tarjas', { variante: 'perigo' })
+  acoesBarra.append(confirmarTodas, aplicar)
+  barra.append(resumo, acoesBarra)
+  const mensagem = criarMensagem()
+  etapa2.corpo.append(instrucao, areaPaginas, mensagem.elemento, barra)
+
+  const resultado = criarPainelResultado(3)
+  corpo.append(etapa1.secao, etapa2.secao, resultado.elemento)
+
+  let arquivoAtual: File | null = null
   let bytesOriginais: Uint8Array | null = null
   let candidatos: Candidato[] = []
   let proximoIdManual = 0
-  let ultimoResultado: Uint8Array | null = null
-
-  const botaoEnviar = criarBotaoEnviarAoProcesso({
-    nomeArquivoPadrao: NOME_ARQUIVO_RESULTADO,
-    obterBytes: () => ultimoResultado,
-  })
-  if (botaoEnviar) container.appendChild(botaoEnviar)
 
   // Por página: o viewport (pra converter pixel de canvas <-> ponto PDF) e os elementos onde
   // redesenhar() repinta as marcações -- nada aqui guarda estado de negócio, só referências DOM.
-  const paginasInfo = new Map<number, { viewport: PageViewport; overlay: HTMLDivElement; lista: HTMLUListElement }>()
+  const paginasInfo = new Map<number, { viewport: PageViewport; canvas: HTMLCanvasElement; overlay: HTMLDivElement; lista: HTMLUListElement }>()
 
   function atualizarResumo(): void {
     const confirmadas = candidatos.filter((c) => c.status === 'confirmada').length
     const pendentes = candidatos.filter((c) => c.status === 'pendente').length
-    status.textContent = bytesOriginais
-      ? `${confirmadas} tarja(s) confirmada(s), ${pendentes} sugestão/área pendente de confirmação.`
-      : ''
+    resumo.replaceChildren(
+      criarElemento('strong', undefined, String(confirmadas)),
+      confirmadas === 1 ? 'tarja confirmada' : 'tarjas confirmadas',
+      criarElemento('span', 'separador', '·'),
+      criarElemento('strong', undefined, String(pendentes)),
+      pendentes === 1 ? 'pendente' : 'pendentes'
+    )
+    confirmarTodas.disabled = pendentes === 0
+    aplicar.disabled = confirmadas === 0
+  }
+
+  function criarItemLista(candidato: Candidato): HTMLLIElement {
+    const item = criarElemento('li', `candidato ${candidato.status}`)
+    const topo = criarElemento('div', 'candidato-topo')
+    topo.append(
+      criarElemento('span', 'etiqueta', ROTULO_ORIGEM[candidato.origem]),
+      criarElemento('span', 'candidato-valor', candidato.valor ?? 'Área desenhada'),
+      criarElemento('span', `etiqueta etiqueta-${candidato.status}`, ROTULO_STATUS[candidato.status])
+    )
+    item.append(topo)
+
+    if (candidato.status !== 'descartada') {
+      const acoes = criarElemento('div', 'candidato-acoes')
+      if (candidato.status === 'pendente') {
+        const confirmar = criarBotao('Confirmar', { variante: 'perigo', icone: ICONES.check })
+        confirmar.addEventListener('click', () => definirStatus(candidato.id, 'confirmada'))
+        acoes.append(confirmar)
+      }
+      const descartar = criarBotao(candidato.status === 'confirmada' ? 'Remover tarja' : 'Descartar', { icone: ICONES.x })
+      descartar.addEventListener('click', () => definirStatus(candidato.id, 'descartada'))
+      acoes.append(descartar)
+      item.append(acoes)
+    }
+    return item
   }
 
   function redesenharPagina(paginaIndex: number): void {
     const info = paginasInfo.get(paginaIndex)
     if (!info) return
-    const { viewport, overlay, lista } = info
+    const { viewport, canvas, overlay, lista } = info
     const candidatosDaPagina = candidatos.filter((c) => c.paginaIndex === paginaIndex)
 
     overlay.querySelectorAll('[data-candidato]').forEach((el) => el.remove())
-    lista.innerHTML = ''
+    lista.replaceChildren()
 
     for (const candidato of candidatosDaPagina) {
       if (candidato.status !== 'descartada') {
         const [vx0, vy0] = viewport.convertToViewportPoint(candidato.xPdf, candidato.yPdf)
         const [vx1, vy1] = viewport.convertToViewportPoint(candidato.xPdf + candidato.larguraPdf, candidato.yPdf + candidato.alturaPdf)
-        const div = document.createElement('div')
-        div.dataset.candidato = candidato.id
-        div.style.position = 'absolute'
-        div.style.left = `${Math.min(vx0, vx1)}px`
-        div.style.top = `${Math.min(vy0, vy1)}px`
-        div.style.width = `${Math.abs(vx1 - vx0)}px`
-        div.style.height = `${Math.abs(vy1 - vy0)}px`
-        if (candidato.status === 'confirmada') {
-          div.style.background = '#000'
-          div.style.pointerEvents = 'none'
-        } else {
-          div.style.background = 'rgba(255, 193, 7, 0.4)'
-          div.style.border = '2px solid #b5530a'
-          div.style.cursor = 'pointer'
-          div.title = 'Clique pra confirmar esta tarja'
-          div.addEventListener('click', () => {
+        // Em % do canvas: a marcação acompanha a página quando o CSS a redimensiona.
+        const marca = criarElemento('div', `tarja-marca ${candidato.status}`)
+        marca.dataset.candidato = candidato.id
+        marca.style.left = `${(Math.min(vx0, vx1) / canvas.width) * 100}%`
+        marca.style.top = `${(Math.min(vy0, vy1) / canvas.height) * 100}%`
+        marca.style.width = `${(Math.abs(vx1 - vx0) / canvas.width) * 100}%`
+        marca.style.height = `${(Math.abs(vy1 - vy0) / canvas.height) * 100}%`
+        if (candidato.status === 'pendente') {
+          marca.title = 'Clique pra confirmar esta tarja'
+          marca.addEventListener('click', () => {
             // Defesa contra o bug "clique perdido revive descarte": só age se, no momento do
             // clique, o candidato ainda estiver pendente (elemento de descartada nem existe
             // mais no DOM, mas o guard fica aqui também pra não depender só disso).
             const atual = candidatos.find((c) => c.id === candidato.id)
-            if (atual?.status === 'pendente') confirmar(atual.id)
+            if (atual?.status === 'pendente') definirStatus(atual.id, 'confirmada')
           })
         }
-        overlay.appendChild(div)
+        overlay.append(marca)
       }
-
-      const li = document.createElement('li')
-      const texto = document.createElement('span')
-      texto.textContent = `${rotuloOrigem(candidato)} — ${candidato.status}`
-      const botaoConfirmar = document.createElement('button')
-      botaoConfirmar.textContent = 'Confirmar tarja'
-      botaoConfirmar.disabled = candidato.status !== 'pendente'
-      botaoConfirmar.addEventListener('click', () => confirmar(candidato.id))
-      const botaoDescartar = document.createElement('button')
-      botaoDescartar.textContent = 'Descartar'
-      botaoDescartar.disabled = candidato.status === 'descartada'
-      botaoDescartar.addEventListener('click', () => descartar(candidato.id))
-      li.append(texto, botaoConfirmar, botaoDescartar)
-      lista.appendChild(li)
+      lista.append(criarItemLista(candidato))
     }
 
+    if (candidatosDaPagina.length === 0) {
+      lista.append(criarElemento('li', 'tarjar-lista-vazia', 'Nenhuma sugestão nesta página. Arraste sobre a página pra marcar uma área.'))
+    }
     atualizarResumo()
   }
 
-  function confirmar(id: string): void {
+  function definirStatus(id: string, status: 'confirmada' | 'descartada'): void {
     const candidato = candidatos.find((c) => c.id === id)
     if (!candidato) return
-    candidato.status = 'confirmada'
+    candidato.status = status
+    resultado.limpar()
     redesenharPagina(candidato.paginaIndex)
   }
 
-  function descartar(id: string): void {
-    const candidato = candidatos.find((c) => c.id === id)
-    if (!candidato) return
-    candidato.status = 'descartada'
-    redesenharPagina(candidato.paginaIndex)
-  }
+  confirmarTodas.addEventListener('click', () => {
+    const paginas = new Set<number>()
+    for (const candidato of candidatos) {
+      if (candidato.status !== 'pendente') continue
+      candidato.status = 'confirmada'
+      paginas.add(candidato.paginaIndex)
+    }
+    resultado.limpar()
+    paginas.forEach(redesenharPagina)
+  })
 
   function configurarArrastoDeDesenho(canvas: HTMLCanvasElement, overlay: HTMLDivElement, viewport: PageViewport, paginaIndex: number): void {
-    const rascunho = document.createElement('div')
-    rascunho.style.position = 'absolute'
-    rascunho.style.border = '2px dashed #0a7fb5'
-    rascunho.style.background = 'rgba(10, 127, 181, 0.15)'
-    rascunho.style.display = 'none'
-    rascunho.style.pointerEvents = 'none'
-    overlay.appendChild(rascunho)
+    const rascunho = criarElemento('div', 'tarja-rascunho')
+    rascunho.hidden = true
+    overlay.append(rascunho)
 
     canvas.addEventListener('mousedown', (evento) => {
+      evento.preventDefault()
       const rect = canvas.getBoundingClientRect()
-      const inicio = { x: evento.clientX - rect.left, y: evento.clientY - rect.top }
-      rascunho.style.display = 'block'
+      // Posições em px de tela (CSS) pro rascunho; convertidas pra px do canvas só no fim.
+      const posicao = (e: MouseEvent): { x: number; y: number } => ({
+        x: Math.min(Math.max(e.clientX - rect.left, 0), rect.width),
+        y: Math.min(Math.max(e.clientY - rect.top, 0), rect.height),
+      })
+      const inicio = posicao(evento)
+      rascunho.hidden = false
 
       const atualizarRascunho = (atual: { x: number; y: number }): void => {
         rascunho.style.left = `${Math.min(inicio.x, atual.x)}px`
@@ -217,20 +290,18 @@ export function montar(container: HTMLElement): void {
       }
       atualizarRascunho(inicio)
 
-      const mover = (e: MouseEvent): void => {
-        atualizarRascunho({ x: e.clientX - rect.left, y: e.clientY - rect.top })
-      }
+      const mover = (e: MouseEvent): void => atualizarRascunho(posicao(e))
       const soltar = (e: MouseEvent): void => {
         document.removeEventListener('mousemove', mover)
         document.removeEventListener('mouseup', soltar)
-        rascunho.style.display = 'none'
-        const fim = { x: e.clientX - rect.left, y: e.clientY - rect.top }
-        const larguraPx = Math.abs(fim.x - inicio.x)
-        const alturaPx = Math.abs(fim.y - inicio.y)
-        if (larguraPx < LIMIAR_ARRASTO_PX || alturaPx < LIMIAR_ARRASTO_PX) return // clique acidental
+        rascunho.hidden = true
+        const fim = posicao(e)
+        if (Math.abs(fim.x - inicio.x) < LIMIAR_ARRASTO_PX || Math.abs(fim.y - inicio.y) < LIMIAR_ARRASTO_PX) return // clique acidental
 
-        const p1 = viewport.convertToPdfPoint(Math.min(inicio.x, fim.x), Math.min(inicio.y, fim.y))
-        const p2 = viewport.convertToPdfPoint(Math.max(inicio.x, fim.x), Math.max(inicio.y, fim.y))
+        const escalaX = canvas.width / rect.width
+        const escalaY = canvas.height / rect.height
+        const p1 = viewport.convertToPdfPoint(Math.min(inicio.x, fim.x) * escalaX, Math.min(inicio.y, fim.y) * escalaY)
+        const p2 = viewport.convertToPdfPoint(Math.max(inicio.x, fim.x) * escalaX, Math.max(inicio.y, fim.y) * escalaY)
         candidatos.push({
           id: `manual-${paginaIndex}-${proximoIdManual++}`,
           paginaIndex,
@@ -241,6 +312,7 @@ export function montar(container: HTMLElement): void {
           origem: 'manual',
           status: 'pendente',
         })
+        resultado.limpar()
         redesenharPagina(paginaIndex)
       }
       document.addEventListener('mousemove', mover)
@@ -248,104 +320,82 @@ export function montar(container: HTMLElement): void {
     })
   }
 
-  input.addEventListener('change', async () => {
-    const arquivo = input.files?.[0]
+  seletor.aoMudar(async ([arquivo]) => {
+    mensagemArquivo.limpar()
+    mensagem.limpar()
+    resultado.limpar()
+    etapa2.secao.hidden = true
+    candidatos = []
+    paginasInfo.clear()
+    areaPaginas.replaceChildren()
+    arquivoAtual = arquivo ?? null
+    bytesOriginais = null
     if (!arquivo) return
-    try {
-      botaoAplicar.disabled = true
-      candidatos = []
-      paginasInfo.clear()
-      areaPaginas.innerHTML = ''
-      status.textContent = 'Carregando páginas...'
 
-      bytesOriginais = new Uint8Array(await arquivo.arrayBuffer())
-      ultimoResultado = null
-      const pdf = await getDocument({ data: bytesOriginais.slice() }).promise
+    try {
+      const bytes = await lerBytes(arquivo)
+      const pdf = await abrirPdf(bytes)
+      if (arquivoAtual !== arquivo) return
+      bytesOriginais = bytes
+      etapa2.secao.hidden = false
 
       for (let numero = 1; numero <= pdf.numPages; numero++) {
+        if (arquivoAtual !== arquivo) return
+        progresso.definir((numero - 1) / pdf.numPages, `Carregando página ${numero} de ${pdf.numPages}...`)
         const pagina = await pdf.getPage(numero)
         const paginaIndex = numero - 1
-        const viewportBase = pagina.getViewport({ scale: 1 })
-        const escala = Math.min(1.6, 900 / viewportBase.width)
-        const viewport = pagina.getViewport({ scale: escala })
+        const { canvas, viewport } = await renderizarPagina(pagina, escalaParaLargura(pagina, LARGURA_PAGINA_PX))
+        canvas.style.width = `${LARGURA_PAGINA_PX}px`
+        canvas.style.height = 'auto'
 
-        const bloco = document.createElement('div')
-        bloco.style.marginBottom = '1.5rem'
-        const titulo = document.createElement('h3')
-        titulo.textContent = `Página ${numero}`
-
-        const wrap = document.createElement('div')
-        wrap.style.position = 'relative'
-        wrap.style.display = 'inline-block'
-        wrap.style.border = '1px solid #ccc'
-        wrap.style.lineHeight = '0'
-        wrap.style.verticalAlign = 'top'
-
-        const canvas = document.createElement('canvas')
-        canvas.width = viewport.width
-        canvas.height = viewport.height
-        canvas.style.display = 'block'
-        canvas.style.cursor = 'crosshair'
-        const contexto = canvas.getContext('2d')!
-        await pagina.render({ canvas, canvasContext: contexto, viewport }).promise
-
-        const overlay = document.createElement('div')
-        overlay.style.position = 'absolute'
-        overlay.style.inset = '0'
-
+        const bloco = criarElemento('div', 'tarjar-pagina')
+        const wrap = criarElemento('div', 'tarjar-canvas-wrap')
+        const overlay = criarElemento('div', 'tarjar-overlay')
         wrap.append(canvas, overlay)
+        const lista = criarElemento('ul', 'tarjar-lista')
+        bloco.append(criarElemento('h3', 'tarjar-pagina-titulo', `Página ${numero} de ${pdf.numPages}`), wrap, lista)
+        areaPaginas.append(bloco)
 
-        const lista = document.createElement('ul')
-        lista.style.display = 'inline-block'
-        lista.style.verticalAlign = 'top'
-        lista.style.marginLeft = '1rem'
-        lista.style.maxWidth = '280px'
-
-        bloco.append(titulo, wrap, lista)
-        areaPaginas.appendChild(bloco)
-
-        paginasInfo.set(paginaIndex, { viewport, overlay, lista })
+        paginasInfo.set(paginaIndex, { viewport, canvas, overlay, lista })
         configurarArrastoDeDesenho(canvas, overlay, viewport, paginaIndex)
 
-        const sugestoes = await sugerirCandidatos(pagina, paginaIndex)
-        candidatos.push(...sugestoes)
+        candidatos.push(...(await sugerirCandidatos(pagina, paginaIndex)))
         redesenharPagina(paginaIndex)
       }
-
-      botaoAplicar.disabled = false
+      progresso.ocultar()
       atualizarResumo()
     } catch (error) {
       console.error('[SEIRMG] Falha ao carregar PDF para tarjar:', error)
-      alert('Não foi possível ler o arquivo selecionado. Confira se é um PDF válido.')
+      progresso.ocultar()
+      etapa2.secao.hidden = true
       bytesOriginais = null
-      botaoAplicar.disabled = true
+      mensagemArquivo.mostrar('erro', 'Não foi possível ler o arquivo. Confira se é um PDF válido e sem senha.')
     }
   })
 
-  botaoAplicar.addEventListener('click', async () => {
-    try {
-      if (!bytesOriginais) return
-      const tarjasConfirmadas: Tarja[] = candidatos
-        .filter((c) => c.status === 'confirmada')
-        .map((c) => ({ pagina: c.paginaIndex, x: c.xPdf, y: c.yPdf, largura: c.larguraPdf, altura: c.alturaPdf }))
-
-      if (tarjasConfirmadas.length === 0) {
-        alert('Nenhuma tarja foi confirmada ainda. Confirme pelo menos uma sugestão ou área desenhada antes de aplicar.')
-        return
-      }
-
-      const resultado = await aplicarTarjas(bytesOriginais, tarjasConfirmadas)
-      ultimoResultado = resultado
-      const blob = new Blob([resultado as BlobPart], { type: 'application/pdf' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = NOME_ARQUIVO_RESULTADO
-      link.click()
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('[SEIRMG] Falha ao aplicar tarjas:', error)
-      alert('Não foi possível aplicar as tarjas.')
+  aplicar.addEventListener('click', async () => {
+    mensagem.limpar()
+    if (!bytesOriginais || !arquivoAtual) return
+    const tarjasConfirmadas: Tarja[] = candidatos
+      .filter((c) => c.status === 'confirmada')
+      .map((c) => ({ pagina: c.paginaIndex, x: c.xPdf, y: c.yPdf, largura: c.larguraPdf, altura: c.alturaPdf }))
+    if (tarjasConfirmadas.length === 0) {
+      mensagem.mostrar('aviso', 'Nenhuma tarja confirmada ainda. Confirme pelo menos uma sugestão ou área desenhada.')
+      return
     }
+
+    const original = bytesOriginais
+    const base = nomeBase(arquivoAtual)
+    await comCarregando(aplicar, 'Aplicando...', async () => {
+      try {
+        const bytes = await aplicarTarjas(original, tarjasConfirmadas)
+        const qtd = tarjasConfirmadas.length
+        resultado.mostrar([{ nome: `${base}-tarjado.pdf`, bytes, detalhe: qtd === 1 ? '1 tarja' : `${qtd} tarjas` }])
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao aplicar tarjas:', error)
+        mensagem.mostrar('erro', 'Não foi possível aplicar as tarjas.')
+      }
+    })
+    atualizarResumo()
   })
 }

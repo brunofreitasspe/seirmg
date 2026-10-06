@@ -745,7 +745,7 @@ async function montarPainelAtribuicao(): Promise<void> {
 // Atalho pra aba standalone de Ferramentas de PDF (juntar, dividir, tarjar etc.), análogo ao
 // item de menu "Ferramentas do Processo" do seipro -- leva o id_procedimento atual na própria URL
 // (?idProcedimento=...) pra essa aba oferecer "Enviar ao processo aberto no SEI" como alternativa
-// ao simples download do resultado (ver ferramentas-pdf/ui/botaoEnviarAoProcesso.ts).
+// ao simples download do resultado (ver ferramentas-pdf/ui/resultado.ts).
 function montarAtalhoFerramentasPdf(): void {
   try {
     const idProcedimento = obterIdProcedimento()
@@ -766,6 +766,9 @@ function montarAtalhoFerramentasPdf(): void {
       .join('\n')
     const urlIncluir = extrairUrlIncluirDocumento(scriptsHtml)
     if (urlIncluir) params.set('urlIncluir', new URL(urlIncluir, window.location.href).href)
+    // Só pra exibição na página das ferramentas; descarta se o nó selecionado for um documento.
+    const numeroProcesso = obterNumeroProcesso(document)
+    if (numeroProcesso && /\d{4,}[./-]/.test(numeroProcesso)) params.set('numeroProcesso', numeroProcesso)
     link.href = chrome.runtime.getURL(`src/ferramentas-pdf/index.html?${params.toString()}`)
     link.textContent = 'Juntar, dividir, tarjar e outras ferramentas de PDF'
     corpo.appendChild(link)

@@ -1,49 +1,78 @@
-import { numerarPaginas } from '../../features/ferramentas-pdf/numerarPaginas'
-import { criarBotaoEnviarAoProcesso } from '../ui/botaoEnviarAoProcesso'
+import { numerarPaginas, type OpcoesNumeracao } from '../../features/ferramentas-pdf/numerarPaginas'
+import { criarPainelResultado } from '../ui/resultado'
+import {
+  comCarregando,
+  criarBarraAcoes,
+  criarBotao,
+  criarCampo,
+  criarElemento,
+  criarEtapa,
+  criarMensagem,
+  criarSegmentado,
+  criarSeletorArquivos,
+  lerBytes,
+  montarEstruturaFerramenta,
+  nomeBase,
+} from '../ui/kit'
 
-const NOME_ARQUIVO_RESULTADO = 'pdf-numerado.pdf'
+type Posicao = NonNullable<OpcoesNumeracao['posicao']>
 
 export function montar(container: HTMLElement): void {
-  container.innerHTML = `
-    <h2>Numerar páginas</h2>
-    <input type="file" id="numerar-arquivo" accept="application/pdf" />
-    <label>Começar em: <input type="number" id="numerar-inicio" value="1" min="1" /></label>
-    <button id="numerar-processar" disabled>Numerar</button>
-  `
-  const input = document.getElementById('numerar-arquivo') as HTMLInputElement
-  const inicio = document.getElementById('numerar-inicio') as HTMLInputElement
-  const botao = document.getElementById('numerar-processar') as HTMLButtonElement
+  const corpo = montarEstruturaFerramenta(container, 'numerar-paginas')
 
-  let ultimoResultado: Uint8Array | null = null
-
-  const botaoEnviar = criarBotaoEnviarAoProcesso({
-    nomeArquivoPadrao: NOME_ARQUIVO_RESULTADO,
-    obterBytes: () => ultimoResultado,
+  const etapa1 = criarEtapa(1, 'Escolha o PDF')
+  const seletor = criarSeletorArquivos({
+    aceitar: 'application/pdf,.pdf',
+    titulo: 'Clique pra escolher o PDF',
+    dica: 'ou arraste o arquivo pra cá',
   })
-  if (botaoEnviar) container.appendChild(botaoEnviar)
+  etapa1.corpo.append(seletor.elemento)
 
-  input.addEventListener('change', () => {
-    botao.disabled = !input.files?.[0]
-    ultimoResultado = null
+  const etapa2 = criarEtapa(2, 'Opções da numeração')
+  const inicio = criarElemento('input')
+  inicio.type = 'number'
+  inicio.min = '1'
+  inicio.value = '1'
+  const posicao = criarSegmentado<Posicao>(
+    'numerar-posicao',
+    [
+      { valor: 'inferior-direito', rotulo: 'Canto inferior direito' },
+      { valor: 'inferior-centro', rotulo: 'Centro do rodapé' },
+    ],
+    'inferior-direito'
+  )
+  const campos = criarElemento('div', 'campos')
+  campos.append(
+    criarCampo('Começar em', inicio, 'Útil pra continuar a numeração de outro volume.'),
+    criarCampo('Posição', posicao.elemento)
+  )
+  const botao = criarBotao('Numerar páginas', { variante: 'primario' })
+  botao.disabled = true
+  const mensagem = criarMensagem()
+  etapa2.corpo.append(campos, criarBarraAcoes(botao), mensagem.elemento)
+
+  const resultado = criarPainelResultado(3)
+  corpo.append(etapa1.secao, etapa2.secao, resultado.elemento)
+
+  seletor.aoMudar((arquivos) => {
+    botao.disabled = arquivos.length === 0
+    resultado.limpar()
+    mensagem.limpar()
   })
 
   botao.addEventListener('click', async () => {
-    try {
-      const arquivo = input.files?.[0]
-      if (!arquivo) return
-      const bytes = new Uint8Array(await arquivo.arrayBuffer())
-      const resultado = await numerarPaginas(bytes, { inicioEm: Number(inicio.value) || 1 })
-      ultimoResultado = resultado
-      const blob = new Blob([resultado as BlobPart], { type: 'application/pdf' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = NOME_ARQUIVO_RESULTADO
-      link.click()
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('[SEIRMG] Falha ao numerar páginas:', error)
-      alert('Não foi possível numerar o PDF.')
-    }
+    mensagem.limpar()
+    const [arquivo] = seletor.obterArquivos()
+    if (!arquivo) return
+    const inicioEm = Math.max(1, Math.floor(Number(inicio.value)) || 1)
+    await comCarregando(botao, 'Numerando...', async () => {
+      try {
+        const bytes = await numerarPaginas(await lerBytes(arquivo), { inicioEm, posicao: posicao.valor() })
+        resultado.mostrar([{ nome: `${nomeBase(arquivo)}-numerado.pdf`, bytes, detalhe: `numeração a partir de ${inicioEm}` }])
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao numerar páginas:', error)
+        mensagem.mostrar('erro', 'Não foi possível numerar o PDF. Confira se é um PDF válido e sem senha.')
+      }
+    })
   })
 }

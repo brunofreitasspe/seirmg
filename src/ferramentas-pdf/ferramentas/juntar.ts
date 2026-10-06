@@ -1,50 +1,59 @@
 import { juntarPdfs } from '../../features/ferramentas-pdf/juntar'
-import { criarBotaoEnviarAoProcesso } from '../ui/botaoEnviarAoProcesso'
-
-const NOME_ARQUIVO_RESULTADO = 'processo-unido.pdf'
+import { criarPainelResultado } from '../ui/resultado'
+import { contarPaginas } from '../ui/pdfInfo'
+import {
+  comCarregando,
+  criarBarraAcoes,
+  criarBotao,
+  criarEtapa,
+  criarMensagem,
+  criarSeletorArquivos,
+  lerBytes,
+  montarEstruturaFerramenta,
+  nomeBase,
+  rotuloPaginas,
+} from '../ui/kit'
 
 export function montar(container: HTMLElement): void {
-  container.innerHTML = `
-    <h2>Juntar PDFs</h2>
-    <input type="file" id="juntar-arquivos" accept="application/pdf" multiple />
-    <p id="juntar-lista"></p>
-    <button id="juntar-processar" disabled>Juntar</button>
-  `
-  const input = document.getElementById('juntar-arquivos') as HTMLInputElement
-  const botao = document.getElementById('juntar-processar') as HTMLButtonElement
-  const lista = document.getElementById('juntar-lista') as HTMLParagraphElement
+  const corpo = montarEstruturaFerramenta(container, 'juntar')
 
-  let ultimoResultado: Uint8Array | null = null
-
-  const botaoEnviar = criarBotaoEnviarAoProcesso({
-    nomeArquivoPadrao: NOME_ARQUIVO_RESULTADO,
-    obterBytes: () => ultimoResultado,
+  const etapa = criarEtapa(1, 'Escolha os PDFs, na ordem final')
+  const seletor = criarSeletorArquivos({
+    aceitar: 'application/pdf,.pdf',
+    multiplo: true,
+    ordenavel: true,
+    titulo: 'Clique pra escolher os PDFs',
+    dica: 'ou arraste os arquivos pra cá. Use as setas pra ajustar a ordem.',
   })
-  if (botaoEnviar) container.appendChild(botaoEnviar)
+  const botao = criarBotao('Juntar PDFs', { variante: 'primario' })
+  botao.disabled = true
+  const mensagem = criarMensagem()
+  etapa.corpo.append(seletor.elemento, criarBarraAcoes(botao), mensagem.elemento)
 
-  input.addEventListener('change', () => {
-    const arquivos = Array.from(input.files ?? [])
-    lista.textContent = arquivos.map((a) => a.name).join(', ')
+  const resultado = criarPainelResultado(2)
+  corpo.append(etapa.secao, resultado.elemento)
+
+  seletor.aoMudar((arquivos) => {
     botao.disabled = arquivos.length < 2
-    ultimoResultado = null
+    resultado.limpar()
+    if (arquivos.length === 1) mensagem.mostrar('info', 'Adicione pelo menos mais um PDF pra juntar.')
+    else mensagem.limpar()
   })
 
   botao.addEventListener('click', async () => {
-    try {
-      const arquivos = Array.from(input.files ?? [])
-      const bytes = await Promise.all(arquivos.map(async (a) => new Uint8Array(await a.arrayBuffer())))
-      const resultado = await juntarPdfs(bytes)
-      ultimoResultado = resultado
-      const blob = new Blob([resultado as BlobPart], { type: 'application/pdf' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = NOME_ARQUIVO_RESULTADO
-      link.click()
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('[SEIRMG] Falha ao juntar PDFs:', error)
-      alert('Não foi possível juntar os PDFs. Veja o console pra detalhes.')
-    }
+    mensagem.limpar()
+    const arquivos = seletor.obterArquivos()
+    await comCarregando(botao, 'Juntando...', async () => {
+      try {
+        const bytes = await juntarPdfs(await Promise.all(arquivos.map(lerBytes)))
+        const paginas = await contarPaginas(bytes)
+        resultado.mostrar([
+          { nome: `${nomeBase(arquivos[0])}-unido.pdf`, bytes, detalhe: `${arquivos.length} arquivos · ${rotuloPaginas(paginas)}` },
+        ])
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao juntar PDFs:', error)
+        mensagem.mostrar('erro', 'Não foi possível juntar os PDFs. Confira se todos são PDFs válidos e sem senha.')
+      }
+    })
   })
 }

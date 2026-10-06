@@ -1,51 +1,61 @@
 import { imagensParaPdf, type ImagemEntrada } from '../../features/ferramentas-pdf/imagemParaPdf'
-import { criarBotaoEnviarAoProcesso } from '../ui/botaoEnviarAoProcesso'
-
-const NOME_ARQUIVO_RESULTADO = 'imagens-convertidas.pdf'
+import { criarPainelResultado } from '../ui/resultado'
+import {
+  comCarregando,
+  criarBarraAcoes,
+  criarBotao,
+  criarEtapa,
+  criarMensagem,
+  criarSeletorArquivos,
+  lerBytes,
+  montarEstruturaFerramenta,
+  nomeBase,
+  rotuloPaginas,
+} from '../ui/kit'
 
 export function montar(container: HTMLElement): void {
-  container.innerHTML = `
-    <h2>Imagem → PDF</h2>
-    <input type="file" id="imagem-arquivos" accept="image/png,image/jpeg" multiple />
-    <button id="imagem-processar" disabled>Converter</button>
-  `
-  const input = document.getElementById('imagem-arquivos') as HTMLInputElement
-  const botao = document.getElementById('imagem-processar') as HTMLButtonElement
+  const corpo = montarEstruturaFerramenta(container, 'imagem-para-pdf')
 
-  let ultimoResultado: Uint8Array | null = null
-
-  const botaoEnviar = criarBotaoEnviarAoProcesso({
-    nomeArquivoPadrao: NOME_ARQUIVO_RESULTADO,
-    obterBytes: () => ultimoResultado,
+  const etapa = criarEtapa(1, 'Escolha as imagens, na ordem das páginas')
+  const seletor = criarSeletorArquivos({
+    aceitar: 'image/png,image/jpeg',
+    multiplo: true,
+    ordenavel: true,
+    titulo: 'Clique pra escolher as imagens',
+    dica: 'JPG ou PNG. Cada imagem vira uma página.',
   })
-  if (botaoEnviar) container.appendChild(botaoEnviar)
+  const botao = criarBotao('Converter em PDF', { variante: 'primario' })
+  botao.disabled = true
+  const mensagem = criarMensagem()
+  etapa.corpo.append(seletor.elemento, criarBarraAcoes(botao), mensagem.elemento)
 
-  input.addEventListener('change', () => {
-    botao.disabled = (input.files?.length ?? 0) === 0
-    ultimoResultado = null
+  const resultado = criarPainelResultado(2)
+  corpo.append(etapa.secao, resultado.elemento)
+
+  seletor.aoMudar((arquivos) => {
+    botao.disabled = arquivos.length === 0
+    resultado.limpar()
+    mensagem.limpar()
   })
 
   botao.addEventListener('click', async () => {
-    try {
-      const arquivos = Array.from(input.files ?? [])
-      const imagens: ImagemEntrada[] = await Promise.all(
-        arquivos.map(async (arquivo) => ({
-          bytes: new Uint8Array(await arquivo.arrayBuffer()),
-          tipo: arquivo.type === 'image/png' ? ('png' as const) : ('jpg' as const),
-        }))
-      )
-      const resultado = await imagensParaPdf(imagens)
-      ultimoResultado = resultado
-      const blob = new Blob([resultado as BlobPart], { type: 'application/pdf' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = NOME_ARQUIVO_RESULTADO
-      link.click()
-      URL.revokeObjectURL(url)
-    } catch (error) {
-      console.error('[SEIRMG] Falha ao converter imagens em PDF:', error)
-      alert('Não foi possível converter as imagens.')
-    }
+    mensagem.limpar()
+    const arquivos = seletor.obterArquivos()
+    await comCarregando(botao, 'Convertendo...', async () => {
+      try {
+        const imagens: ImagemEntrada[] = await Promise.all(
+          arquivos.map(async (arquivo) => ({
+            bytes: await lerBytes(arquivo),
+            tipo: arquivo.type === 'image/png' ? ('png' as const) : ('jpg' as const),
+          }))
+        )
+        const bytes = await imagensParaPdf(imagens)
+        const nome = arquivos.length === 1 ? `${nomeBase(arquivos[0])}.pdf` : 'imagens-convertidas.pdf'
+        resultado.mostrar([{ nome, bytes, detalhe: rotuloPaginas(arquivos.length) }])
+      } catch (error) {
+        console.error('[SEIRMG] Falha ao converter imagens:', error)
+        mensagem.mostrar('erro', 'Não foi possível converter. Confira se as imagens são JPG ou PNG válidos.')
+      }
+    })
   })
 }
