@@ -35,11 +35,10 @@ const ESTILO_BOTOES = `
     padding-left: 6px;
     border-left: 1px solid #d1d5db;
   }
-  .seirmg-cke-button-icone svg {
-    width: 16px;
-    height: 16px;
-    display: block;
-    margin: 0 auto;
+  .seirmg-cke-button-icone {
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 16px 16px;
   }
 `
 
@@ -98,13 +97,27 @@ function aguardarToolbox(iframe: HTMLIFrameElement, intervaloMs: number, tentati
   })
 }
 
+// O ícone vai como imagem de fundo (como os nativos do CKEditor), não como <svg> inline: o CSS de
+// reset do CKEditor zera width/height de <rect>, e os ícones perdiam os quadrados (checklist, QR,
+// tabela). Numa imagem currentColor não vale, então usa a cor dos ícones nativos, com traço mais fino.
+function prepararIconeSvg(svg: string): string {
+  return svg
+    .replace(/<!--[\s\S]*?-->/g, '')
+    .replace(/currentColor/g, '#333333')
+    .replace(/stroke-width="2"/, 'stroke-width="1.75"')
+    .trim()
+}
+
 export function criarBotaoToolbar(id: string, titulo: string, iconeSvg: string, aoClicar: () => void): HTMLElement {
   const botao = document.createElement('a')
   botao.id = id
   botao.href = '#'
   botao.title = titulo
   botao.className = 'cke_button cke_button_off seirmg-cke-button'
-  botao.innerHTML = `<span class="cke_button_icon seirmg-cke-button-icone">${iconeSvg}</span>`
+  const icone = document.createElement('span')
+  icone.className = 'cke_button_icon seirmg-cke-button-icone'
+  icone.style.backgroundImage = `url("data:image/svg+xml,${encodeURIComponent(prepararIconeSvg(iconeSvg))}")`
+  botao.append(icone)
   botao.addEventListener('click', (evento) => {
     evento.preventDefault()
     aoClicar()

@@ -353,3 +353,20 @@ describe('iniciarFormatacaoBasica', () => {
     expect(toolboxCorpo.querySelectorAll('.seirmg-cke-button').length).toBeGreaterThanOrEqual(6)
   })
 })
+
+describe('ícones da barra', () => {
+  it('desenha o ícone como imagem de fundo, fora do alcance do CSS do CKEditor (que zera <rect>)', async () => {
+    const { criarBotaoToolbar } = await import('./formatacaoBasica')
+    const svg = '<!-- licença --><svg xmlns="http://www.w3.org/2000/svg" stroke="currentColor" stroke-width="2"><rect width="18" height="18"/></svg>'
+    const botao = criarBotaoToolbar('seirmg-cke-x', 'X', svg, () => {})
+    const icone = botao.querySelector('.cke_button_icon') as HTMLElement
+    expect(icone.querySelector('svg')).toBeNull()
+    const fundo = decodeURIComponent(icone.style.backgroundImage)
+    expect(fundo).toContain('data:image/svg+xml')
+    expect(fundo).toContain('<rect width="18" height="18"/>')
+    // currentColor não funciona em imagem: usa a cor dos ícones nativos do CKEditor
+    expect(fundo).not.toContain('currentColor')
+    expect(fundo).toContain('stroke="#333333"')
+    expect(fundo).not.toContain('licença')
+  })
+})

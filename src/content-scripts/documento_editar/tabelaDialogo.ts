@@ -80,7 +80,12 @@ export function abrirGradeInsercao(editor: EditorSEI): void {
   })
 
   atualizarDestaque(0, 0)
-  corpo.appendChild(grade)
+  const rodape = document.createElement('div')
+  rodape.className = 'seirmg-painel-flutuante-rodape'
+  const btnCancelar = criarBotaoDialogo('Cancelar', xIconSvg)
+  btnCancelar.addEventListener('click', () => fecharPainel(painel))
+  rodape.append(btnCancelar)
+  corpo.append(grade, rodape)
   document.body.appendChild(painel)
   fecharAoClicarFora(painel)
 }
