@@ -11,3 +11,8 @@ export function escaparHtml(texto: string): string {
   div.textContent = texto
   return div.innerHTML
 }
+
+// Pra valores dentro de atributo HTML entre aspas duplas: além do que escaparHtml faz, escapa ".
+export function escaparAtributo(texto: string): string {
+  return escaparHtml(texto).replace(/"/g, '&quot;')
+}

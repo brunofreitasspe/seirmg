@@ -1,8 +1,11 @@
 // Botões novos do editor (grupo Inserir e Referências e links). Cada task do plano acrescenta
 // o seu ao mapa; a ordem na barra vem de features/editor/grupos.ts, não da ordem de inserção aqui.
 import squareCheckIconSvg from 'lucide-static/icons/square-check.svg?raw'
+import link2IconSvg from 'lucide-static/icons/link-2.svg?raw'
 import { alternarChecklist, CLASSE_CHECKLIST, montarChecklistHtml } from '../../features/editor/checklist'
 import type { IdBotaoEditor } from '../../features/editor/grupos'
+import { montarLinkHtml, validarUrlHttp } from '../../features/editor/linkCurto'
+import { abrirDialogoLinkCurto } from './linkCurtoDialogo'
 import { criarBotaoToolbar } from './formatacaoBasica'
 import type { EditorSEI } from './ponteEditor'
 
@@ -34,6 +37,22 @@ export function montarBotoesInserir(editor: EditorSEI): Map<IdBotaoEditor, HTMLE
     'checklist',
     criarBotaoToolbar('seirmg-cke-checklist', 'Inserir caixa de seleção (checklist)', squareCheckIconSvg, () => {
       editor.inserirHtml(montarChecklistHtml()).catch(tratarErro('Falha ao inserir checklist'))
+    })
+  )
+  botoes.set(
+    'link-curto',
+    criarBotaoToolbar('seirmg-cke-link-curto', 'Gerar link curto (TinyURL)', link2IconSvg, () => {
+      editor
+        .obterTextoSelecionado()
+        .then((selecao) => {
+          const link = validarUrlHttp(selecao)
+          // Seleção que não é link vira o texto do link curto; sem seleção, o próprio link curto.
+          const textoDoLink = link.ok ? '' : selecao.trim()
+          abrirDialogoLinkCurto(link.ok ? link.url : '', (linkCurto) => {
+            editor.inserirHtml(montarLinkHtml(linkCurto, textoDoLink || linkCurto)).catch(tratarErro('Falha ao inserir link curto'))
+          })
+        })
+        .catch(tratarErro('Falha ao abrir o link curto'))
     })
   )
   return botoes

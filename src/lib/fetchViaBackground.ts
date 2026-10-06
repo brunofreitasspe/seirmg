@@ -55,3 +55,13 @@ export async function enviarArquivoViaBackground(url: string, arquivo: ArquivoPa
     return { ok: false, error: message }
   }
 }
+
+// Conteúdo de sites fora do SEI (ex.: TinyURL), pela lista de hosts permitidos do background.
+export async function fetchExterno(url: string): Promise<Result<string>> {
+  try {
+    const resposta = await chrome.runtime.sendMessage({ type: 'seirmg:fetch-externo', url })
+    return (resposta as Result<string> | undefined) ?? { ok: false, error: 'Sem resposta do background' }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : String(error) }
+  }
+}

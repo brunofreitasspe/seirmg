@@ -17,6 +17,7 @@ import { agendarChecagemLembretesFavoritos, ALARME_CHECAGEM_LEMBRETES_FAVORITOS 
 import { processarLembretesFavoritos } from './lembreteFavoritosPipeline'
 import { extrairIdProcedimentoDoLink } from '../features/controle-processos/favoritos'
 import { construirOpcoesFetchSei } from './fetchSeiOptions'
+import { hostExternoPermitido } from './fetchExterno'
 import type { ArquivoUploadMensagem } from '../lib/fetchViaBackground'
 import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
 
@@ -106,6 +107,20 @@ function ehMensagemFetchSei(mensagem: unknown): mensagem is MensagemFetchSei {
     typeof mensagem === 'object' &&
     mensagem !== null &&
     (mensagem as { type?: unknown }).type === 'seirmg:fetch-sei'
+  )
+}
+
+interface MensagemFetchExterno {
+  type: 'seirmg:fetch-externo'
+  url: string
+}
+
+function ehMensagemFetchExterno(mensagem: unknown): mensagem is MensagemFetchExterno {
+  return (
+    typeof mensagem === 'object' &&
+    mensagem !== null &&
+    (mensagem as { type?: unknown }).type === 'seirmg:fetch-externo' &&
+    typeof (mensagem as { url?: unknown }).url === 'string'
   )
 }
 
@@ -240,6 +255,19 @@ chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
     body: mensagem.body,
     timeoutMs: Math.min(mensagem.timeoutMs ?? TIMEOUT_FETCH_IA_PADRAO_MS, TIMEOUT_FETCH_IA_MAXIMO_MS),
   })
+    .then(responder)
+    .catch((error) => responder({ ok: false, error: String(error) }))
+  return true
+})
+
+// Sites fora do SEI (ex.: TinyURL) pedidos pelo editor -- só os hosts de fetchExterno.ts.
+chrome.runtime.onMessage.addListener((mensagem, _remetente, responder) => {
+  if (!ehMensagemFetchExterno(mensagem)) return false
+  if (!hostExternoPermitido(mensagem.url)) {
+    responder({ ok: false, error: 'Host não permitido' })
+    return false
+  }
+  fetchText(mensagem.url, { timeoutMs: 15000 })
     .then(responder)
     .catch((error) => responder({ ok: false, error: String(error) }))
   return true

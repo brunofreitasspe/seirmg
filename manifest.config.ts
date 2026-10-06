@@ -34,6 +34,7 @@ export default defineManifest({
     'https://api.openai.com/*',
     'https://generativelanguage.googleapis.com/*',
     'https://api.anthropic.com/*',
+    'https://tinyurl.com/*',
   ],
   optional_host_permissions: ['*://*/*'],
   web_accessible_resources: [
