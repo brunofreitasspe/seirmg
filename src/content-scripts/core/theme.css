@@ -851,6 +851,119 @@ p.seirmg-atribuido-para.seirmg-atribuido-para-mais {
   display: flex;
 }
 
+/* Fila de revisão (2+ arquivos): ordem de envio ajustável antes de mandar. */
+#seirmg-dropzone-overlay[data-state='revisao'] {
+  pointer-events: auto;
+}
+
+#seirmg-dropzone-overlay[data-state='revisao'] .seirmg-dropzone-card {
+  max-width: min(380px, 94vw);
+  width: 100%;
+  padding: 22px 20px;
+}
+
+#seirmg-dropzone-overlay .seirmg-dropzone-fila {
+  display: none;
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  width: 100%;
+  max-height: 46vh;
+  overflow-y: auto;
+  text-align: left;
+}
+
+#seirmg-dropzone-overlay[data-state='revisao'] .seirmg-dropzone-fila {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+#seirmg-dropzone-overlay .seirmg-dropzone-fila-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 6px;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid #e2e7f0;
+  font-size: 12px;
+  color: #1a2130;
+  cursor: grab;
+  user-select: none;
+}
+
+#seirmg-dropzone-overlay .seirmg-dropzone-fila-item.arrastando {
+  opacity: 0.45;
+}
+
+#seirmg-dropzone-overlay .seirmg-dropzone-fila-item.alvo {
+  border-color: var(--seirmg-accent-color);
+  box-shadow: 0 0 0 2px rgba(1, 127, 255, 0.18);
+}
+
+#seirmg-dropzone-overlay .seirmg-dropzone-fila-alca {
+  display: inline-flex;
+  color: #98a2b3;
+}
+
+#seirmg-dropzone-overlay .seirmg-dropzone-fila-alca svg,
+#seirmg-dropzone-overlay .seirmg-dropzone-fila-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+#seirmg-dropzone-overlay .seirmg-dropzone-fila-posicao {
+  min-width: 18px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #667085;
+  text-align: center;
+}
+
+#seirmg-dropzone-overlay .seirmg-dropzone-fila-nome {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#seirmg-dropzone-overlay .seirmg-dropzone-fila-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: transparent;
+  color: #667085;
+  cursor: pointer;
+}
+
+#seirmg-dropzone-overlay .seirmg-dropzone-fila-btn:hover:not(:disabled) {
+  background: #f1f4f9;
+  color: #1a2130;
+}
+
+#seirmg-dropzone-overlay .seirmg-dropzone-fila-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+#seirmg-dropzone-overlay .seirmg-dropzone-acoes-revisao {
+  display: none;
+  gap: 8px;
+  margin-top: 12px;
+  align-self: flex-end;
+}
+
+#seirmg-dropzone-overlay[data-state='revisao'] .seirmg-dropzone-acoes-revisao {
+  display: flex;
+}
+
 @keyframes seirmg-dropzone-pulso {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(1.02); }
