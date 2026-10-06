@@ -1,5 +1,5 @@
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist'
-import { extrairTextoDeImagem, montarTextoPorPagina } from '../../features/ferramentas-pdf/ocr'
+import { criarReconhecedorOcr, montarTextoPorPagina } from '../../features/ferramentas-pdf/ocr'
 
 GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href
 
@@ -38,10 +38,15 @@ export function montar(container: HTMLElement): void {
       const bytes = new Uint8Array(await arquivo.arrayBuffer())
       const pdf = await getDocument({ data: bytes }).promise
       const textos: string[] = []
-      for (let numero = 1; numero <= pdf.numPages; numero++) {
-        progresso.textContent = `Processando página ${numero} de ${pdf.numPages}...`
-        const png = await paginaParaPng(pdf, numero)
-        textos.push(await extrairTextoDeImagem(png))
+      const reconhecedor = await criarReconhecedorOcr()
+      try {
+        for (let numero = 1; numero <= pdf.numPages; numero++) {
+          progresso.textContent = `Processando página ${numero} de ${pdf.numPages}...`
+          const png = await paginaParaPng(pdf, numero)
+          textos.push(await reconhecedor.reconhecer(png))
+        }
+      } finally {
+        await reconhecedor.encerrar()
       }
       resultado.value = montarTextoPorPagina(textos)
       progresso.textContent = 'Concluído.'

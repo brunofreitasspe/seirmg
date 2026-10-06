@@ -1,6 +1,30 @@
-import { defineConfig } from 'vite'
+import { readFileSync } from 'node:fs'
+import { defineConfig, type Plugin } from 'vite'
 import { crx } from '@crxjs/vite-plugin'
 import manifest from './manifest.config'
+
+// OCR (ferramentas-pdf): o tesseract.js busca worker e core (JS+WASM) no jsdelivr por padrão, e a
+// CSP do MV3 proíbe código remoto -- copiamos os arquivos pra dist/tesseract/ e o código aponta
+// pra lá via chrome.runtime.getURL (ver features/ferramentas-pdf/ocr.ts). Só as variantes LSTM do
+// core (o OEM padrão), uma por nível de suporte a SIMD do navegador.
+function copiarArquivosTesseract(): Plugin {
+  const arquivos: [string, string][] = [
+    ['tesseract.js/dist/worker.min.js', 'tesseract/worker.min.js'],
+    ...['lstm', 'simd-lstm', 'relaxedsimd-lstm'].map((variante): [string, string] => [
+      `tesseract.js-core/tesseract-core-${variante}.wasm.js`,
+      `tesseract/tesseract-core-${variante}.wasm.js`,
+    ]),
+  ]
+  return {
+    name: 'seirmg-copiar-tesseract',
+    apply: 'build',
+    generateBundle() {
+      for (const [origem, destino] of arquivos) {
+        this.emitFile({ type: 'asset', fileName: destino, source: readFileSync(new URL(`./node_modules/${origem}`, import.meta.url)) })
+      }
+    },
+  }
+}
 
 export default defineConfig({
   build: {
@@ -31,6 +55,7 @@ export default defineConfig({
     },
   },
   plugins: [
+    copiarArquivosTesseract(),
     crx({
       manifest,
       contentScripts: {
