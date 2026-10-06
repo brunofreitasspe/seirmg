@@ -4,8 +4,25 @@ import {
   createSyncConfigStore,
   DEFAULT_LOCAL_CONFIG,
   DEFAULT_SYNC_CONFIG,
+  lerAgenteIAConfig,
   type StorageArea,
+  type SyncConfig,
 } from './storage'
+
+describe('lerAgenteIAConfig', () => {
+  it('config antigo sem agenteIA devolve os padrões', () => {
+    const antigo = { ...DEFAULT_SYNC_CONFIG } as Partial<SyncConfig>
+    delete antigo.agenteIA
+    expect(lerAgenteIAConfig(antigo as SyncConfig)).toEqual(DEFAULT_SYNC_CONFIG.agenteIA)
+  })
+
+  it('preserva o que foi salvo e completa campos ausentes', () => {
+    const salvo = { ativo: true, apiKey: 'k', modelo: 'claude-sonnet-5-5' } as SyncConfig['agenteIA']
+    const resultado = lerAgenteIAConfig({ ...DEFAULT_SYNC_CONFIG, agenteIA: salvo })
+    expect(resultado).toMatchObject({ ativo: true, apiKey: 'k', modelo: 'claude-sonnet-5-5', fluxos: [] })
+    expect(resultado.skills).toEqual(DEFAULT_SYNC_CONFIG.agenteIA.skills)
+  })
+})
 
 function criarAreaFalsa(): StorageArea {
   const dados = new Map<string, unknown>()

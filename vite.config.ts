@@ -39,6 +39,8 @@ export default defineConfig({
       input: {
         dashboard: 'src/dashboard/index.html',
         ferramentasPdf: 'src/ferramentas-pdf/index.html',
+        agenteIA: 'src/agente-ia/index.html',
+        agenteIAEstudio: 'src/agente-ia/estudio.html',
       },
     },
   },

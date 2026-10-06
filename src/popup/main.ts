@@ -1,4 +1,4 @@
-import { createLocalConfigStore, createSyncConfigStore, type HistoricoProcessoEntry } from '../lib/storage'
+import { createLocalConfigStore, createSyncConfigStore, lerAgenteIAConfig, type HistoricoProcessoEntry } from '../lib/storage'
 import { consultarBlocosAoVivo, type ConsultaBlocosAoVivo } from '../features/bloco-assinatura/consultarAoVivo'
 import { filtrarHistoricoPorTexto, historicoEntryParaFavorito, podarPorJanela } from '../features/procedimento-visualizar/historico'
 import { adicionarFavoritoSeNovo } from '../features/controle-processos/favoritos'
@@ -10,6 +10,7 @@ import settingsIconSvg from 'lucide-static/icons/settings.svg?raw'
 import layoutDashboardIconSvg from 'lucide-static/icons/layout-dashboard.svg?raw'
 import starIconSvg from 'lucide-static/icons/star.svg?raw'
 import fileStackIconSvg from 'lucide-static/icons/file-stack.svg?raw'
+import sparklesIconSvg from 'lucide-static/icons/sparkles.svg?raw'
 
 let historicoCompleto: HistoricoProcessoEntry[] = []
 let baseUrlSeiAtual: string | undefined
@@ -137,6 +138,16 @@ async function render(): Promise<void> {
       if (iconeFerramentasPdf) iconeFerramentasPdf.innerHTML = fileStackIconSvg
       botaoFerramentasPdf.addEventListener('click', () => {
         chrome.tabs.create({ url: chrome.runtime.getURL('src/ferramentas-pdf/index.html') })
+      })
+    }
+
+    const botaoAgenteIA = document.getElementById('abrir-agente-ia') as HTMLButtonElement | null
+    if (botaoAgenteIA && lerAgenteIAConfig(syncConfig).ativo) {
+      botaoAgenteIA.style.display = ''
+      const iconeAgenteIA = document.getElementById('icone-agente-ia')
+      if (iconeAgenteIA) iconeAgenteIA.innerHTML = sparklesIconSvg
+      botaoAgenteIA.addEventListener('click', () => {
+        chrome.tabs.create({ url: chrome.runtime.getURL('src/agente-ia/index.html') })
       })
     }
 
