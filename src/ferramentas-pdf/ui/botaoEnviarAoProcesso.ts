@@ -9,6 +9,11 @@ export function obterIdProcedimentoDaUrl(): string | null {
   return new URL(window.location.href).searchParams.get('idProcedimento')
 }
 
+// URL assinada de "Incluir Documento" repassada pelo atalho da árvore (ver enviarAoProcesso.ts).
+function obterUrlIncluirDaUrl(): string | null {
+  return new URL(window.location.href).searchParams.get('urlIncluir')
+}
+
 export interface OpcoesBotaoEnviarAoProcesso {
   nomeArquivoPadrao: string
   // Lazy: cada clique relê o resultado mais recente -- a ferramenta pode ter sido usada de novo
@@ -21,6 +26,7 @@ export interface OpcoesBotaoEnviarAoProcesso {
 export function criarBotaoEnviarAoProcesso(opcoes: OpcoesBotaoEnviarAoProcesso): HTMLDivElement | null {
   const idProcedimento = obterIdProcedimentoDaUrl()
   if (!idProcedimento) return null
+  const urlIncluir = obterUrlIncluirDaUrl()
 
   const wrapper = document.createElement('div')
   wrapper.className = 'seirmg-enviar-ao-processo'
@@ -39,10 +45,15 @@ export function criarBotaoEnviarAoProcesso(opcoes: OpcoesBotaoEnviarAoProcesso):
       return
     }
 
+    if (!urlIncluir) {
+      status.textContent = 'Link do processo ausente. Reabra as Ferramentas de PDF pelo atalho na árvore do processo.'
+      return
+    }
+
     botao.disabled = true
     status.textContent = 'Enviando ao processo...'
 
-    enviarPdfAoProcesso({ idProcedimento, nomeArquivo: opcoes.nomeArquivoPadrao, bytes })
+    enviarPdfAoProcesso({ urlIncluir, nomeArquivo: opcoes.nomeArquivoPadrao, bytes })
       .then((resultado) => {
         if (resultado.ok) {
           status.textContent = 'Enviado com sucesso ao processo aberto no SEI.'

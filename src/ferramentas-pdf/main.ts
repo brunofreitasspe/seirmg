@@ -64,18 +64,13 @@ function obterFerramentaDaUrl(): string | null {
   return new URL(window.location.href).searchParams.get('ferramenta')
 }
 
-function obterIdProcedimentoDaUrl(): string | null {
-  return new URL(window.location.href).searchParams.get('idProcedimento')
-}
-
 function renderizarCatalogo(container: HTMLElement): void {
-  const idProcedimento = obterIdProcedimentoDaUrl()
   const lista = document.createElement('div')
   lista.className = 'catalogo'
   listarFerramentasPdf().forEach((ferramenta) => {
     const card = document.createElement('a')
     card.className = 'catalogo-card'
-    card.href = montarUrlFerramenta(ferramenta.id, idProcedimento)
+    card.href = montarUrlFerramenta(ferramenta.id, window.location.search)
 
     const icone = document.createElement('div')
     icone.className = 'catalogo-card-icone'

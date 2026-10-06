@@ -10,13 +10,13 @@
 //   4. POST no action de frmDocumentoCadastro (grava o documento)
 //
 // Diferença em relação ao dropzone.ts: lá, o passo 1 lê a URL de um <script> já presente no DOM
-// da própria página do processo (extrairUrlIncluirDocumento) -- aqui não há esse DOM disponível,
-// então montamos a mesma URL diretamente a partir do id_procedimento (o formato é estável e não
-// carrega nenhum hash de sessão, como confirma o teste de extrairUrlIncluirDocumento em
-// dropzone.test.ts: 'controlador.php?acao=documento_escolher_tipo&id_procedimento=1'). O passo 3
-// também muda de transporte: o dropzone faz um fetch() direto com FormData (mesma aba, mesmos
-// cookies); aqui os bytes precisam atravessar o background (enviarArquivoViaBackground), que
-// remonta o FormData do lado de lá antes do fetch real.
+// da própria página do processo (extrairUrlIncluirDocumento). Aqui não há esse DOM, então o atalho
+// em procedimento_visualizar extrai essa mesma URL e a repassa via ?urlIncluir=... -- não dá pra
+// montar na mão, porque o SEI exige infra_sistema/infra_unidade_atual/infra_hash assinados no link
+// ("Link sem assinatura" sem eles). As URLs relativas dos passos 2-4 são resolvidas contra essa URL
+// (não contra baseUrlSei, que não termina em barra e perderia o /sei do caminho). O passo 3 também
+// muda de transporte: o dropzone faz um fetch() direto com FormData (mesma aba, mesmos cookies);
+// aqui os bytes atravessam o background (enviarArquivoViaBackground), que remonta o FormData.
 import {
   extrairIdSerieDocumentoExterno,
   extrairFormulario,
@@ -38,7 +38,8 @@ import { fetchText, enviarArquivoViaBackground } from '../lib/fetchViaBackground
 import { createLocalConfigStore, createSyncConfigStore } from '../lib/storage'
 
 export interface EnvioParaProcesso {
-  idProcedimento: string
+  // URL assinada de "Incluir Documento" (documento_escolher_tipo) extraída da árvore do processo.
+  urlIncluir: string
   nomeArquivo: string
   bytes: Uint8Array
 }
@@ -48,11 +49,17 @@ export interface ResultadoEnvioAoProcesso {
   error?: string
 }
 
-// Monta a mesma URL que extrairUrlIncluirDocumento extrairia do DOM do processo -- só que sem
-// precisar desse DOM (não disponível na aba standalone). Função pura e testável isoladamente.
-export function montarUrlEscolherTipoDocumento(baseUrlSei: string, idProcedimento: string): string {
-  const base = baseUrlSei.endsWith('/') ? baseUrlSei : `${baseUrlSei}/`
-  return `${base}controlador.php?acao=documento_escolher_tipo&id_procedimento=${encodeURIComponent(idProcedimento)}`
+// Função pura: só aceita a URL de "Incluir Documento" do mesmo SEI configurado -- o valor vem da
+// query string da página, então não deixamos o background disparar POSTs pra qualquer lugar.
+export function validarUrlIncluir(urlIncluir: string, baseUrlSei: string): URL | null {
+  try {
+    const url = new URL(urlIncluir)
+    if (url.origin !== new URL(baseUrlSei).origin) return null
+    if (url.searchParams.get('acao') !== 'documento_escolher_tipo') return null
+    return url
+  } catch {
+    return null
+  }
 }
 
 function formatarDataHoje(): string {
@@ -70,8 +77,11 @@ export async function enviarPdfAoProcesso(envio: EnvioParaProcesso): Promise<Res
       return { ok: false, error: 'URL do SEI não configurada. Abra a extensão a partir de uma página do SEI pelo menos uma vez.' }
     }
 
-    const urlIncluir = montarUrlEscolherTipoDocumento(baseUrlSei, envio.idProcedimento)
-    const resposta1 = await fetchText(urlIncluir)
+    const urlIncluir = validarUrlIncluir(envio.urlIncluir, baseUrlSei)
+    if (!urlIncluir) {
+      return { ok: false, error: 'Link do processo inválido. Reabra as Ferramentas de PDF pelo atalho na árvore do processo.' }
+    }
+    const resposta1 = await fetchText(urlIncluir.href)
     if (!resposta1.ok) return { ok: false, error: resposta1.error }
 
     const idSerieExterno = extrairIdSerieDocumentoExterno(resposta1.data)
@@ -92,7 +102,7 @@ export async function enviarPdfAoProcesso(envio: EnvioParaProcesso): Promise<Res
     const camposEscolherTipo = definirValorCampo(extrairCamposOcultos(formularioEscolherTipo), 'hdnIdSerie', idSerieExterno)
     const corpoEscolherTipo = montarCorpoCamposOcultos(camposEscolherTipo)
 
-    const resposta2 = await fetchText(new URL(acaoEscolherTipo, baseUrlSei).href, {
+    const resposta2 = await fetchText(new URL(acaoEscolherTipo, urlIncluir).href, {
       method: 'POST',
       bodyRaw: corpoEscolherTipo,
     })
@@ -101,7 +111,7 @@ export async function enviarPdfAoProcesso(envio: EnvioParaProcesso): Promise<Res
     const urlUpload = extrairUrlUpload(resposta2.data)
     if (!urlUpload) return { ok: false, error: 'Não foi localizada a URL para enviar o arquivo.' }
 
-    const respostaUpload = await enviarArquivoViaBackground(new URL(urlUpload, baseUrlSei).href, {
+    const respostaUpload = await enviarArquivoViaBackground(new URL(urlUpload, urlIncluir).href, {
       fieldName: 'filArquivo',
       fileName: envio.nomeArquivo,
       bytes: envio.bytes,
@@ -126,7 +136,7 @@ export async function enviarPdfAoProcesso(envio: EnvioParaProcesso): Promise<Res
 
     const corpo = montarCorpoDocumentoExterno(campos, selSerie, syncConfig.documentoExterno, nomeDocumento, hdnAnexos, dataHojeStr)
 
-    const respostaFinal = await fetchText(new URL(campos.urlEnvio, baseUrlSei).href, {
+    const respostaFinal = await fetchText(new URL(campos.urlEnvio, urlIncluir).href, {
       method: 'POST',
       bodyRaw: corpo,
     })

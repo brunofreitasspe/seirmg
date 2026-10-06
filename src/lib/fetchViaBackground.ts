@@ -1,4 +1,5 @@
 import type { Result } from './result'
+import { bytesParaBase64 } from './base64'
 
 export async function fetchText(
   url: string,
@@ -25,16 +26,28 @@ export interface ArquivoParaUpload {
   bytes: Uint8Array
 }
 
+// Formato que de fato atravessa chrome.runtime.sendMessage: a mensagem é serializada como JSON,
+// então os bytes vão em base64 (um Uint8Array cru chegaria como {"0":..,"1":..} e o arquivo
+// enviado ao SEI sairia corrompido).
+export interface ArquivoUploadMensagem {
+  fieldName: string
+  fileName: string
+  base64: string
+}
+
 // Upload binário (ex.: bytes de um PDF) via background -- usada por páginas sem a sessão do SEI
-// no próprio contexto (ex.: a aba standalone de Ferramentas de PDF). Os bytes trafegam intactos
-// na mensagem (a API de extensão suporta ArrayBuffer/TypedArray via structured clone); o
-// background remonta o Blob/FormData real antes do fetch (ver background/fetchSeiOptions.ts).
+// no próprio contexto (ex.: a aba standalone de Ferramentas de PDF). O background decodifica o
+// base64 e remonta o Blob/FormData real antes do fetch (ver background/fetchSeiOptions.ts).
 export async function enviarArquivoViaBackground(url: string, arquivo: ArquivoParaUpload): Promise<Result<string>> {
   try {
     const resposta = await chrome.runtime.sendMessage({
       type: 'seirmg:fetch-sei',
       url,
-      upload: arquivo,
+      upload: {
+        fieldName: arquivo.fieldName,
+        fileName: arquivo.fileName,
+        base64: bytesParaBase64(arquivo.bytes),
+      } satisfies ArquivoUploadMensagem,
     })
     return resposta as Result<string>
   } catch (error) {

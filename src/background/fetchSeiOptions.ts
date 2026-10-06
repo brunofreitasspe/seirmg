@@ -1,5 +1,6 @@
 import type { FetchWithTimeoutOptions } from '../lib/result'
-import type { ArquivoParaUpload } from '../lib/fetchViaBackground'
+import type { ArquivoUploadMensagem } from '../lib/fetchViaBackground'
+import { base64ParaBytes } from '../lib/base64'
 
 export interface MensagemFetchSeiOpcoes {
   method?: string
@@ -7,10 +8,9 @@ export interface MensagemFetchSeiOpcoes {
   bodyRaw?: string
   // Presente só quando o chamador precisa de um upload multipart real (ex.: enviar bytes de PDF
   // pro endpoint infraUpload do SEI) -- não dá pra representar o corpo como string sem corromper
-  // bytes binários. O runtime de mensagens de extensão suporta ArrayBuffer/TypedArray via
-  // structured clone, então os bytes trafegam intactos até aqui -- só então remontamos o
-  // Blob/FormData real pro fetch de verdade.
-  upload?: ArquivoParaUpload
+  // bytes binários. A mensagem chega serializada como JSON, então os bytes vêm em base64 --
+  // só aqui decodificamos e remontamos o Blob/FormData real pro fetch de verdade.
+  upload?: ArquivoUploadMensagem
 }
 
 // Função pura (dado o mesmo shape de mensagem, sempre monta as mesmas opções de fetch) --
@@ -20,7 +20,7 @@ export interface MensagemFetchSeiOpcoes {
 export function construirOpcoesFetchSei(mensagem: MensagemFetchSeiOpcoes): FetchWithTimeoutOptions {
   if (mensagem.upload) {
     const formData = new FormData()
-    const blob = new Blob([mensagem.upload.bytes as BlobPart])
+    const blob = new Blob([base64ParaBytes(mensagem.upload.base64) as BlobPart])
     formData.append(mensagem.upload.fieldName, blob, mensagem.upload.fileName)
     // Sem Content-Type manual: o fetch() preenche o boundary do multipart/form-data sozinho
     // quando o body é um FormData -- declarar na mão quebraria o boundary.

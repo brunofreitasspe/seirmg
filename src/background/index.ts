@@ -13,7 +13,7 @@ import {
 import { processarTarefasVencidas } from './tarefasPipeline'
 import { ALARME_LEMBRETE_BLOCO_ASSINATURA, agendarLembreteBlocoAssinatura } from './lembreteBlocoAssinatura'
 import { construirOpcoesFetchSei } from './fetchSeiOptions'
-import type { ArquivoParaUpload } from '../lib/fetchViaBackground'
+import type { ArquivoUploadMensagem } from '../lib/fetchViaBackground'
 import type { BlocoAssinaturaItem } from '../features/bloco-assinatura/types'
 
 const ACAO_BLOCO_ASSINATURA = 'bloco_assinatura_listar'
@@ -45,7 +45,7 @@ interface MensagemFetchSei {
   bodyRaw?: string
   // Presente só quando o chamador precisa de um upload multipart real (ex.: enviarAoProcesso.ts,
   // ferramentas de PDF enviando o resultado pro processo aberto) -- ver fetchSeiOptions.ts.
-  upload?: ArquivoParaUpload
+  upload?: ArquivoUploadMensagem
 }
 
 interface MensagemFetchIA {

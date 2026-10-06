@@ -3,6 +3,7 @@ import {
   extrairTooltipRelacionado,
 } from '../../features/procedimento-visualizar/ajustarElementosNativos'
 import { montarTituloJanela } from '../../features/procedimento-visualizar/alterarTitulo'
+import { extrairUrlIncluirDocumento } from '../../features/procedimento-visualizar/dropzone'
 import { obterNumeroProcesso, ehVisualizacaoDoProcesso } from '../../features/procedimento-visualizar/numeroProcesso'
 import {
   montarCorpoSalvarAnotacao,
@@ -756,9 +757,15 @@ function montarAtalhoFerramentasPdf(): void {
     link.className = 'seirmg-ferramentas-pdf-link'
     link.target = '_blank'
     link.rel = 'noopener'
-    link.href = chrome.runtime.getURL(
-      `src/ferramentas-pdf/index.html?idProcedimento=${encodeURIComponent(idProcedimento)}`
-    )
+    // A URL de "Incluir Documento" já vem assinada (infra_hash) no script da árvore -- repassada
+    // pra aba das ferramentas poder enviar o resultado ao processo (ver enviarAoProcesso.ts).
+    const params = new URLSearchParams({ idProcedimento })
+    const scriptsHtml = Array.from(document.querySelectorAll('script'))
+      .map((script) => script.innerHTML)
+      .join('\n')
+    const urlIncluir = extrairUrlIncluirDocumento(scriptsHtml)
+    if (urlIncluir) params.set('urlIncluir', new URL(urlIncluir, window.location.href).href)
+    link.href = chrome.runtime.getURL(`src/ferramentas-pdf/index.html?${params.toString()}`)
     link.textContent = 'Juntar, dividir, tarjar e outras ferramentas de PDF'
     corpo.appendChild(link)
 

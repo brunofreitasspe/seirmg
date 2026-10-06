@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { construirOpcoesFetchSei } from './fetchSeiOptions'
+import { bytesParaBase64 } from '../lib/base64'
 
 describe('construirOpcoesFetchSei', () => {
   it('monta body urlencoded + Content-Type quando bodyRaw é informado', () => {
@@ -25,7 +26,7 @@ describe('construirOpcoesFetchSei', () => {
   it('monta FormData multipart a partir dos bytes quando upload é informado', async () => {
     const bytes = new Uint8Array([0x25, 0x50, 0x44, 0x46])
     const opcoes = construirOpcoesFetchSei({
-      upload: { fieldName: 'filArquivo', fileName: 'relatorio.pdf', bytes },
+      upload: { fieldName: 'filArquivo', fileName: 'relatorio.pdf', base64: bytesParaBase64(bytes) },
     })
     expect(opcoes.method).toBe('POST')
     expect(opcoes.headers).toBeUndefined()
@@ -40,7 +41,7 @@ describe('construirOpcoesFetchSei', () => {
     const bytes = new Uint8Array([1, 2, 3])
     const opcoes = construirOpcoesFetchSei({
       bodyRaw: 'nao-deveria-ser-usado',
-      upload: { fieldName: 'filArquivo', fileName: 'a.pdf', bytes },
+      upload: { fieldName: 'filArquivo', fileName: 'a.pdf', base64: bytesParaBase64(bytes) },
     })
     expect(opcoes.body).toBeInstanceOf(FormData)
   })
@@ -48,8 +49,17 @@ describe('construirOpcoesFetchSei', () => {
   it('respeita method customizado no upload quando informado', () => {
     const opcoes = construirOpcoesFetchSei({
       method: 'PUT',
-      upload: { fieldName: 'f', fileName: 'a.pdf', bytes: new Uint8Array([1]) },
+      upload: { fieldName: 'f', fileName: 'a.pdf', base64: bytesParaBase64(new Uint8Array([1])) },
     })
     expect(opcoes.method).toBe('PUT')
+  })
+
+  it('bytes sobrevivem à serialização JSON de chrome.runtime.sendMessage', async () => {
+    const bytes = new Uint8Array(256).map((_, i) => i)
+    const mensagem = JSON.parse(
+      JSON.stringify({ upload: { fieldName: 'filArquivo', fileName: 'a.pdf', base64: bytesParaBase64(bytes) } })
+    )
+    const arquivo = (construirOpcoesFetchSei(mensagem).body as FormData).get('filArquivo') as File
+    expect(new Uint8Array(await arquivo.arrayBuffer())).toEqual(bytes)
   })
 })
