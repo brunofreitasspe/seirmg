@@ -82,6 +82,8 @@ import {
   construirLinkSeguro,
   calcularOcultacaoPorFavorito,
   ordenarFavoritosPorData,
+  moverParaLixeira,
+  podarLixeiraPorJanela,
   atualizarSnapshotsFavoritos,
 } from '../../features/controle-processos/favoritos'
 import {
@@ -1550,8 +1552,8 @@ async function alternarFavorito(favorito: FavoritoProcesso): Promise<void> {
     const store = createSyncConfigStore()
     const atual = await store.get()
     const itens = atual.controleProcessos.favoritos.itens
-    const jaFavoritado = itens.some((item) => item.numero === favorito.numero)
-    const novosItens = jaFavoritado
+    const itemRemovido = itens.find((item) => item.numero === favorito.numero)
+    const novosItens = itemRemovido
       ? itens.filter((item) => item.numero !== favorito.numero)
       : [...itens, { ...favorito, adicionadoEm: new Date().toISOString() }]
 
@@ -1562,6 +1564,18 @@ async function alternarFavorito(favorito: FavoritoProcesso): Promise<void> {
         favoritos: { ...atual.controleProcessos.favoritos, itens: novosItens },
       },
     })
+
+    // Removido vai pra lixeira (local, 30 dias) em vez de sumir -- dá pra restaurar no painel.
+    if (itemRemovido) {
+      const localStore = createLocalConfigStore()
+      const localConfig = await localStore.get()
+      const agoraIso = new Date().toISOString()
+      const lixeiraPodada = podarLixeiraPorJanela(localConfig.favoritosLixeira ?? [], agoraIso, 30)
+      await localStore.set({
+        ...localConfig,
+        favoritosLixeira: moverParaLixeira(lixeiraPodada, itemRemovido, agoraIso),
+      })
+    }
 
     itensFavoritados = novosItens
     aplicarFiltroFavoritoEmTodasAsTabelas()
